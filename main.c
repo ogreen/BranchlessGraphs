@@ -88,15 +88,19 @@ void testBFS(uint32_t* off, uint32_t* ind) {
 	BFSSeqBranchless(off, ind, Queue, level2, 1);
 	printf("BFS branchless:     %lf\n", toc() * 1.0e+9);
 
+#ifndef __MIC__
 	INIT_LEVEL_ARRAY(level2)
 	tic ();
 	BFSSeqBranchlessAsm(off, ind, Queue, level2, 1);
 	printf("BFS branchless Asm: %lf\n", toc() * 1.0e+9);
+#endif
 
+#ifdef __SSE__
 	INIT_LEVEL_ARRAY(level2)
 	tic ();
 	BFSSeqBranchlessSSE(off, ind, Queue, level2, 1);
 	printf("BFS branchless SSE: %lf\n", toc() * 1.0e+9);
+#endif
 
 	free(Queue);
 	free(level);
