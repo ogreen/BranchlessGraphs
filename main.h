@@ -5,3 +5,4 @@ void BFSSeq(uint32_t* off, uint32_t* ind, uint32_t* Queue, uint32_t* level,uint3
 void BFSSeqBranchless(uint32_t* off, uint32_t* ind, uint32_t* Queue, uint32_t* level, uint32_t currRoot);
 void BFSSeqBranchlessAsm(uint32_t* off, uint32_t* ind, uint32_t* Queue, uint32_t* level, uint32_t currRoot);
 void BFSSeqBranchlessSSE(uint32_t* off, uint32_t* ind, uint32_t* Queue, uint32_t* level, uint32_t currRoot);
+void BFSSeqBranchlessMIC(uint32_t* off, uint32_t* ind, uint32_t* Queue, uint32_t* level, uint32_t currRoot);

@@ -2,6 +2,7 @@
 #include "timer.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <malloc.h>
 #include <inttypes.h>
 
 #define ACTI(k) (action[2*(k)])
@@ -40,8 +41,8 @@ int main (const int argc, char *argv[]) {
 	fgets(line, LINE_SIZE, fp);
 	sscanf(line, "%d %d", &nv, &ne);
 	nv += 1;
-	off = malloc((nv+2) * sizeof(uint32_t));
-	ind = malloc((ne*2) * sizeof(uint32_t));
+	off = memalign(64, (nv+2) * sizeof(uint32_t));
+	ind = memalign(64, (ne*2) * sizeof(uint32_t));
 	off[0]=0;
 	off[1]=0;
 	uint32_t counter=0;
@@ -74,9 +75,9 @@ int main (const int argc, char *argv[]) {
 	}
 
 void testBFS(uint32_t* off, uint32_t* ind) {
-	uint32_t* Queue = (uint32_t*)malloc(nv * sizeof(uint32_t));
-	uint32_t* level = (uint32_t*)malloc(nv * sizeof(uint32_t));
-	uint32_t* level2 = (uint32_t*)malloc(nv * sizeof(uint32_t));
+	uint32_t* Queue = (uint32_t*)memalign(64, nv * sizeof(uint32_t));
+	uint32_t* level = (uint32_t*)memalign(64, nv * sizeof(uint32_t));
+	uint32_t* level2 = (uint32_t*)memalign(64, nv * sizeof(uint32_t));
 	
 	INIT_LEVEL_ARRAY(level)
 	tic();
@@ -100,6 +101,13 @@ void testBFS(uint32_t* off, uint32_t* ind) {
 	tic ();
 	BFSSeqBranchlessSSE(off, ind, Queue, level2, 1);
 	printf("BFS branchless SSE: %lf\n", toc() * 1.0e+9);
+#endif
+
+#ifdef __MIC__
+	INIT_LEVEL_ARRAY(level2)
+	tic ();
+	BFSSeqBranchlessMIC(off, ind, Queue, level2, 1);
+	printf("BFS branchless MIC: %lf\n", toc() * 1.0e+9);
 #endif
 
 	free(Queue);
