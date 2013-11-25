@@ -82,32 +82,37 @@ void testBFS(uint32_t* off, uint32_t* ind) {
 	INIT_LEVEL_ARRAY(level)
 	tic();
 	BFSSeq(off, ind, Queue, level, 1);
-	printf("BFS regular:        %lf\n", toc() * 1.0e+9);
+	printf("BFS regular:                               %lf\n", toc() * 1.0e+9);
 
 	INIT_LEVEL_ARRAY(level2)
 	tic ();
 	BFSSeqBranchless(off, ind, Queue, level2, 1);
-	printf("BFS branchless:     %lf\n", toc() * 1.0e+9);
+	printf("BFS branchless:                            %lf\n", toc() * 1.0e+9);
 
 #ifndef __MIC__
 	INIT_LEVEL_ARRAY(level2)
 	tic ();
 	BFSSeqBranchlessAsm(off, ind, Queue, level2, 1);
-	printf("BFS branchless Asm: %lf\n", toc() * 1.0e+9);
+	printf("BFS branchless Asm:                        %lf\n", toc() * 1.0e+9);
 #endif
 
 #ifdef __SSE__
 	INIT_LEVEL_ARRAY(level2)
 	tic ();
 	BFSSeqBranchlessSSE(off, ind, Queue, level2, 1);
-	printf("BFS branchless SSE: %lf\n", toc() * 1.0e+9);
+	printf("BFS branchless SSE:                        %lf\n", toc() * 1.0e+9);
 #endif
 
 #ifdef __MIC__
 	INIT_LEVEL_ARRAY(level2)
 	tic ();
-	BFSSeqBranchlessMIC(off, ind, Queue, level2, 1);
-	printf("BFS branchless MIC: %lf\n", toc() * 1.0e+9);
+	BFSSeqBranchlessMICPartVec(off, ind, Queue, level2, 1);
+	printf("BFS branchless MIC (Partially Vectorized): %lf\n", toc() * 1.0e+9);
+
+	INIT_LEVEL_ARRAY(level2)
+	tic ();
+	BFSSeqBranchlessMICFullVec(off, ind, Queue, level2, 1);
+	printf("BFS branchless MIC (Fully Vectorized):     %lf\n", toc() * 1.0e+9);
 #endif
 
 	free(Queue);

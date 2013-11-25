@@ -254,7 +254,7 @@ void BFSSeqBranchlessSSE(int64_t* off, int64_t* ind, int64_t* Queue, int64_t* le
 #endif
 
 #ifdef __MIC__
-	void BFSSeqBranchlessMIC(uint32_t* off, uint32_t* ind, uint32_t* Queue, uint32_t* level, uint32_t currRoot) {
+	void BFSSeqBranchlessMICPartVec(uint32_t* off, uint32_t* ind, uint32_t* Queue, uint32_t* level, uint32_t currRoot) {
 		level[currRoot] = 0;
 
 		Queue[0] = currRoot;
@@ -296,6 +296,53 @@ void BFSSeqBranchlessSSE(int64_t* off, int64_t* ind, int64_t* Queue, int64_t* le
 						Queue[qEnd++] = k;
 					}
 				}
+			}
+		}
+		printf("\nQE %d\n",qEnd);
+	}
+
+	void BFSSeqBranchlessMICFullVec(uint32_t* off, uint32_t* ind, uint32_t* Queue, uint32_t* level, uint32_t currRoot) {
+		level[currRoot] = 0;
+
+		Queue[0] = currRoot;
+		uint32_t qStart = 0, qEnd = 1;
+
+		// While queue is not empty
+		while (qStart < qEnd) {
+			uint32_t currElement = Queue[qStart];
+			qStart++;
+
+			const uint32_t startEdge = off[currElement];
+
+			const uint32_t stopEdge = off[currElement + 1];
+			const uint32_t nextLevel = level[currElement] + 1;
+			const __m512i mmNextLevel = _mm512_set1_epi32(nextLevel);
+			
+			uint32_t j = startEdge;
+			for (; j + 16 < stopEdge; j += 16) {
+				__m512i k = _mm512_undefined_epi32();
+				k = _mm512_loadunpacklo_epi32(k, &ind[j]);
+				k = _mm512_loadunpackhi_epi32(k, &ind[j + 16]);
+				__m512i levelK = _mm512_i32gather_epi32(k, level, sizeof(uint32_t));
+				const __mmask16 predicate = _mm512_cmp_epi32_mask(levelK, mmNextLevel, _MM_CMPINT_GT);
+				_mm512_mask_packstorelo_epi32(&Queue[qEnd], predicate, k);
+				_mm512_mask_packstorehi_epi32(&Queue[qEnd + 16], predicate, k);
+				qEnd += _mm_countbits_32(_mm512_mask2int(predicate));
+				levelK = _mm512_min_epi32(levelK, mmNextLevel);
+				_mm512_i32scatter_epi32(level, k, levelK, sizeof(uint32_t));
+			}
+			if (j != stopEdge) {
+				const __mmask16 elements_mask = _mm512_int2mask((1 << (stopEdge - j)) - 1);
+				__m512i k = _mm512_undefined_epi32();
+				k = _mm512_mask_loadunpacklo_epi32(k, elements_mask, &ind[j]);
+				k = _mm512_mask_loadunpackhi_epi32(k, elements_mask, &ind[j + 16]);
+				__m512i levelK = _mm512_mask_i32gather_epi32(_mm512_undefined_epi32(), elements_mask, k, level, sizeof(uint32_t));
+				const __mmask16 predicate = _mm512_mask_cmp_epi32_mask(elements_mask, levelK, mmNextLevel, _MM_CMPINT_GT);
+				_mm512_mask_packstorelo_epi32(&Queue[qEnd], predicate, k);
+				_mm512_mask_packstorehi_epi32(&Queue[qEnd + 16], predicate, k);
+				qEnd += _mm_countbits_32(_mm512_mask2int(predicate));
+				levelK = _mm512_mask_min_epi32(_mm512_undefined_epi32(), elements_mask, levelK, mmNextLevel);
+				_mm512_mask_i32scatter_epi32(level, elements_mask, k, levelK, sizeof(uint32_t));
 			}
 		}
 		printf("\nQE %d\n",qEnd);
