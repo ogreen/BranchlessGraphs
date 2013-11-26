@@ -103,6 +103,13 @@ void testBFS(uint32_t* off, uint32_t* ind) {
 	printf("BFS branchless SSE:                        %lf\n", toc() * 1.0e+9);
 #endif
 
+#ifdef __AVX2__
+	INIT_LEVEL_ARRAY(level2)
+	tic ();
+	BFSSeqBranchlessAVX2(off, ind, Queue, level2, 1);
+	printf("BFS branchless AVX2:                       %lf\n", toc() * 1.0e+9);
+#endif
+
 #ifdef __MIC__
 	INIT_LEVEL_ARRAY(level2)
 	tic ();
