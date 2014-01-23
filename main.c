@@ -5,9 +5,6 @@
 #include <malloc.h>
 #include <inttypes.h>
 
-#define ACTI(k) (action[2*(k)])
-#define ACTJ(k) (action[2*(k)+1])
-
 static uint32_t nv, ne, naction;
 static uint32_t * restrict off;
 static uint32_t * restrict from;
@@ -21,14 +18,10 @@ static uint32_t * restrict actionmem;
 
 static double * update_time_trace;
 
-
-#define LDB(...) //printf(__VA_ARGS__);
-
-
-#define LINE_SIZE 100000
-
-void testVS(uint32_t nv, uint32_t* off, uint32_t* ind);
+void testSV(size_t nv, uint32_t* off, uint32_t* ind);
 void testBFS(uint32_t* off, uint32_t* ind);
+
+#define LINE_SIZE 10000
 
 int main (const int argc, char *argv[]) {
 	if (argc != 2) {
@@ -63,8 +56,12 @@ int main (const int argc, char *argv[]) {
 
 
 	fclose(fp);
-
+#if defined(BENCHMARK_BFS)
         testBFS(off,ind);
+#endif
+#if defined(BENCHMARK_SV)
+        testSV(nv, off,ind);
+#endif
  	free(off);
 	free(ind);
 }
@@ -74,55 +71,97 @@ int main (const int argc, char *argv[]) {
 		arr[i] = INT32_MAX; \
 	}
 
-void testBFS(uint32_t* off, uint32_t* ind) {
-	uint32_t* Queue = (uint32_t*)memalign(64, nv * sizeof(uint32_t));
-	uint32_t* level = (uint32_t*)memalign(64, nv * sizeof(uint32_t));
-	uint32_t* level2 = (uint32_t*)memalign(64, nv * sizeof(uint32_t));
-	
-	INIT_LEVEL_ARRAY(level)
-	tic();
-	BFSSeq(off, ind, Queue, level, 1);
-	printf("BFS regular:                               %lf\n", toc() * 1.0e+9);
+#if defined(BENCHMARK_BFS)
+	void testBFS(uint32_t* off, uint32_t* ind) {
+		uint32_t* Queue = (uint32_t*)memalign(64, nv * sizeof(uint32_t));
+		uint32_t* level = (uint32_t*)memalign(64, nv * sizeof(uint32_t));
+		uint32_t* level2 = (uint32_t*)memalign(64, nv * sizeof(uint32_t));
+		
+		INIT_LEVEL_ARRAY(level)
+		tic();
+		BFSSeq(off, ind, Queue, level, 1);
+		printf("BFS regular:                               %lf\n", toc() * 1.0e+9);
 
-	INIT_LEVEL_ARRAY(level2)
-	tic ();
-	BFSSeqBranchless(off, ind, Queue, level2, 1);
-	printf("BFS branchless:                            %lf\n", toc() * 1.0e+9);
+		INIT_LEVEL_ARRAY(level2)
+		tic ();
+		BFSSeqBranchless(off, ind, Queue, level2, 1);
+		printf("BFS branchless:                            %lf\n", toc() * 1.0e+9);
 
-#ifndef __MIC__
-	INIT_LEVEL_ARRAY(level2)
-	tic ();
-	BFSSeqBranchlessAsm(off, ind, Queue, level2, 1);
-	printf("BFS branchless Asm:                        %lf\n", toc() * 1.0e+9);
+	#ifndef __MIC__
+		INIT_LEVEL_ARRAY(level2)
+		tic ();
+		BFSSeqBranchlessAsm(off, ind, Queue, level2, 1);
+		printf("BFS branchless Asm:                        %lf\n", toc() * 1.0e+9);
+	#endif
+
+	#ifdef __SSE__
+		INIT_LEVEL_ARRAY(level2)
+		tic ();
+		BFSSeqBranchlessSSE(off, ind, Queue, level2, 1);
+		printf("BFS branchless SSE:                        %lf\n", toc() * 1.0e+9);
+	#endif
+
+	#ifdef __AVX2__
+		INIT_LEVEL_ARRAY(level2)
+		tic ();
+		BFSSeqBranchlessAVX2(off, ind, Queue, level2, 1);
+		printf("BFS branchless AVX2:                       %lf\n", toc() * 1.0e+9);
+	#endif
+
+	#ifdef __MIC__
+		INIT_LEVEL_ARRAY(level2)
+		tic ();
+		BFSSeqBranchlessMICPartVec(off, ind, Queue, level2, 1);
+		printf("BFS branchless MIC (Partially Vectorized): %lf\n", toc() * 1.0e+9);
+
+		INIT_LEVEL_ARRAY(level2)
+		tic ();
+		BFSSeqBranchlessMICFullVec(off, ind, Queue, level2, 1);
+		printf("BFS branchless MIC (Fully Vectorized):     %lf\n", toc() * 1.0e+9);
+	#endif
+
+		free(Queue);
+		free(level);
+		free(level2);
+	}
 #endif
 
-#ifdef __SSE__
-	INIT_LEVEL_ARRAY(level2)
-	tic ();
-	BFSSeqBranchlessSSE(off, ind, Queue, level2, 1);
-	printf("BFS branchless SSE:                        %lf\n", toc() * 1.0e+9);
+#if defined(BENCHMARK_SV)
+	void testSV(size_t nv, uint32_t* off, uint32_t* ind) {
+		uint32_t* components_map = (uint32_t*)memalign(64, nv * sizeof(uint32_t));
+		
+		{
+			printf("BFS regular:\n");
+			for (size_t i = 0; i < nv; i++) {
+				components_map[i] = i;
+			}
+			bool changed = true;
+			size_t iteration = 0;
+			while (changed) {
+				tic();
+				changed = SVSeq(nv, components_map, off, ind);
+				const double secs = toc() * 1.0e+9;
+				if (iteration++ < 3)
+					printf("Iteration %3zu: %lf\n", iteration, secs);
+			}
+		}
+		
+		{
+			printf("BFS branchless:\n");
+			for (size_t i = 0; i < nv; i++) {
+				components_map[i] = i;
+			}
+			bool changed = true;
+			size_t iteration = 0;
+			while (changed) {
+				tic();
+				changed = SVBranchless(nv, components_map, off, ind);
+				const double secs = toc() * 1.0e+9;
+				if (iteration++ < 3)
+					printf("Iteration %3zu: %lf\n", iteration, secs);
+			}
+		}
+		
+		free(components_map);
+	}
 #endif
-
-#ifdef __AVX2__
-	INIT_LEVEL_ARRAY(level2)
-	tic ();
-	BFSSeqBranchlessAVX2(off, ind, Queue, level2, 1);
-	printf("BFS branchless AVX2:                       %lf\n", toc() * 1.0e+9);
-#endif
-
-#ifdef __MIC__
-	INIT_LEVEL_ARRAY(level2)
-	tic ();
-	BFSSeqBranchlessMICPartVec(off, ind, Queue, level2, 1);
-	printf("BFS branchless MIC (Partially Vectorized): %lf\n", toc() * 1.0e+9);
-
-	INIT_LEVEL_ARRAY(level2)
-	tic ();
-	BFSSeqBranchlessMICFullVec(off, ind, Queue, level2, 1);
-	printf("BFS branchless MIC (Fully Vectorized):     %lf\n", toc() * 1.0e+9);
-#endif
-
-	free(Queue);
-	free(level);
-	free(level2);
-}
