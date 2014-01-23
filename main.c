@@ -129,7 +129,7 @@ int main (const int argc, char *argv[]) {
 #if defined(BENCHMARK_SV)
 	void testSV(size_t nv, uint32_t* off, uint32_t* ind) {
 		uint32_t* components_map = (uint32_t*)memalign(64, nv * sizeof(uint32_t));
-		
+
 		{
 			printf("BFS regular:\n");
 			for (size_t i = 0; i < nv; i++) {
@@ -141,11 +141,11 @@ int main (const int argc, char *argv[]) {
 				tic();
 				changed = SVSeq(nv, components_map, off, ind);
 				const double secs = toc() * 1.0e+9;
-				if (iteration++ < 3)
-					printf("Iteration %3zu: %lf\n", iteration, secs);
+				if ((iteration++ < 3) || (!changed))
+					printf("\tIteration %3zu: %lf\n", iteration, secs);
 			}
 		}
-		
+
 		{
 			printf("BFS branchless:\n");
 			for (size_t i = 0; i < nv; i++) {
@@ -157,11 +157,65 @@ int main (const int argc, char *argv[]) {
 				tic();
 				changed = SVBranchless(nv, components_map, off, ind);
 				const double secs = toc() * 1.0e+9;
-				if (iteration++ < 3)
-					printf("Iteration %3zu: %lf\n", iteration, secs);
+				if ((iteration++ < 3) || (!changed))
+					printf("\tIteration %3zu: %lf\n", iteration, secs);
 			}
 		}
-		
+
+	#ifndef __MIC__
+		{
+			printf("BFS branchless Asm:\n");
+			for (size_t i = 0; i < nv; i++) {
+				components_map[i] = i;
+			}
+			bool changed = true;
+			size_t iteration = 0;
+			while (changed) {
+				tic();
+				changed = SVBranchlessAsm(nv, components_map, off, ind);
+				const double secs = toc() * 1.0e+9;
+				if ((iteration++ < 3) || (!changed))
+					printf("\tIteration %3zu: %lf\n", iteration, secs);
+			}
+		}
+	#endif
+
+	#ifdef __SSE4_1__
+		{
+			printf("BFS branchless SSE4.1:\n");
+			for (size_t i = 0; i < nv; i++) {
+				components_map[i] = i;
+			}
+			bool changed = true;
+			size_t iteration = 0;
+			while (changed) {
+				tic();
+				changed = SVBranchlessSSE4_1(nv, components_map, off, ind);
+				const double secs = toc() * 1.0e+9;
+				if ((iteration++ < 3) || (!changed))
+					printf("\tIteration %3zu: %lf\n", iteration, secs);
+			}
+		}
+	#endif
+
+	#ifdef __MIC__
+		{
+			printf("BFS branchless MIC:\n");
+			for (size_t i = 0; i < nv; i++) {
+				components_map[i] = i;
+			}
+			bool changed = true;
+			size_t iteration = 0;
+			while (changed) {
+				tic();
+				changed = SVBranchlessMIC(nv, components_map, off, ind);
+				const double secs = toc() * 1.0e+9;
+				if ((iteration++ < 3) || (!changed))
+					printf("\tIteration %3zu: %lf\n", iteration, secs);
+			}
+		}
+	#endif
+
 		free(components_map);
 	}
 #endif

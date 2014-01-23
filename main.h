@@ -13,3 +13,6 @@ void BFSSeqBranchlessMICFullVec(uint32_t* off, uint32_t* ind, uint32_t* Queue, u
 
 bool SVSeq(size_t nv, uint32_t* component_map, uint32_t* off, uint32_t* ind);
 bool SVBranchless(size_t nv, uint32_t* component_map, uint32_t* off, uint32_t* ind);
+bool SVBranchlessAsm(size_t nv, uint32_t* component_map, uint32_t* off, uint32_t* ind);
+bool SVBranchlessSSE4_1(size_t nv, uint32_t* component_map, uint32_t* off, uint32_t* ind);
+bool SVBranchlessMIC(size_t nv, uint32_t* component_map, uint32_t* off, uint32_t* ind);
