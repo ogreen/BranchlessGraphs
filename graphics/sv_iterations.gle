@@ -1,0 +1,60 @@
+size 12 6
+
+amove 0 1 
+
+begin scale 1.1 0.9
+
+begin graph 
+
+!data someresults.csv
+data arg$1
+
+!yaxis min 10^-10 max 6*10^-9
+!yaxis log min 0.01 max 1 grid   
+!xaxis min 0 max 0.0006 grid
+
+xlabels hei 0.3
+ylabels hei 0.3 dist 0.1
+yticks lstyle 1
+xaxis dticks 10
+!yaxis dnticks 6
+!xaxis d0
+!xnames from d0
+
+!d7 line lwidth 0.25 fill green
+key compact pos tl
+
+d1 line marker wdiamond msize 0.2 mdata 1 color steelblue lwidth 0.05
+d2 line marker wcircle msize 0.2 mdata 1 color darkorange lwidth 0.05 
+d3 line marker wtriangle msize 0.2 mdata 1 color silver lwidth 0.05 
+d4 line marker wsquare msize 0.2 mdata 1 color gold lwidth 0.05 
+!d5 line marker minus msize 0.2 mdata 1 color blue lwidth 0.05
+
+ytitle "Seconds" hei 0.4
+xtitle "Iterations" hei 0.4
+
+end graph
+end scale
+
+begin key
+
+  position bc coldist 0.5 offset 0 -1 nobox  boxcolor clear hei 0.3
+
+!d1 key "Baseline"
+!d2 key "Branchless (C)"
+!d3 key "Branchless (Assembly)"
+!d4 key "SIMD (SSE4)" 
+!d5 key "SIMD (AVX)"
+
+marker wdiamond color steelblue text "Baseline"
+marker wcircle color darkorange text "Branchless (C)" 
+separator
+marker wtriangle color silver text "Branchless (Assembly)" 
+marker wsquare color gold text "SIMD (SSE4)" 
+separator
+!marker minus color blue text "SIMD (AVX)"
+
+
+
+end key
+
