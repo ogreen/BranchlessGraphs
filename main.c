@@ -94,10 +94,10 @@ int main (const int argc, char *argv[]) {
 		printf("BFS branchless Asm:                        %lf\n", toc() * 1.0e+9);
 	#endif
 
-	#ifdef __SSE__
+	#ifdef __SSE4_1__
 		INIT_LEVEL_ARRAY(level2)
 		tic ();
-		BFSSeqBranchlessSSE(off, ind, Queue, level2, 1);
+		BFSSeqBranchlessSSE4_1(off, ind, Queue, level2, 1);
 		printf("BFS branchless SSE:                        %lf\n", toc() * 1.0e+9);
 	#endif
 

@@ -162,8 +162,8 @@ void BFSSeqBranchlessSSE(int64_t* off, int64_t* ind, int64_t* Queue, int64_t* le
 }
 */
 
-#ifdef __SSE__
-	void BFSSeqBranchlessSSE(uint32_t* off, uint32_t* ind, uint32_t* Queue, uint32_t* level, uint32_t currRoot) {
+#ifdef __SSE4_1__
+	void BFSSeqBranchlessSSE4_1(uint32_t* off, uint32_t* ind, uint32_t* Queue, uint32_t* level, uint32_t currRoot) {
 		level[currRoot] = 0;
 
 		Queue[0] = currRoot;
