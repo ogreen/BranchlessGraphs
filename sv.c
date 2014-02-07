@@ -29,11 +29,11 @@ bool SVSeq(size_t nv, uint32_t* component_map, uint32_t* off, uint32_t* ind) {
 	if (!changed)
 		return false;
 
-	for (size_t i = 0; i < nv; i++) {
-		while (component_map[i] != component_map[component_map[i]]) {
-			component_map[i] = component_map[component_map[i]];
-		}
-	}
+	//~ for (size_t i = 0; i < nv; i++) {
+		//~ while (component_map[i] != component_map[component_map[i]]) {
+			//~ component_map[i] = component_map[component_map[i]];
+		//~ }
+	//~ }
 
 	return true;
 }
@@ -60,11 +60,11 @@ bool SVBranchless(size_t nv, uint32_t* component_map, uint32_t* off, uint32_t* i
 	if (!changed)
 		return false;
 
-	for (size_t i = 0; i < nv; i++) {
-		while (component_map[i] != component_map[component_map[i]]) {
-			component_map[i] = component_map[component_map[i]];
-		}
-	}
+	//~ for (size_t i = 0; i < nv; i++) {
+		//~ while (component_map[i] != component_map[component_map[i]]) {
+			//~ component_map[i] = component_map[component_map[i]];
+		//~ }
+	//~ }
 
 	return true;
 }
@@ -96,11 +96,11 @@ bool SVBranchless(size_t nv, uint32_t* component_map, uint32_t* off, uint32_t* i
 		if (!changed)
 			return false;
 
-		for (size_t i = 0; i < nv; i++) {
-			while (component_map[i] != component_map[component_map[i]]) {
-				component_map[i] = component_map[component_map[i]];
-			}
-		}
+		//~ for (size_t i = 0; i < nv; i++) {
+			//~ while (component_map[i] != component_map[component_map[i]]) {
+				//~ component_map[i] = component_map[component_map[i]];
+			//~ }
+		//~ }
 
 		return true;
 	}
@@ -144,11 +144,11 @@ bool SVBranchless(size_t nv, uint32_t* component_map, uint32_t* off, uint32_t* i
 		if (!changed)
 			return false;
 
-		for (size_t i = 0; i < nv; i++) {
-			while (component_map[i] != component_map[component_map[i]]) {
-				component_map[i] = component_map[component_map[i]];
-			}
-		}
+		//~ for (size_t i = 0; i < nv; i++) {
+			//~ while (component_map[i] != component_map[component_map[i]]) {
+				//~ component_map[i] = component_map[component_map[i]];
+			//~ }
+		//~ }
 
 		return true;
 	}
@@ -194,11 +194,11 @@ bool SVBranchless(size_t nv, uint32_t* component_map, uint32_t* off, uint32_t* i
 		if (_mm512_kortestz(changed, changed))
 			return false;
 
-		for (size_t i = 0; i < nv; i++) {
-			while (component_map[i] != component_map[component_map[i]]) {
-				component_map[i] = component_map[component_map[i]];
-			}
-		}
+		//~ for (size_t i = 0; i < nv; i++) {
+			//~ while (component_map[i] != component_map[component_map[i]]) {
+				//~ component_map[i] = component_map[component_map[i]];
+			//~ }
+		//~ }
 
 		return true;
 	}

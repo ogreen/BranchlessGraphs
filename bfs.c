@@ -33,7 +33,7 @@ void BFSSeq(uint32_t* off, uint32_t* ind, uint32_t* Queue, uint32_t* level, uint
 
 	}
 
-	printf("\nQE %d\n",qEnd);
+	//~ printf("\nQE %d\n",qEnd);
 }
 
 void BFSSeqBranchless(uint32_t* off, uint32_t* ind, uint32_t* Queue, uint32_t* level, uint32_t currRoot) {
@@ -63,7 +63,7 @@ void BFSSeqBranchless(uint32_t* off, uint32_t* ind, uint32_t* Queue, uint32_t* l
 			level[k] += isINF * (temp);
 		}
 	}
-	printf("\nQE %d\n",qEnd);
+	//~ printf("\nQE %d\n",qEnd);
 }
 
 #ifndef __MIC__
@@ -95,7 +95,7 @@ void BFSSeqBranchless(uint32_t* off, uint32_t* ind, uint32_t* Queue, uint32_t* l
 				level[k] = levelK;
 			}
 		}
-		printf("\nQE %d\n",qEnd);
+		//~ printf("\nQE %d\n",qEnd);
 	}
 #endif
 
@@ -249,7 +249,7 @@ void BFSSeqBranchlessSSE(int64_t* off, int64_t* ind, int64_t* Queue, int64_t* le
 			}
 
 		}
-		printf("\nQE %d\n",qEnd);
+		//~ printf("\nQE %d\n",qEnd);
 	}
 #endif
 
@@ -577,7 +577,7 @@ void BFSSeqBranchlessSSE(int64_t* off, int64_t* ind, int64_t* Queue, int64_t* le
 			}
 
 		}
-		printf("\nQE %d\n",qEnd);
+		//~ printf("\nQE %d\n",qEnd);
 	}
 #endif
 
@@ -626,7 +626,7 @@ void BFSSeqBranchlessSSE(int64_t* off, int64_t* ind, int64_t* Queue, int64_t* le
 				}
 			}
 		}
-		printf("\nQE %d\n",qEnd);
+		//~ printf("\nQE %d\n",qEnd);
 	}
 
 	void BFSSeqBranchlessMICFullVec(uint32_t* off, uint32_t* ind, uint32_t* Queue, uint32_t* level, uint32_t currRoot) {
@@ -673,6 +673,6 @@ void BFSSeqBranchlessSSE(int64_t* off, int64_t* ind, int64_t* Queue, int64_t* le
 				_mm512_mask_i32scatter_epi32(level, elements_mask, k, levelK, sizeof(uint32_t));
 			}
 		}
-		printf("\nQE %d\n",qEnd);
+		//~ printf("\nQE %d\n",qEnd);
 	}
 #endif
