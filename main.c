@@ -24,8 +24,8 @@ static uint32_t * restrict actionmem;
 
 static double * update_time_trace;
 
-void testSV(size_t nv, uint32_t* off, uint32_t* ind);
-void testBFS(uint32_t* off, uint32_t* ind);
+void testSV(const char* implementation_name, SVFunction sv_function, size_t nv, uint32_t* off, uint32_t* ind);
+void testBFS(const char* implementation_name, BFSFunction bfs_function, uint32_t* off, uint32_t* ind);
 
 #define LINE_SIZE 10000
 
@@ -67,22 +67,40 @@ int main (const int argc, char *argv[]) {
 
 	fclose(fp);
 #if defined(BENCHMARK_BFS)
-        testBFS(off,ind);
+        testBFS("BFS brachy", BFSSeq, off, ind);
+        testBFS("BFS branchless (C)", BFSSeqBranchless, off, ind);
+	#ifndef __MIC__
+        testBFS("BFS branchless (asm)", BFSSeqBranchlessAsm, off, ind);
+	#endif
+	#ifdef __SSE4_1__
+        testBFS("BFS bracnhless (SSE 4.1)", BFSSeqBranchlessSSE4_1, off, ind);
+	#endif
+	#ifdef __AVX2__
+        testBFS("BFS bracnhless (AVX 2)", BFSSeqBranchlessAVX2, off, ind);
+	#endif
+	#ifdef __MIC__
+        testBFS("BFS bracnhless (MIC)", BFSSeqBranchlessMIC, off, ind);
+	#endif
 #endif
 #if defined(BENCHMARK_SV)
-        testSV(nv, off,ind);
+	testSV("SV regular", SVSeq, nv, off, ind);
+	testSV("SV branchless (C)", SVBranchless, nv, off, ind);
+	#ifndef __MIC__
+	testSV("SV branchless (asm)", SVBranchlessAsm, nv, off, ind);
+	#endif
+	#ifdef __SSE4_1__
+	testSV("SV branchless (SSE4.1)", SVBranchlessSSE4_1, nv, off, ind);
+	#endif
+	#ifdef __MIC__
+	testSV("SV branchless (MIC)", SVBranchlessMIC, nv, off, ind);
+	#endif
 #endif
  	free(off);
 	free(ind);
 }
 
-#define INIT_LEVEL_ARRAY(arr) \
-	for (size_t i = 0; i < nv; i++) { \
-		arr[i] = INT32_MAX; \
-	}
-
 #if defined(BENCHMARK_BFS)
-	void testBFS(uint32_t* off, uint32_t* ind) {
+	void testBFS(const char* implementation_name, BFSFunction bfs_function, uint32_t* off, uint32_t* ind) {
 		struct perf_event_attr perf_branches;
 		struct perf_event_attr perf_mispredictions;
 		struct perf_event_attr perf_instructions;
@@ -129,20 +147,25 @@ int main (const int argc, char *argv[]) {
 			exit(EXIT_FAILURE);
 		}
 
-		uint32_t* Queue = (uint32_t*)memalign(64, nv * sizeof(uint32_t));
+		uint32_t* queue = (uint32_t*)memalign(64, nv * sizeof(uint32_t));
 		uint32_t* level = (uint32_t*)memalign(64, nv * sizeof(uint32_t));
-		uint32_t* level2 = (uint32_t*)memalign(64, nv * sizeof(uint32_t));
-
+		
 		ioctl(fd_branches, PERF_EVENT_IOC_RESET, 0);
 		ioctl(fd_mispredictions, PERF_EVENT_IOC_RESET, 0);
 		ioctl(fd_instructions, PERF_EVENT_IOC_RESET, 0);
 		{
-			INIT_LEVEL_ARRAY(level)
+			/* Initialize level array */
+			for (size_t i = 0; i < nv; i++) {
+				level[i] = INT32_MAX;
+			}
 			tic();
 			ioctl(fd_branches, PERF_EVENT_IOC_ENABLE, 0);
 			ioctl(fd_mispredictions, PERF_EVENT_IOC_ENABLE, 0);
 			ioctl(fd_instructions, PERF_EVENT_IOC_ENABLE, 0);
-			BFSSeq(off, ind, Queue, level, 1);
+			
+			/* Call the bfs implementation */
+			bfs_function(off, ind, queue, level, 1);
+
 			ioctl(fd_branches, PERF_EVENT_IOC_DISABLE, 0);
 			ioctl(fd_mispredictions, PERF_EVENT_IOC_DISABLE, 0);
 			ioctl(fd_instructions, PERF_EVENT_IOC_DISABLE, 0);
@@ -152,109 +175,19 @@ int main (const int argc, char *argv[]) {
 			read(fd_mispredictions, &mispredictions, sizeof(long long));
 			read(fd_instructions, &instructions, sizeof(long long));
 			const double branch_misprections = (double)mispredictions / (double)branches;
-			printf("%20s\t%9.lf\t%5.3lf%%\t%lld\t%lld\t%lld\n", "BFS regular", nanoseconds, branch_misprections * 100.0, mispredictions, branches, instructions);
+			printf("%30s\t%9.lf\t%5.3lf%%\t%lld\t%lld\t%lld\n", implementation_name, nanoseconds, branch_misprections * 100.0, mispredictions, branches, instructions);
 		}
-
-		ioctl(fd_branches, PERF_EVENT_IOC_RESET, 0);
-		ioctl(fd_mispredictions, PERF_EVENT_IOC_RESET, 0);
-		ioctl(fd_instructions, PERF_EVENT_IOC_RESET, 0);
-		{
-			INIT_LEVEL_ARRAY(level2)
-			tic();
-			ioctl(fd_branches, PERF_EVENT_IOC_ENABLE, 0);
-			ioctl(fd_mispredictions, PERF_EVENT_IOC_ENABLE, 0);
-			ioctl(fd_instructions, PERF_EVENT_IOC_ENABLE, 0);
-			BFSSeqBranchless(off, ind, Queue, level2, 1);
-			ioctl(fd_branches, PERF_EVENT_IOC_DISABLE, 0);
-			ioctl(fd_mispredictions, PERF_EVENT_IOC_DISABLE, 0);
-			ioctl(fd_instructions, PERF_EVENT_IOC_DISABLE, 0);
-			const double nanoseconds = toc() * 1.0e+9;
-			long long branches, mispredictions, instructions;
-			read(fd_branches, &branches, sizeof(long long));
-			read(fd_mispredictions, &mispredictions, sizeof(long long));
-			read(fd_instructions, &instructions, sizeof(long long));
-			const double branch_misprections = (double)mispredictions / (double)branches;
-			printf("%20s\t%9.lf\t%5.3lf%%\t%lld\t%lld\t%lld\n", "BFS branchless", nanoseconds, branch_misprections * 100.0, mispredictions, branches, instructions);
-		}
-
-	#ifndef __MIC__
-		ioctl(fd_branches, PERF_EVENT_IOC_RESET, 0);
-		ioctl(fd_mispredictions, PERF_EVENT_IOC_RESET, 0);
-		ioctl(fd_instructions, PERF_EVENT_IOC_RESET, 0);
-		{
-			INIT_LEVEL_ARRAY(level2)
-			tic();
-			ioctl(fd_branches, PERF_EVENT_IOC_ENABLE, 0);
-			ioctl(fd_mispredictions, PERF_EVENT_IOC_ENABLE, 0);
-			ioctl(fd_instructions, PERF_EVENT_IOC_ENABLE, 0);
-			BFSSeqBranchlessAsm(off, ind, Queue, level2, 1);
-			ioctl(fd_branches, PERF_EVENT_IOC_DISABLE, 0);
-			ioctl(fd_mispredictions, PERF_EVENT_IOC_DISABLE, 0);
-			ioctl(fd_instructions, PERF_EVENT_IOC_DISABLE, 0);
-			const double nanoseconds = toc() * 1.0e+9;
-			long long branches, mispredictions, instructions;
-			read(fd_branches, &branches, sizeof(long long));
-			read(fd_mispredictions, &mispredictions, sizeof(long long));
-			read(fd_instructions, &instructions, sizeof(long long));
-			const double branch_misprections = (double)mispredictions / (double)branches;
-			printf("%20s\t%9.lf\t%5.3lf%%\t%lld\t%lld\t%lld\n", "BFS branchless Asm", nanoseconds, branch_misprections * 100.0, mispredictions, branches, instructions);
-		}
-	#endif
-
-	#ifdef __SSE4_1__
-		ioctl(fd_branches, PERF_EVENT_IOC_RESET, 0);
-		ioctl(fd_mispredictions, PERF_EVENT_IOC_RESET, 0);
-		ioctl(fd_instructions, PERF_EVENT_IOC_RESET, 0);
-		{
-			INIT_LEVEL_ARRAY(level2)
-			tic();
-			ioctl(fd_branches, PERF_EVENT_IOC_ENABLE, 0);
-			ioctl(fd_mispredictions, PERF_EVENT_IOC_ENABLE, 0);
-			ioctl(fd_instructions, PERF_EVENT_IOC_ENABLE, 0);
-			BFSSeqBranchlessSSE4_1(off, ind, Queue, level2, 1);
-			ioctl(fd_branches, PERF_EVENT_IOC_DISABLE, 0);
-			ioctl(fd_mispredictions, PERF_EVENT_IOC_DISABLE, 0);
-			ioctl(fd_instructions, PERF_EVENT_IOC_DISABLE, 0);
-			const double nanoseconds = toc() * 1.0e+9;
-			long long branches, mispredictions, instructions;
-			read(fd_branches, &branches, sizeof(long long));
-			read(fd_mispredictions, &mispredictions, sizeof(long long));
-			read(fd_instructions, &instructions, sizeof(long long));
-			const double branch_misprections = (double)mispredictions / (double)branches;
-			printf("%20s\t%9.lf\t%5.3lf%%\t%lld\t%lld\t%lld\n", "BFS branchless SSE", nanoseconds, branch_misprections * 100.0, mispredictions, branches, instructions);
-		}
-	#endif
-
-	#ifdef __AVX2__
-		INIT_LEVEL_ARRAY(level2)
-		tic ();
-		BFSSeqBranchlessAVX2(off, ind, Queue, level2, 1);
-		printf("BFS branchless AVX2:                       %lf\n", toc() * 1.0e+9);
-	#endif
-
-	#ifdef __MIC__
-		INIT_LEVEL_ARRAY(level2)
-		tic ();
-		BFSSeqBranchlessMICPartVec(off, ind, Queue, level2, 1);
-		printf("BFS branchless MIC (Partially Vectorized): %lf\n", toc() * 1.0e+9);
-
-		INIT_LEVEL_ARRAY(level2)
-		tic ();
-		BFSSeqBranchlessMICFullVec(off, ind, Queue, level2, 1);
-		printf("BFS branchless MIC (Fully Vectorized):     %lf\n", toc() * 1.0e+9);
-	#endif
 
 		close(fd_branches);
 		close(fd_mispredictions);
 		close(fd_instructions);
-		free(Queue);
+		free(queue);
 		free(level);
-		free(level2);
 	}
 #endif
 
 #if defined(BENCHMARK_SV)
-	void testSV(size_t nv, uint32_t* off, uint32_t* ind) {
+	void testSV(const char* implementation_name, SVFunction sv_function, size_t nv, uint32_t* off, uint32_t* ind) {
 		uint32_t* components_map = (uint32_t*)memalign(64, nv * sizeof(uint32_t));
 
 		struct perf_event_attr perf_branches;
@@ -304,7 +237,7 @@ int main (const int argc, char *argv[]) {
 		}
 
 		{
-			printf("SV regular:\n");
+			printf("%s:\n", implementation_name);
 			for (size_t i = 0; i < nv; i++) {
 				components_map[i] = i;
 			}
@@ -318,68 +251,9 @@ int main (const int argc, char *argv[]) {
 				ioctl(fd_branches, PERF_EVENT_IOC_ENABLE, 0);
 				ioctl(fd_mispredictions, PERF_EVENT_IOC_ENABLE, 0);
 				ioctl(fd_instructions, PERF_EVENT_IOC_ENABLE, 0);
-				changed = SVSeq(nv, components_map, off, ind);
-				ioctl(fd_branches, PERF_EVENT_IOC_DISABLE, 0);
-				ioctl(fd_mispredictions, PERF_EVENT_IOC_DISABLE, 0);
-				ioctl(fd_instructions, PERF_EVENT_IOC_DISABLE, 0);
-				const double secs = toc() * 1.0e+9;
-				long long branches, mispredictions, instructions;
-				read(fd_branches, &branches, sizeof(long long));
-				read(fd_mispredictions, &mispredictions, sizeof(long long));
-				read(fd_instructions, &instructions, sizeof(long long));
-				const double branch_misprections = (double)mispredictions / (double)branches;
-				if ((iteration++ < 7) || (!changed))
-					printf("\tIteration %3zu: %9.lf\t%5.3lf%%\t%11lld\t%11lld\t%11lld\n", iteration, secs, branch_misprections * 100.0, mispredictions, branches, instructions);
-			}
-		}
 
-		{
-			printf("SV branchless:\n");
-			for (size_t i = 0; i < nv; i++) {
-				components_map[i] = i;
-			}
-			bool changed = true;
-			size_t iteration = 0;
-			while (changed) {
-				ioctl(fd_branches, PERF_EVENT_IOC_RESET, 0);
-				ioctl(fd_mispredictions, PERF_EVENT_IOC_RESET, 0);
-				ioctl(fd_instructions, PERF_EVENT_IOC_RESET, 0);
-				tic();
-				ioctl(fd_branches, PERF_EVENT_IOC_ENABLE, 0);
-				ioctl(fd_mispredictions, PERF_EVENT_IOC_ENABLE, 0);
-				ioctl(fd_instructions, PERF_EVENT_IOC_ENABLE, 0);
-				changed = SVBranchless(nv, components_map, off, ind);
-				ioctl(fd_branches, PERF_EVENT_IOC_DISABLE, 0);
-				ioctl(fd_mispredictions, PERF_EVENT_IOC_DISABLE, 0);
-				ioctl(fd_instructions, PERF_EVENT_IOC_DISABLE, 0);
-				const double secs = toc() * 1.0e+9;
-				long long branches, mispredictions, instructions;
-				read(fd_branches, &branches, sizeof(long long));
-				read(fd_mispredictions, &mispredictions, sizeof(long long));
-				read(fd_instructions, &instructions, sizeof(long long));
-				const double branch_misprections = (double)mispredictions / (double)branches;
-				if ((iteration++ < 7) || (!changed))
-					printf("\tIteration %3zu: %9.lf\t%5.3lf%%\t%11lld\t%11lld\t%11lld\n", iteration, secs, branch_misprections * 100.0, mispredictions, branches, instructions);
-			}
-		}
+				changed = sv_function(nv, components_map, off, ind);
 
-	#ifndef __MIC__
-		{
-			printf("SV branchless Asm:\n");
-			for (size_t i = 0; i < nv; i++) {
-				components_map[i] = i;
-			}
-			bool changed = true;
-			size_t iteration = 0;
-			while (changed) {
-				ioctl(fd_branches, PERF_EVENT_IOC_RESET, 0);
-				ioctl(fd_mispredictions, PERF_EVENT_IOC_RESET, 0);
-				ioctl(fd_instructions, PERF_EVENT_IOC_RESET, 0);
-				tic();
-				ioctl(fd_branches, PERF_EVENT_IOC_ENABLE, 0);
-				ioctl(fd_mispredictions, PERF_EVENT_IOC_ENABLE, 0);
-				ioctl(fd_instructions, PERF_EVENT_IOC_ENABLE, 0);
-				changed = SVBranchlessAsm(nv, components_map, off, ind);
 				ioctl(fd_branches, PERF_EVENT_IOC_DISABLE, 0);
 				ioctl(fd_mispredictions, PERF_EVENT_IOC_DISABLE, 0);
 				ioctl(fd_instructions, PERF_EVENT_IOC_DISABLE, 0);
@@ -388,76 +262,11 @@ int main (const int argc, char *argv[]) {
 				read(fd_branches, &branches, sizeof(long long));
 				read(fd_mispredictions, &mispredictions, sizeof(long long));
 				read(fd_instructions, &instructions, sizeof(long long));
-				const double branch_misprections = (double)mispredictions / (double)branches;
+				const double branch_misprections = (double)(mispredictions) / (double)(branches - nv);
 				if ((iteration++ < 7) || (!changed))
 					printf("\tIteration %3zu: %9.lf\t%5.3lf%%\t%11lld\t%11lld\t%11lld\n", iteration, secs, branch_misprections * 100.0, mispredictions, branches, instructions);
 			}
 		}
-	#endif
-
-	#ifdef __SSE4_1__
-		{
-			printf("SV branchless SSE4.1:\n");
-			for (size_t i = 0; i < nv; i++) {
-				components_map[i] = i;
-			}
-			bool changed = true;
-			size_t iteration = 0;
-			while (changed) {
-				ioctl(fd_branches, PERF_EVENT_IOC_RESET, 0);
-				ioctl(fd_mispredictions, PERF_EVENT_IOC_RESET, 0);
-				ioctl(fd_instructions, PERF_EVENT_IOC_RESET, 0);
-				tic();
-				ioctl(fd_branches, PERF_EVENT_IOC_ENABLE, 0);
-				ioctl(fd_mispredictions, PERF_EVENT_IOC_ENABLE, 0);
-				ioctl(fd_instructions, PERF_EVENT_IOC_ENABLE, 0);
-				changed = SVBranchlessSSE4_1(nv, components_map, off, ind);
-				ioctl(fd_branches, PERF_EVENT_IOC_DISABLE, 0);
-				ioctl(fd_mispredictions, PERF_EVENT_IOC_DISABLE, 0);
-				ioctl(fd_instructions, PERF_EVENT_IOC_DISABLE, 0);
-				const double secs = toc() * 1.0e+9;
-				long long branches, mispredictions, instructions;
-				read(fd_branches, &branches, sizeof(long long));
-				read(fd_mispredictions, &mispredictions, sizeof(long long));
-				read(fd_instructions, &instructions, sizeof(long long));
-				const double branch_misprections = (double)mispredictions / (double)branches;
-				if ((iteration++ < 7) || (!changed))
-					printf("\tIteration %3zu: %9.lf\t%5.3lf%%\t%11lld\t%11lld\t%11lld\n", iteration, secs, branch_misprections * 100.0, mispredictions, branches, instructions);
-			}
-		}
-	#endif
-
-	#ifdef __MIC__
-		{
-			printf("SV branchless MIC:\n");
-			for (size_t i = 0; i < nv; i++) {
-				components_map[i] = i;
-			}
-			bool changed = true;
-			size_t iteration = 0;
-			while (changed) {
-				ioctl(fd_branches, PERF_EVENT_IOC_RESET, 0);
-				ioctl(fd_mispredictions, PERF_EVENT_IOC_RESET, 0);
-				ioctl(fd_instructions, PERF_EVENT_IOC_RESET, 0);
-				tic();
-				ioctl(fd_branches, PERF_EVENT_IOC_ENABLE, 0);
-				ioctl(fd_mispredictions, PERF_EVENT_IOC_ENABLE, 0);
-				ioctl(fd_instructions, PERF_EVENT_IOC_ENABLE, 0);
-				changed = SVBranchlessMIC(nv, components_map, off, ind);
-				ioctl(fd_branches, PERF_EVENT_IOC_DISABLE, 0);
-				ioctl(fd_mispredictions, PERF_EVENT_IOC_DISABLE, 0);
-				ioctl(fd_instructions, PERF_EVENT_IOC_DISABLE, 0);
-				const double secs = toc() * 1.0e+9;
-				long long branches, mispredictions, instructions;
-				read(fd_branches, &branches, sizeof(long long));
-				read(fd_mispredictions, &mispredictions, sizeof(long long));
-				read(fd_instructions, &instructions, sizeof(long long));
-				const double branch_misprections = (double)mispredictions / (double)branches;
-				if ((iteration++ < 7) || (!changed))
-					printf("\tIteration %3zu: %9.lf\t%5.3lf%%\t%11lld\t%11lld\t%11lld\n", iteration, secs, branch_misprections * 100.0, mispredictions, branches, instructions);
-			}
-		}
-	#endif
 
 		close(fd_branches);
 		close(fd_mispredictions);

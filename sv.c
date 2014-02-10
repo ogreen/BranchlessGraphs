@@ -7,24 +7,46 @@
 	#include <x86intrin.h>
 #endif
 
-bool SVSeq(size_t nv, uint32_t* component_map, uint32_t* off, uint32_t* ind) {
-	uint32_t changed = 0;
+#define SV_USE_INDEX
 
-	for (size_t v=0; v < nv; v++) {
-		const uint32_t *restrict vind = &ind[off[v]];
-		const size_t vdeg = off[v + 1] - off[v];
+bool SVSeq(size_t nv, uint32_t* component_map, uint32_t* off, uint32_t* ind) {
+	bool changed = 0;
+
+#if defined(SV_USE_INDEX)
+	uint32_t *restrict vindend = ind + off[0];
+	for (size_t v = 0; v < nv; v++) {
+		const uint32_t *restrict vind = vindend;
+		vindend = ind + off[v+1];
 		const uint32_t component_v = component_map[v];
 		uint32_t component_v_new = component_v;
-		for (size_t edge = 0; edge < vdeg; edge++){
-			const uint32_t u = vind[edge];
+		for (; vind != vindend; vind++){
+			const uint32_t u = *vind;
 			const uint32_t component_u = component_map[u];
 			if (component_u < component_v_new) {
-				component_v_new = component_u;
+				component_map[v] = component_u;
+				changed = true;
 			}
 		}
-		changed |= component_v ^ component_v_new;
-		component_map[v] = component_v_new;
 	}
+#else
+	uint32_t* vindend = ind + (*off++);
+	uint32_t* component_map_v = component_map;
+	for (size_t v = nv; v != 0; v--) {
+		const uint32_t *restrict vind = vindend;
+		vindend = ind + (*off++);
+		const uint32_t component_v = *component_map_v;
+		uint32_t component_v_new = component_v;
+		for (; vind != vindend; vind++){
+			const uint32_t u = *vind;
+			const uint32_t component_u = component_map[u];
+			if (component_u < component_v_new) {
+				*component_map_v = component_u;
+				changed = true;
+			}
+		}
+		component_map_v++;
+	}
+#endif
 
 	if (!changed)
 		return false;
@@ -41,13 +63,15 @@ bool SVSeq(size_t nv, uint32_t* component_map, uint32_t* off, uint32_t* ind) {
 bool SVBranchless(size_t nv, uint32_t* component_map, uint32_t* off, uint32_t* ind) {
 	uint32_t changed = 0;
 
-	for (size_t v=0; v < nv; v++) {
-		const uint32_t *restrict vind = &ind[off[v]];
-		const size_t vdeg = off[v + 1] - off[v];
+#if defined(SV_USE_INDEX)
+	uint32_t *restrict vindend = ind + off[0];
+	for (size_t v = 0; v < nv; v++) {
+		const uint32_t *restrict vind = vindend;
+		vindend = ind + off[v+1];
 		const uint32_t component_v = component_map[v];
 		uint32_t component_v_new = component_v;
-		for (size_t edge = 0; edge < vdeg; edge++){
-			const uint32_t u = vind[edge];
+		for (; vind != vindend; vind++){
+			const uint32_t u = *vind;
 			const uint32_t component_u = component_map[u];
 			const uint32_t component_diff = component_u - component_v_new;
 			const uint32_t flag = (uint32_t)((int32_t)component_u - (int32_t)component_v_new) >> 31;
@@ -56,6 +80,25 @@ bool SVBranchless(size_t nv, uint32_t* component_map, uint32_t* off, uint32_t* i
 		changed |= component_v ^ component_v_new;
 		component_map[v] = component_v_new;
 	}
+#else
+	uint32_t* vindend = ind + (*off++);
+	uint32_t* component_map_v = component_map;
+	for (size_t v = nv; v != 0; v--) {
+		const uint32_t *restrict vind = vindend;
+		vindend = ind + (*off++);
+		const uint32_t component_v = *component_map_v;
+		uint32_t component_v_new = component_v;
+		for (; vind != vindend; vind++){
+			const uint32_t u = *vind;
+			const uint32_t component_u = component_map[u];
+			const uint32_t component_diff = component_u - component_v_new;
+			const uint32_t flag = (uint32_t)((int32_t)component_u - (int32_t)component_v_new) >> 31;
+			component_v_new += (-flag) & (component_u - component_v_new);
+		}
+		changed |= component_v ^ component_v_new;
+		*component_map_v++ = component_v_new;
+	}
+#endif
 
 	if (!changed)
 		return false;
@@ -73,25 +116,50 @@ bool SVBranchless(size_t nv, uint32_t* component_map, uint32_t* off, uint32_t* i
 	bool SVBranchlessAsm(size_t nv, uint32_t* component_map, uint32_t* off, uint32_t* ind) {
 		uint32_t changed = 0;
 
-		for (size_t v=0; v < nv; v++) {
-			const uint32_t *restrict vind = &ind[off[v]];
-			const size_t vdeg = off[v + 1] - off[v];
-			const uint32_t component_v = component_map[v];
-			uint32_t component_v_new = component_v;
-			for (size_t edge = 0; edge < vdeg; edge++){
-				const uint32_t u = vind[edge];
-				const uint32_t component_u = component_map[u];
-				__asm__ __volatile__ (
-					"CMPL %[component_v_new], %[component_u];"
-					"CMOVBL %[component_u], %[component_v_new];"
-					: [component_v_new] "+r" (component_v_new)
-					: [component_u] "r" (component_u)
-					: "cc"
-				);
+		#if defined(SV_USE_INDEX)
+			uint32_t *restrict vindend = ind + off[0];
+			for (size_t v = 0; v < nv; v++) {
+				const uint32_t *restrict vind = vindend;
+				vindend = ind + off[v+1];
+				const uint32_t component_v = component_map[v];
+				uint32_t component_v_new = component_v;
+				for (; vind != vindend; vind++){
+					const uint32_t u = *vind;
+					const uint32_t component_u = component_map[u];
+					__asm__ __volatile__ (
+						"CMPL %[component_v_new], %[component_u];"
+						"CMOVBL %[component_u], %[component_v_new];"
+						: [component_v_new] "+r" (component_v_new)
+						: [component_u] "r" (component_u)
+						: "cc"
+					);
+				}
+				changed |= component_v ^ component_v_new;
+				component_map[v] = component_v_new;
 			}
-			changed |= component_v ^ component_v_new;
-			component_map[v] = component_v_new;
-		}
+		#else
+			uint32_t* vindend = ind + (*off++);
+			uint32_t* component_map_v = component_map;
+			for (size_t v = nv; v != 0; v--) {
+				const uint32_t *restrict vind = vindend;
+				vindend = ind + (*off++);
+				const uint32_t component_v = *component_map_v;
+				uint32_t component_v_new = component_v;
+				for (; vind != vindend; vind++){
+					const uint32_t u = *vind;
+					const uint32_t component_u = component_map[u];
+					__asm__ __volatile__ (
+						"CMPL %[component_v_new], %[component_u];"
+						"CMOVBL %[component_u], %[component_v_new];"
+						: [component_v_new] "+r" (component_v_new)
+						: [component_u] "r" (component_u)
+						: "cc"
+					);
+				}
+				changed |= component_v ^ component_v_new;
+				*component_map_v++ = component_v_new;
+			}
+		#endif
 
 		if (!changed)
 			return false;

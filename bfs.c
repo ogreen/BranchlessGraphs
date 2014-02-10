@@ -2,16 +2,16 @@
 #include <stdint.h>
 #include <inttypes.h>
 
-void BFSSeq(uint32_t* off, uint32_t* ind, uint32_t* Queue, uint32_t* level, uint32_t currRoot) {
+void BFSSeq(uint32_t* off, uint32_t* ind, uint32_t* queue, uint32_t* level, uint32_t currRoot) {
 	level[currRoot] = 0;
 
 
-	Queue[0] = currRoot;
+	queue[0] = currRoot;
 	uint32_t qStart = 0, qEnd = 1;
 
 	// While queue is not empty
 	while (qStart!=qEnd) {
-		uint64_t currElement = Queue[qStart];
+		uint64_t currElement = queue[qStart];
 		qStart++;
 
 		uint32_t startEdge = off[currElement];
@@ -26,7 +26,7 @@ void BFSSeq(uint32_t* off, uint32_t* ind, uint32_t* Queue, uint32_t* level, uint
 				// Checking if "k" has been found.
 				if (level[k] == INT32_MAX) {
 					level[k] = nextLevel; //level[currElement]+1;
-					Queue[qEnd++] = k;
+					queue[qEnd++] = k;
 				}
 			}
 		}
@@ -36,11 +36,11 @@ void BFSSeq(uint32_t* off, uint32_t* ind, uint32_t* Queue, uint32_t* level, uint
 	//~ printf("\nQE %d\n",qEnd);
 }
 
-void BFSSeqBranchless(uint32_t* off, uint32_t* ind, uint32_t* Queue, uint32_t* level, uint32_t currRoot) {
+void BFSSeqBranchless(uint32_t* off, uint32_t* ind, uint32_t* queue, uint32_t* level, uint32_t currRoot) {
 
 	level[currRoot] = 0;
 
-	Queue[0] = currRoot;
+	queue[0] = currRoot;
 	uint32_t qStart=0,qEnd=1;
 
 	uint32_t flag=1;
@@ -49,7 +49,7 @@ void BFSSeqBranchless(uint32_t* off, uint32_t* ind, uint32_t* Queue, uint32_t* l
 	uint32_t temp;
 	// While queue is not empty
 	while (qStart < qEnd) {
-		uint32_t currElement = Queue[qStart++];
+		uint32_t currElement = queue[qStart++];
 
 		uint32_t startEdge = off[currElement];
 		uint32_t stopEdge = off[currElement+1];
@@ -57,7 +57,7 @@ void BFSSeqBranchless(uint32_t* off, uint32_t* ind, uint32_t* Queue, uint32_t* l
 		for (uint32_t j = startEdge; j < stopEdge; j++) {
 			const int64_t k = ind[j];
 			temp = nextLevel - level[k];
-			Queue[qEnd] = k;
+			queue[qEnd] = k;
 			isINF = (uint32_t)(temp) >> 31;
 			qEnd += isINF;
 			level[k] += isINF * (temp);
@@ -67,15 +67,15 @@ void BFSSeqBranchless(uint32_t* off, uint32_t* ind, uint32_t* Queue, uint32_t* l
 }
 
 #ifndef __MIC__
-	void BFSSeqBranchlessAsm(uint32_t* off, uint32_t* ind, uint32_t* Queue, uint32_t* level, uint32_t currRoot) {
+	void BFSSeqBranchlessAsm(uint32_t* off, uint32_t* ind, uint32_t* queue, uint32_t* level, uint32_t currRoot) {
 		level[currRoot] = 0;
 
-		Queue[0] = currRoot;
+		queue[0] = currRoot;
 		uint32_t qStart = 0, qEnd = 1;
 
 		// While queue is not empty
 		while (qStart < qEnd) {
-			uint32_t currElement = Queue[qStart++];
+			uint32_t currElement = queue[qStart++];
 
 			const uint32_t startEdge = off[currElement];
 			const uint32_t stopEdge = off[currElement + 1];
@@ -83,7 +83,7 @@ void BFSSeqBranchless(uint32_t* off, uint32_t* ind, uint32_t* Queue, uint32_t* l
 			for (uint32_t j = startEdge; j < stopEdge; j++) {
 				const uint32_t k = ind[j];
 				uint32_t levelK = level[k];
-				Queue[qEnd] = k;
+				queue[qEnd] = k;
 				__asm__ __volatile__ (
 					"CMPL %[levelK], %[nextLevel];"
 					"CMOVNGEL %[nextLevel], %[levelK];"
@@ -102,10 +102,10 @@ void BFSSeqBranchless(uint32_t* off, uint32_t* ind, uint32_t* Queue, uint32_t* l
 #include <x86intrin.h>
 
 /*
-void BFSSeqBranchlessSSE(int64_t* off, int64_t* ind, int64_t* Queue, int64_t* level, int64_t currRoot) {
+void BFSSeqBranchlessSSE(int64_t* off, int64_t* ind, int64_t* queue, int64_t* level, int64_t currRoot) {
 	level[currRoot] = 0;
 
-	Queue[0] = currRoot;
+	queue[0] = currRoot;
 	int64_t qStart = 0, qEnd = 1;
 
 	const __m128i shuffleTable[4] = {
@@ -118,7 +118,7 @@ void BFSSeqBranchlessSSE(int64_t* off, int64_t* ind, int64_t* Queue, int64_t* le
 	// While queue is not empty
 	while (qStart < qEnd) {
 		uint64_t currElement;
-		currElement = Queue[qStart];
+		currElement = queue[qStart];
 		qStart++;
 
 		const int64_t startEdge = off[currElement];
@@ -136,7 +136,7 @@ void BFSSeqBranchlessSSE(int64_t* off, int64_t* ind, int64_t* Queue, int64_t* le
 			__m128i mmLevelK = _mm_insert_epi64(_mm_loadl_epi64((__m128i*)&level[k0]), level[k1], 1);
 			const __m128i predicate = _mm_cmpgt_epi64(mmLevelK, mmNextLevel);
 			const unsigned qMask = _mm_movemask_pd(_mm_castsi128_pd(predicate));
-			_mm_storeu_si128((__m128i*)&Queue[qEnd], _mm_shuffle_epi8(mmK, shuffleTable[qMask]));
+			_mm_storeu_si128((__m128i*)&queue[qEnd], _mm_shuffle_epi8(mmK, shuffleTable[qMask]));
 			qEnd += __builtin_popcount(qMask);
 			mmLevelK = _mm_blendv_epi8(mmLevelK, mmNextLevel, predicate);
 			level[k0] = _mm_cvtsi128_si64(mmLevelK);
@@ -145,7 +145,7 @@ void BFSSeqBranchlessSSE(int64_t* off, int64_t* ind, int64_t* Queue, int64_t* le
 		for (; j < stopEdge; j ++) {
 			const int64_t k = ind[j];
 			int64_t levelK = level[k];
-			Queue[qEnd] = k;
+			queue[qEnd] = k;
 			__asm__ __volatile__ (
 				"CMPQ %[levelK], %[nextLevel];"
 				"CMOVNGEQ %[nextLevel], %[levelK];"
@@ -163,10 +163,10 @@ void BFSSeqBranchlessSSE(int64_t* off, int64_t* ind, int64_t* Queue, int64_t* le
 */
 
 #ifdef __SSE4_1__
-	void BFSSeqBranchlessSSE4_1(uint32_t* off, uint32_t* ind, uint32_t* Queue, uint32_t* level, uint32_t currRoot) {
+	void BFSSeqBranchlessSSE4_1(uint32_t* off, uint32_t* ind, uint32_t* queue, uint32_t* level, uint32_t currRoot) {
 		level[currRoot] = 0;
 
-		Queue[0] = currRoot;
+		queue[0] = currRoot;
 		uint32_t qStart = 0, qEnd = 1;
 
 		const __m128i shuffleTable[16] = {
@@ -190,7 +190,7 @@ void BFSSeqBranchlessSSE(int64_t* off, int64_t* ind, int64_t* Queue, int64_t* le
 
 		// While queue is not empty
 		while (qStart < qEnd) {
-			uint32_t currElement = Queue[qStart];
+			uint32_t currElement = queue[qStart];
 			qStart++;
 
 			const uint32_t startEdge = off[currElement];
@@ -223,7 +223,7 @@ void BFSSeqBranchlessSSE(int64_t* off, int64_t* ind, int64_t* Queue, int64_t* le
 				//~ mask = _mm_add_epi8(mask, _mm_setr_epi8(0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3));
 				//const __m128i compressed = _mm_shuffle_epi8(mmK, mask);
 				const __m128i compressed = _mm_shuffle_epi8(mmK, shuffleTable[qMask]);
-				_mm_storeu_si128((__m128i*)&Queue[qEnd], compressed);
+				_mm_storeu_si128((__m128i*)&queue[qEnd], compressed);
 
 				qEnd += __builtin_popcount(qMask);
 				//~ qEnd += __builtin_popcount(qMask) >> 2;
@@ -236,7 +236,7 @@ void BFSSeqBranchlessSSE(int64_t* off, int64_t* ind, int64_t* Queue, int64_t* le
 			for (; j < stopEdge; j ++) {
 				const uint32_t k = ind[j];
 				uint32_t levelK = level[k];
-				Queue[qEnd] = k;
+				queue[qEnd] = k;
 				__asm__ __volatile__ (
 					"CMPL %[levelK], %[nextLevel];"
 					"CMOVNGEL %[nextLevel], %[levelK];"
@@ -254,10 +254,10 @@ void BFSSeqBranchlessSSE(int64_t* off, int64_t* ind, int64_t* Queue, int64_t* le
 #endif
 
 #ifdef __AVX2__
-	void BFSSeqBranchlessAVX2(uint32_t* off, uint32_t* ind, uint32_t* Queue, uint32_t* level, uint32_t currRoot) {
+	void BFSSeqBranchlessAVX2(uint32_t* off, uint32_t* ind, uint32_t* queue, uint32_t* level, uint32_t currRoot) {
 		level[currRoot] = 0;
 
-		Queue[0] = currRoot;
+		queue[0] = currRoot;
 		uint32_t qStart = 0, qEnd = 1;
 
 		const __m256i shuffleTable[256] = {
@@ -521,7 +521,7 @@ void BFSSeqBranchlessSSE(int64_t* off, int64_t* ind, int64_t* Queue, int64_t* le
 
 		// While queue is not empty
 		while (qStart < qEnd) {
-			uint32_t currElement = Queue[qStart];
+			uint32_t currElement = queue[qStart];
 			qStart++;
 
 			const uint32_t startEdge = off[currElement];
@@ -547,7 +547,7 @@ void BFSSeqBranchlessSSE(int64_t* off, int64_t* ind, int64_t* Queue, int64_t* le
 					_mm_insert_epi32(_mm_insert_epi32(_mm_insert_epi32(_mm_cvtsi32_si128(level[k4]), level[k5], 1), level[k6], 2), level[k7], 3), 1);
 				const __m256i predicate = _mm256_cmpgt_epi32(mmLevelK, mmNextLevel);
 				const unsigned qMask = _mm256_movemask_ps(_mm256_castsi256_ps(predicate));
-				_mm256_storeu_si256((__m256i*)&Queue[qEnd],  _mm256_permutevar8x32_epi32(mmK, shuffleTable[qMask]));
+				_mm256_storeu_si256((__m256i*)&queue[qEnd],  _mm256_permutevar8x32_epi32(mmK, shuffleTable[qMask]));
 				qEnd += __builtin_popcount(qMask);
 				mmLevelK = _mm256_min_epi32(mmLevelK, mmNextLevel);
 				const __m128i mmLevelKLo = _mm256_castsi256_si128(mmLevelK);
@@ -564,7 +564,7 @@ void BFSSeqBranchlessSSE(int64_t* off, int64_t* ind, int64_t* Queue, int64_t* le
 			for (; j < stopEdge; j ++) {
 				const uint32_t k = ind[j];
 				uint32_t levelK = level[k];
-				Queue[qEnd] = k;
+				queue[qEnd] = k;
 				__asm__ __volatile__ (
 					"CMPL %[levelK], %[nextLevel];"
 					"CMOVNGEL %[nextLevel], %[levelK];"
@@ -582,15 +582,15 @@ void BFSSeqBranchlessSSE(int64_t* off, int64_t* ind, int64_t* Queue, int64_t* le
 #endif
 
 #ifdef __MIC__
-	void BFSSeqBranchlessMICPartVec(uint32_t* off, uint32_t* ind, uint32_t* Queue, uint32_t* level, uint32_t currRoot) {
+	void BFSSeqBranchlessMIC(uint32_t* off, uint32_t* ind, uint32_t* queue, uint32_t* level, uint32_t currRoot) {
 		level[currRoot] = 0;
 
-		Queue[0] = currRoot;
+		queue[0] = currRoot;
 		uint32_t qStart = 0, qEnd = 1;
 
 		// While queue is not empty
 		while (qStart < qEnd) {
-			uint32_t currElement = Queue[qStart];
+			uint32_t currElement = queue[qStart];
 			qStart++;
 
 			const uint32_t startEdge = off[currElement];
@@ -606,55 +606,8 @@ void BFSSeqBranchlessSSE(int64_t* off, int64_t* ind, int64_t* Queue, int64_t* le
 				k = _mm512_loadunpackhi_epi32(k, &ind[j + 16]);
 				__m512i levelK = _mm512_i32gather_epi32(k, level, sizeof(uint32_t));
 				const __mmask16 predicate = _mm512_cmp_epi32_mask(levelK, mmNextLevel, _MM_CMPINT_GT);
-				_mm512_mask_packstorelo_epi32(&Queue[qEnd], predicate, k);
-				_mm512_mask_packstorehi_epi32(&Queue[qEnd + 16], predicate, k);
-				qEnd += _mm_countbits_32(_mm512_mask2int(predicate));
-				levelK = _mm512_min_epi32(levelK, mmNextLevel);
-				_mm512_i32scatter_epi32(level, k, levelK, sizeof(uint32_t));
-			}
-			for (; j < stopEdge; j ++) {
-				const uint32_t k = ind[j];
-				uint32_t levelK = level[k];
-
-				// If this is a neighbor and has not been found
-				if (levelK > level[currElement]) {
-					// Checking if "k" has been found.
-					if (levelK == INT32_MAX) {
-						level[k] = nextLevel; //level[currElement]+1;
-						Queue[qEnd++] = k;
-					}
-				}
-			}
-		}
-		//~ printf("\nQE %d\n",qEnd);
-	}
-
-	void BFSSeqBranchlessMICFullVec(uint32_t* off, uint32_t* ind, uint32_t* Queue, uint32_t* level, uint32_t currRoot) {
-		level[currRoot] = 0;
-
-		Queue[0] = currRoot;
-		uint32_t qStart = 0, qEnd = 1;
-
-		// While queue is not empty
-		while (qStart < qEnd) {
-			uint32_t currElement = Queue[qStart];
-			qStart++;
-
-			const uint32_t startEdge = off[currElement];
-
-			const uint32_t stopEdge = off[currElement + 1];
-			const uint32_t nextLevel = level[currElement] + 1;
-			const __m512i mmNextLevel = _mm512_set1_epi32(nextLevel);
-			
-			uint32_t j = startEdge;
-			for (; j + 16 < stopEdge; j += 16) {
-				__m512i k = _mm512_undefined_epi32();
-				k = _mm512_loadunpacklo_epi32(k, &ind[j]);
-				k = _mm512_loadunpackhi_epi32(k, &ind[j + 16]);
-				__m512i levelK = _mm512_i32gather_epi32(k, level, sizeof(uint32_t));
-				const __mmask16 predicate = _mm512_cmp_epi32_mask(levelK, mmNextLevel, _MM_CMPINT_GT);
-				_mm512_mask_packstorelo_epi32(&Queue[qEnd], predicate, k);
-				_mm512_mask_packstorehi_epi32(&Queue[qEnd + 16], predicate, k);
+				_mm512_mask_packstorelo_epi32(&queue[qEnd], predicate, k);
+				_mm512_mask_packstorehi_epi32(&queue[qEnd + 16], predicate, k);
 				qEnd += _mm_countbits_32(_mm512_mask2int(predicate));
 				levelK = _mm512_min_epi32(levelK, mmNextLevel);
 				_mm512_i32scatter_epi32(level, k, levelK, sizeof(uint32_t));
@@ -666,8 +619,8 @@ void BFSSeqBranchlessSSE(int64_t* off, int64_t* ind, int64_t* Queue, int64_t* le
 				k = _mm512_mask_loadunpackhi_epi32(k, elements_mask, &ind[j + 16]);
 				__m512i levelK = _mm512_mask_i32gather_epi32(_mm512_undefined_epi32(), elements_mask, k, level, sizeof(uint32_t));
 				const __mmask16 predicate = _mm512_mask_cmp_epi32_mask(elements_mask, levelK, mmNextLevel, _MM_CMPINT_GT);
-				_mm512_mask_packstorelo_epi32(&Queue[qEnd], predicate, k);
-				_mm512_mask_packstorehi_epi32(&Queue[qEnd + 16], predicate, k);
+				_mm512_mask_packstorelo_epi32(&queue[qEnd], predicate, k);
+				_mm512_mask_packstorehi_epi32(&queue[qEnd + 16], predicate, k);
 				qEnd += _mm_countbits_32(_mm512_mask2int(predicate));
 				levelK = _mm512_mask_min_epi32(_mm512_undefined_epi32(), elements_mask, levelK, mmNextLevel);
 				_mm512_mask_i32scatter_epi32(level, elements_mask, k, levelK, sizeof(uint32_t));
