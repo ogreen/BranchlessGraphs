@@ -69,7 +69,7 @@ int main (const int argc, char *argv[]) {
 #if defined(BENCHMARK_BFS)
         testBFS("BFS brachy", BFSSeq, off, ind);
         testBFS("BFS branchless (C)", BFSSeqBranchless, off, ind);
-	#ifndef __MIC__
+	#if defined(__x86_64__) && !defined(__MIC__)
         testBFS("BFS branchless (asm)", BFSSeqBranchlessAsm, off, ind);
 	#endif
 	#ifdef __SSE4_1__
@@ -85,7 +85,7 @@ int main (const int argc, char *argv[]) {
 #if defined(BENCHMARK_SV)
 	testSV("SV regular", SVSeq, nv, off, ind);
 	testSV("SV branchless (C)", SVBranchless, nv, off, ind);
-	#ifndef __MIC__
+	#if defined(__x86_64__) && !defined(__MIC__)
 	testSV("SV branchless (asm)", SVBranchlessAsm, nv, off, ind);
 	#endif
 	#ifdef __SSE4_1__

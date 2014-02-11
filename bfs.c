@@ -2,6 +2,10 @@
 #include <stdint.h>
 #include <inttypes.h>
 
+#ifdef __x86_64__
+	#include <x86intrin.h>
+#endif
+
 void BFSSeq(uint32_t* off, uint32_t* ind, uint32_t* queue, uint32_t* level, uint32_t currRoot) {
 	level[currRoot] = 0;
 
@@ -66,7 +70,7 @@ void BFSSeqBranchless(uint32_t* off, uint32_t* ind, uint32_t* queue, uint32_t* l
 	//~ printf("\nQE %d\n",qEnd);
 }
 
-#ifndef __MIC__
+#if defined(__x86_64__) && !defined(__MIC__)
 	void BFSSeqBranchlessAsm(uint32_t* off, uint32_t* ind, uint32_t* queue, uint32_t* level, uint32_t currRoot) {
 		level[currRoot] = 0;
 
@@ -98,8 +102,6 @@ void BFSSeqBranchless(uint32_t* off, uint32_t* ind, uint32_t* queue, uint32_t* l
 		//~ printf("\nQE %d\n",qEnd);
 	}
 #endif
-
-#include <x86intrin.h>
 
 /*
 void BFSSeqBranchlessSSE(int64_t* off, int64_t* ind, int64_t* queue, int64_t* level, int64_t currRoot) {

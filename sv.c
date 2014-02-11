@@ -112,7 +112,7 @@ bool SVBranchless(size_t nv, uint32_t* component_map, uint32_t* off, uint32_t* i
 	return true;
 }
 
-#ifndef __MIC__
+#if defined(__x86_64__) && !defined(__MIC__)
 	bool SVBranchlessAsm(size_t nv, uint32_t* component_map, uint32_t* off, uint32_t* ind) {
 		uint32_t changed = 0;
 
