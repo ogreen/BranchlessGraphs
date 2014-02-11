@@ -17,12 +17,12 @@ bool SVSeq(size_t nv, uint32_t* component_map, uint32_t* off, uint32_t* ind) {
 	for (size_t v = 0; v < nv; v++) {
 		const uint32_t *restrict vind = vindend;
 		vindend = ind + off[v+1];
-		const uint32_t component_v = component_map[v];
-		uint32_t component_v_new = component_v;
+		uint32_t component_v = component_map[v];
 		for (; vind != vindend; vind++){
 			const uint32_t u = *vind;
 			const uint32_t component_u = component_map[u];
-			if (component_u < component_v_new) {
+			if (component_u < component_v) {
+				component_v = component_u;
 				component_map[v] = component_u;
 				changed = true;
 			}
@@ -34,12 +34,12 @@ bool SVSeq(size_t nv, uint32_t* component_map, uint32_t* off, uint32_t* ind) {
 	for (size_t v = nv; v != 0; v--) {
 		const uint32_t *restrict vind = vindend;
 		vindend = ind + (*off++);
-		const uint32_t component_v = *component_map_v;
-		uint32_t component_v_new = component_v;
+		uint32_t component_v = *component_map_v;
 		for (; vind != vindend; vind++){
 			const uint32_t u = *vind;
 			const uint32_t component_u = component_map[u];
-			if (component_u < component_v_new) {
+			if (component_u < component_v) {
+				component_v = component_u;
 				*component_map_v = component_u;
 				changed = true;
 			}
