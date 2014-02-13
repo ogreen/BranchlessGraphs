@@ -1,0 +1,8 @@
+#!/bin/bash
+
+
+./bfsBU $1
+./bfs $1
+ 
+ 
+

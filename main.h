@@ -17,3 +17,8 @@ bool SVBranchless(size_t nv, uint32_t* component_map, uint32_t* off, uint32_t* i
 bool SVBranchlessAsm(size_t nv, uint32_t* component_map, uint32_t* off, uint32_t* ind);
 bool SVBranchlessSSE4_1(size_t nv, uint32_t* component_map, uint32_t* off, uint32_t* ind);
 bool SVBranchlessMIC(size_t nv, uint32_t* component_map, uint32_t* off, uint32_t* ind);
+
+
+typedef uint32_t (*BFSBUFunction)(uint32_t* off, uint32_t* ind, uint32_t* bitmap, uint32_t* level, uint32_t currRoot, uint32_t nv,uint32_t currLevel,uint32_t nextLevel);
+uint32_t BFSSeqBU(uint32_t* off, uint32_t* ind, uint32_t* bitmap, uint32_t* level, uint32_t currRoot, uint32_t nv,uint32_t currLevel,uint32_t nextLevel);
+
