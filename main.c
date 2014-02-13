@@ -67,7 +67,20 @@ int main (const int argc, char *argv[]) {
 
 
 	fclose(fp);
-#if defined(BENCHMARK_BFS)
+
+	#if defined(BENCHMARK_BFS)	
+	uint32_t* queue = (uint32_t*)memalign(64, nv * sizeof(uint32_t));
+	uint32_t* level = (uint32_t*)memalign(64, nv * sizeof(uint32_t));
+	uint32_t* edgesTraversed = (uint32_t*)memalign(64, nv * sizeof(uint32_t));
+	uint32_t* queueStartPosition = (uint32_t*)memalign(64, nv * sizeof(uint32_t));
+	for (size_t i = 0; i < nv; i++) {
+		level[i] = INT32_MAX;
+	}
+	
+//	BFSSeqLevelInformation(off, ind, queue, level, 1, edgesTraversed, queueStartPosition);
+	BFSSeqLevelInformation(off, ind, queue, level, 1, edgesTraversed, queueStartPosition);
+
+
         testBFS("BFS brachy", BFSSeq, off, ind);
         testBFS("BFS branchless (C)", BFSSeqBranchless, off, ind);
 	#if defined(__x86_64__) && !defined(__MIC__)
@@ -84,7 +97,14 @@ int main (const int argc, char *argv[]) {
 	#endif
 #endif
 
-#if defined(BENCHMARK_BFS_BU)
+	#if defined(BENCHMARK_BFS)	
+	free(queueStartPosition);
+	free(edgesTraversed);
+	free(level);
+	free(queue);
+	#endif
+	
+	#if defined(BENCHMARK_BFS_BU)
         testBFSBU("BFS brachy", BFSSeqBU, off, ind);
 /*        testBFS("BFS branchless (C)", BFSSeqBranchless, off, ind);
 	#if defined(__x86_64__) && !defined(__MIC__)
@@ -182,6 +202,7 @@ int main (const int argc, char *argv[]) {
 			ioctl(fd_branches, PERF_EVENT_IOC_ENABLE, 0);
 			ioctl(fd_mispredictions, PERF_EVENT_IOC_ENABLE, 0);
 			ioctl(fd_instructions, PERF_EVENT_IOC_ENABLE, 0);
+			
 			
 			/* Call the bfs implementation */
 			bfs_function(off, ind, queue, level, 1);
@@ -309,7 +330,7 @@ int main (const int argc, char *argv[]) {
 			{
 				total+=times[lev];
 			}
-			printf("total time %lf\n", total);
+			printf("%30s\t%9.lf\t\n", "Total time", total);
 			
 		}
 

@@ -6,6 +6,56 @@
 	#include <x86intrin.h>
 #endif
 
+void BFSSeqLevelInformation(uint32_t* off, uint32_t* ind, uint32_t* queue, uint32_t* level, uint32_t currRoot, uint32_t* edgesTraversed, uint32_t* queueStartPosition)
+{
+	level[currRoot] = 0;
+
+	queue[0] = currRoot;
+	uint32_t qStart = 0, qEnd = 1;
+
+	uint32_t currLevel=0;
+
+	queueStartPosition[0]=0;
+	uint32_t travEdge=0;
+	// While queue is not empty
+	while (qStart!=qEnd) {
+		uint64_t currElement = queue[qStart];
+		uint32_t startEdge = off[currElement];
+		uint32_t stopEdge = off[currElement+1];
+		uint32_t nextLevel = level[currElement]+1;
+		if (level[currElement]>currLevel)
+		{
+			queueStartPosition[currLevel+1]=qStart;			
+			edgesTraversed[currLevel]=travEdge;
+			travEdge=0;
+			currLevel=level[currElement];	
+//			printf("curr level %ld",currLevel); fflush(stdout);					
+		}
+		
+		for (uint32_t j = startEdge; startEdge < stopEdge; startEdge++) {
+			uint32_t k = ind[startEdge];
+			travEdge++;
+			// If this is a neighbor and has not been found
+			if (level[k] > level[currElement]) {
+				// Checking if "k" has been found.
+				if (level[k] == INT32_MAX) {
+					level[k] = nextLevel; //level[currElement]+1;
+					queue[qEnd++] = k;
+				}
+			}
+		}
+		qStart++;
+	}
+
+	queueStartPosition[currLevel+1]=qStart;			
+	edgesTraversed[currLevel]=travEdge;
+	
+
+	//~ printf("\nQE %d\n",qEnd);
+}
+
+
+
 void BFSSeq(uint32_t* off, uint32_t* ind, uint32_t* queue, uint32_t* level, uint32_t currRoot) {
 	level[currRoot] = 0;
 
