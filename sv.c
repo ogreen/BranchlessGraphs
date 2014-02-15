@@ -9,7 +9,7 @@
 
 #define SV_USE_INDEX
 
-bool SVSeq(size_t nv, uint32_t* component_map, uint32_t* off, uint32_t* ind) {
+bool ConnectedComponents_SV_Branchy(size_t nv, uint32_t* component_map, uint32_t* off, uint32_t* ind) {
 	bool changed = 0;
 
 #if defined(SV_USE_INDEX)
@@ -60,7 +60,7 @@ bool SVSeq(size_t nv, uint32_t* component_map, uint32_t* off, uint32_t* ind) {
 	return true;
 }
 
-bool SVBranchless(size_t nv, uint32_t* component_map, uint32_t* off, uint32_t* ind) {
+bool ConnectedComponents_SV_Branchless(size_t nv, uint32_t* component_map, uint32_t* off, uint32_t* ind) {
 	uint32_t changed = 0;
 
 #if defined(SV_USE_INDEX)
@@ -113,7 +113,7 @@ bool SVBranchless(size_t nv, uint32_t* component_map, uint32_t* off, uint32_t* i
 }
 
 #if defined(__x86_64__) && !defined(__MIC__)
-	bool SVBranchlessAsm(size_t nv, uint32_t* component_map, uint32_t* off, uint32_t* ind) {
+	bool ConnectedComponents_SV_Branchless_CMOV(size_t nv, uint32_t* component_map, uint32_t* off, uint32_t* ind) {
 		uint32_t changed = 0;
 
 		#if defined(SV_USE_INDEX)
@@ -175,7 +175,7 @@ bool SVBranchless(size_t nv, uint32_t* component_map, uint32_t* off, uint32_t* i
 #endif
 
 #ifdef __SSE4_1__
-	bool SVBranchlessSSE4_1(size_t nv, uint32_t* component_map, uint32_t* off, uint32_t* ind) {
+	bool ConnectedComponents_SV_Branchless_SSE4_1(size_t nv, uint32_t* component_map, uint32_t* off, uint32_t* ind) {
 		uint32_t changed = 0;
 
 		for (size_t v=0; v < nv; v++) {
@@ -223,7 +223,7 @@ bool SVBranchless(size_t nv, uint32_t* component_map, uint32_t* off, uint32_t* i
 #endif
 
 #ifdef __MIC__
-	bool SVBranchlessMIC(size_t nv, uint32_t* component_map, uint32_t* off, uint32_t* ind) {
+	bool ConnectedComponents_SV_Branchless_MIC(size_t nv, uint32_t* component_map, uint32_t* off, uint32_t* ind) {
 		__mmask16 changed = 0;
 
 		for (size_t v=0; v < nv; v++) {

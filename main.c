@@ -24,9 +24,9 @@ static uint32_t * restrict actionmem;
 
 static double * update_time_trace;
 
-void testSV(const char* implementation_name, SVFunction sv_function, size_t nv, uint32_t* off, uint32_t* ind);
-void testBFS(const char* implementation_name, BFSFunction bfs_function, uint32_t* off, uint32_t* ind);
-void testBFSBU(const char* implementation_name, BFSBUFunction bfs_function, uint32_t* off, uint32_t* ind);
+void Benchmark_BFS_TopDown(const char* implementation_name, BFS_TopDown_Function bfs_function, uint32_t* off, uint32_t* ind);
+void Benchmark_BFS_BottomUp(const char* implementation_name, BFS_BottomUp_Function bfs_function, uint32_t* off, uint32_t* ind);
+void Benchmark_ConnectedComponents_SV(const char* implementation_name, ConnectedComponents_SV_Function sv_function, size_t nv, uint32_t* off, uint32_t* ind);
 
 #define LINE_SIZE 10000
 
@@ -69,70 +69,54 @@ int main (const int argc, char *argv[]) {
 	fclose(fp);
 
 	#if defined(BENCHMARK_BFS)	
-	uint32_t* queue = (uint32_t*)memalign(64, nv * sizeof(uint32_t));
-	uint32_t* level = (uint32_t*)memalign(64, nv * sizeof(uint32_t));
-	uint32_t* edgesTraversed = (uint32_t*)memalign(64, nv * sizeof(uint32_t));
-	uint32_t* queueStartPosition = (uint32_t*)memalign(64, nv * sizeof(uint32_t));
-	for (size_t i = 0; i < nv; i++) {
-		level[i] = INT32_MAX;
-	}
-	
-//	BFSSeqLevelInformation(off, ind, queue, level, 1, edgesTraversed, queueStartPosition);
-	BFSSeqLevelInformation(off, ind, queue, level, 1, edgesTraversed, queueStartPosition);
+		{
+			uint32_t* queue = (uint32_t*)memalign(64, nv * sizeof(uint32_t));
+			uint32_t* level = (uint32_t*)memalign(64, nv * sizeof(uint32_t));
+			uint32_t* edgesTraversed = (uint32_t*)memalign(64, nv * sizeof(uint32_t));
+			uint32_t* queueStartPosition = (uint32_t*)memalign(64, nv * sizeof(uint32_t));
+			for (size_t i = 0; i < nv; i++) {
+				level[i] = INT32_MAX;
+			}
 
+			BFS_TopDown_Branchy_LevelInformation(off, ind, queue, level, 1, edgesTraversed, queueStartPosition);
 
-        testBFS("BFS brachy", BFSSeq, off, ind);
-        testBFS("BFS branchless (C)", BFSSeqBranchless, off, ind);
-	#if defined(__x86_64__) && !defined(__MIC__)
-        testBFS("BFS branchless (asm)", BFSSeqBranchlessAsm, off, ind);
-	#endif
-	#ifdef __SSE4_1__
-        testBFS("BFS bracnhless (SSE 4.1)", BFSSeqBranchlessSSE4_1, off, ind);
-	#endif
-	#ifdef __AVX2__
-        testBFS("BFS bracnhless (AVX 2)", BFSSeqBranchlessAVX2, off, ind);
-	#endif
-	#ifdef __MIC__
-        testBFS("BFS bracnhless (MIC)", BFSSeqBranchlessMIC, off, ind);
-	#endif
-#endif
+			free(queueStartPosition);
+			free(edgesTraversed);
+			free(level);
+			free(queue);
+		}
 
-	#if defined(BENCHMARK_BFS)	
-	free(queueStartPosition);
-	free(edgesTraversed);
-	free(level);
-	free(queue);
+		Benchmark_BFS_TopDown("BFS/TD brachy", BFS_TopDown_Branchy, off, ind);
+		Benchmark_BFS_TopDown("BFS/TD branchless (C)", BFS_TopDown_Branchless, off, ind);
+		#if defined(__x86_64__) && !defined(__MIC__)
+		Benchmark_BFS_TopDown("BFS/TD branchless (CMOV)", BFS_TopDown_Branchless_CMOV, off, ind);
+		#endif
+		#ifdef __SSE4_1__
+		Benchmark_BFS_TopDown("BFS/TD bracnhless (SSE 4.1)", BFS_TopDown_Branchless_SSE4_1, off, ind);
+		#endif
+		#ifdef __AVX2__
+		Benchmark_BFS_TopDown("BFS/TD bracnhless (AVX 2)", BFS_TopDown_Branchless_AVX2, off, ind);
+		#endif
+		#ifdef __MIC__
+		Benchmark_BFS_TopDown("BFS/TD bracnhless (MIC)", BFS_TopDown_Branchless_MIC, off, ind);
+		#endif
+		Benchmark_BFS_BottomUp("BFS/BU brachy", BFS_BottomUp_Branchy, off, ind);
+		Benchmark_BFS_BottomUp("BFS/BU branchless (C)", BFS_BottomUp_Branchless, off, ind);
+		Benchmark_BFS_BottomUp("BFS/BU branchless (CMOV)", BFS_BottomUp_Branchless_CMOV, off, ind);
+
 	#endif
-	
-	#if defined(BENCHMARK_BFS_BU)
-        testBFSBU("BFS brachy", BFSSeqBU, off, ind);
-/*        testBFS("BFS branchless (C)", BFSSeqBranchless, off, ind);
-	#if defined(__x86_64__) && !defined(__MIC__)
-        testBFS("BFS branchless (asm)", BFSSeqBranchlessAsm, off, ind);
-	#endif
-	#ifdef __SSE4_1__
-        testBFS("BFS bracnhless (SSE 4.1)", BFSSeqBranchlessSSE4_1, off, ind);
-	#endif
-	#ifdef __AVX2__
-        testBFS("BFS bracnhless (AVX 2)", BFSSeqBranchlessAVX2, off, ind);
-	#endif
-	#ifdef __MIC__
-        testBFS("BFS bracnhless (MIC)", BFSSeqBranchlessMIC, off, ind);
-	#endif
-*/	
-#endif
 
 #if defined(BENCHMARK_SV)
-	testSV("SV regular", SVSeq, nv, off, ind);
-	testSV("SV branchless (C)", SVBranchless, nv, off, ind);
+	Benchmark_ConnectedComponents_SV("SV regular", ConnectedComponents_SV_Branchy, nv, off, ind);
+	Benchmark_ConnectedComponents_SV("SV branchless (C)", ConnectedComponents_SV_Branchless, nv, off, ind);
 	#if defined(__x86_64__) && !defined(__MIC__)
-	testSV("SV branchless (asm)", SVBranchlessAsm, nv, off, ind);
+	Benchmark_ConnectedComponents_SV("SV branchless (asm)", ConnectedComponents_SV_Branchless_CMOV, nv, off, ind);
 	#endif
 	#ifdef __SSE4_1__
-	testSV("SV branchless (SSE4.1)", SVBranchlessSSE4_1, nv, off, ind);
+	Benchmark_ConnectedComponents_SV("SV branchless (SSE4.1)", ConnectedComponents_SV_Branchless_SSE4_1, nv, off, ind);
 	#endif
 	#ifdef __MIC__
-	testSV("SV branchless (MIC)", SVBranchlessMIC, nv, off, ind);
+	Benchmark_ConnectedComponents_SV("SV branchless (MIC)", ConnectedComponents_SV_Branchless_MIC, nv, off, ind);
 	#endif
 #endif
  	free(off);
@@ -140,7 +124,7 @@ int main (const int argc, char *argv[]) {
 }
 
 #if defined(BENCHMARK_BFS)
-	void testBFS(const char* implementation_name, BFSFunction bfs_function, uint32_t* off, uint32_t* ind) {
+	void Benchmark_BFS_TopDown(const char* implementation_name, BFS_TopDown_Function bfs_function, uint32_t* off, uint32_t* ind) {
 		struct perf_event_attr perf_branches;
 		struct perf_event_attr perf_mispredictions;
 		struct perf_event_attr perf_instructions;
@@ -225,10 +209,8 @@ int main (const int argc, char *argv[]) {
 		free(queue);
 		free(level);
 	}
-#endif
 
-#if defined(BENCHMARK_BFS_BU)
-	void testBFSBU(const char* implementation_name, BFSBUFunction bfs_function, uint32_t* off, uint32_t* ind) {
+	void Benchmark_BFS_BottomUp(const char* implementation_name, BFS_BottomUp_Function bfs_function, uint32_t* off, uint32_t* ind) {
 		struct perf_event_attr perf_branches;
 		struct perf_event_attr perf_mispredictions;
 		struct perf_event_attr perf_instructions;
@@ -275,78 +257,66 @@ int main (const int argc, char *argv[]) {
 			exit(EXIT_FAILURE);
 		}
 
-		uint32_t* level = (uint32_t*)memalign(64, nv * sizeof(uint32_t));
+		uint32_t* levels = (uint32_t*)memalign(64, nv * sizeof(uint32_t));
 		uint32_t* bitmap = (uint32_t*)memalign(64, nv * sizeof(uint32_t));
-		double* times = (double*)memalign(64, nv * sizeof(double));
+		uint64_t* branches = (uint64_t*)memalign(64, nv * sizeof(uint64_t));
+		uint64_t* mispredictions = (uint64_t*)memalign(64, nv * sizeof(uint64_t));
+		uint64_t* instructions = (uint64_t*)memalign(64, nv * sizeof(uint64_t));
+		double* seconds = (double*)memalign(64, nv * sizeof(double));
 
-		{
+		uint32_t currentLevel = 0;
+		bool changed;
+		do {
 			/* Initialize level array */
 			for (size_t i = 0; i < nv; i++) {
-				level[i] 	= INT32_MAX;
-				bitmap[i]	= 0;
+				levels[i] = INT32_MAX;
+				bitmap[i] = 0;
 			}
-			
-			uint32_t currRoot=1;
-			level[currRoot] = 0;
-			bitmap[currRoot] = 1;
 
-			uint32_t changed=1;
+			const uint32_t currentRoot = 1;
+			levels[currentRoot] = 0;
+			bitmap[currentRoot] = 1;
 
-			uint32_t v,currLevel=0,nextLevel=1;
+			ioctl(fd_branches, PERF_EVENT_IOC_RESET, 0);
+			ioctl(fd_mispredictions, PERF_EVENT_IOC_RESET, 0);
+			ioctl(fd_instructions, PERF_EVENT_IOC_RESET, 0);
 
-			while(changed)
-			{
+			tic();
+			ioctl(fd_branches, PERF_EVENT_IOC_ENABLE, 0);
+			ioctl(fd_mispredictions, PERF_EVENT_IOC_ENABLE, 0);
+			ioctl(fd_instructions, PERF_EVENT_IOC_ENABLE, 0);
 
-				ioctl(fd_branches, PERF_EVENT_IOC_RESET, 0);
-				ioctl(fd_mispredictions, PERF_EVENT_IOC_RESET, 0);
-				ioctl(fd_instructions, PERF_EVENT_IOC_RESET, 0);			
-				
-				tic();
-				ioctl(fd_branches, PERF_EVENT_IOC_ENABLE, 0);
-				ioctl(fd_mispredictions, PERF_EVENT_IOC_ENABLE, 0);
-				ioctl(fd_instructions, PERF_EVENT_IOC_ENABLE, 0);
-				
-				
-				/* Call the bfs implementation */
-				changed=bfs_function(off, ind, bitmap, level, currRoot, nv,currLevel,nextLevel);
-				currLevel++;
-				nextLevel++;
-				
-				ioctl(fd_branches, PERF_EVENT_IOC_DISABLE, 0);
-				ioctl(fd_mispredictions, PERF_EVENT_IOC_DISABLE, 0);
-				ioctl(fd_instructions, PERF_EVENT_IOC_DISABLE, 0);
-				const double nanoseconds = toc() * 1.0e+9;
-				times[currLevel-1]=nanoseconds;
-				long long branches, mispredictions, instructions;
-				read(fd_branches, &branches, sizeof(long long));
-				read(fd_mispredictions, &mispredictions, sizeof(long long));
-				read(fd_instructions, &instructions, sizeof(long long));
-				const double branch_misprections = (double)mispredictions / (double)branches;
-				printf("%30s\t%9.lf\t%5.3lf%%\t%lld\t%lld\t%lld\n", implementation_name, nanoseconds, branch_misprections * 100.0, mispredictions, branches, instructions);
-			}
-			uint32_t lev;
-			double total=0;
-			for(lev=0; lev< (currLevel-1); lev++)
-			{
-				total+=times[lev];
-			}
-			printf("%30s\t%9.lf\t\n", "Total time", total);
-			
+			/* Call the bfs implementation */
+			changed = bfs_function(off, ind, bitmap, levels, currentRoot, nv, currentLevel);
+
+			ioctl(fd_branches, PERF_EVENT_IOC_DISABLE, 0);
+			ioctl(fd_mispredictions, PERF_EVENT_IOC_DISABLE, 0);
+			ioctl(fd_instructions, PERF_EVENT_IOC_DISABLE, 0);
+			seconds[currentLevel] = toc();
+			read(fd_branches, &branches[currentLevel], sizeof(long long));
+			read(fd_mispredictions, &mispredictions[currentLevel], sizeof(long long));
+			read(fd_instructions, &instructions[currentLevel], sizeof(long long));
+			currentLevel += 1;
+		} while (changed);
+
+		for (uint32_t level = 0; level < currentLevel; level++) {
+			printf("%s\t%.1lf\t%lld\t%lld\t%lld\n", implementation_name, seconds[level] *1.0e+9, mispredictions[level], branches[level], instructions[level]);
 		}
 
 		close(fd_branches);
 		close(fd_mispredictions);
 		close(fd_instructions);
-		free(times);
+		free(levels);
 		free(bitmap);
-		free(level);
+		free(branches);
+		free(mispredictions);
+		free(instructions);
+		free(seconds);
 	}
 #endif
 
-
-
 #if defined(BENCHMARK_SV)
-	void testSV(const char* implementation_name, SVFunction sv_function, size_t nv, uint32_t* off, uint32_t* ind) {
+	void Benchmark_ConnectedComponents_SV(const char* implementation_name, ConnectedComponents_SV_Function sv_function, size_t nv, uint32_t* off, uint32_t* ind) {
 		uint32_t* components_map = (uint32_t*)memalign(64, nv * sizeof(uint32_t));
 
 		struct perf_event_attr perf_branches;

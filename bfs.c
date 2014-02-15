@@ -6,8 +6,7 @@
 	#include <x86intrin.h>
 #endif
 
-void BFSSeqLevelInformation(uint32_t* off, uint32_t* ind, uint32_t* queue, uint32_t* level, uint32_t currRoot, uint32_t* edgesTraversed, uint32_t* queueStartPosition)
-{
+void BFS_TopDown_Branchy_LevelInformation(uint32_t* off, uint32_t* ind, uint32_t* queue, uint32_t* level, uint32_t currRoot, uint32_t* edgesTraversed, uint32_t* queueStartPosition) {
 	level[currRoot] = 0;
 
 	queue[0] = currRoot;
@@ -18,17 +17,16 @@ void BFSSeqLevelInformation(uint32_t* off, uint32_t* ind, uint32_t* queue, uint3
 	queueStartPosition[0]=0;
 	uint32_t travEdge=0;
 	// While queue is not empty
-	while (qStart!=qEnd) {
+	while (qStart != qEnd) {
 		uint64_t currElement = queue[qStart];
 		uint32_t startEdge = off[currElement];
 		uint32_t stopEdge = off[currElement+1];
-		uint32_t nextLevel = level[currElement]+1;
-		if (level[currElement]>currLevel)
-		{
-			queueStartPosition[currLevel+1]=qStart;			
-			edgesTraversed[currLevel]=travEdge;
-			travEdge=0;
-			currLevel=level[currElement];	
+		uint32_t nextLevel = level[currElement] + 1;
+		if (level[currElement] > currLevel){
+			queueStartPosition[currLevel+1] = qStart;			
+			edgesTraversed[currLevel] = travEdge;
+			travEdge = 0;
+			currLevel = level[currElement];	
 //			printf("curr level %ld",currLevel); fflush(stdout);					
 		}
 		
@@ -47,16 +45,13 @@ void BFSSeqLevelInformation(uint32_t* off, uint32_t* ind, uint32_t* queue, uint3
 		qStart++;
 	}
 
-	queueStartPosition[currLevel+1]=qStart;			
-	edgesTraversed[currLevel]=travEdge;
-	
-
-	//~ printf("\nQE %d\n",qEnd);
+	queueStartPosition[currLevel+1] = qStart;			
+	edgesTraversed[currLevel] = travEdge;
 }
 
 
 
-void BFSSeq(uint32_t* off, uint32_t* ind, uint32_t* queue, uint32_t* level, uint32_t currRoot) {
+void BFS_TopDown_Branchy(uint32_t* off, uint32_t* ind, uint32_t* queue, uint32_t* level, uint32_t currRoot) {
 	level[currRoot] = 0;
 
 
@@ -64,14 +59,14 @@ void BFSSeq(uint32_t* off, uint32_t* ind, uint32_t* queue, uint32_t* level, uint
 	uint32_t qStart = 0, qEnd = 1;
 
 	// While queue is not empty
-	while (qStart!=qEnd) {
+	while (qStart != qEnd) {
 		uint64_t currElement = queue[qStart];
 		qStart++;
 
 		uint32_t startEdge = off[currElement];
 		uint32_t stopEdge = off[currElement+1];
 
-		uint32_t nextLevel = level[currElement]+1;
+		uint32_t nextLevel = level[currElement] + 1;
 		for (uint32_t j = startEdge; startEdge < stopEdge; startEdge++) {
 			uint32_t k = ind[startEdge];
 
@@ -79,19 +74,16 @@ void BFSSeq(uint32_t* off, uint32_t* ind, uint32_t* queue, uint32_t* level, uint
 			if (level[k] > level[currElement]) {
 				// Checking if "k" has been found.
 				if (level[k] == INT32_MAX) {
-					level[k] = nextLevel; //level[currElement]+1;
+					level[k] = nextLevel;
 					queue[qEnd++] = k;
 				}
 			}
 		}
 
 	}
-
-	//~ printf("\nQE %d\n",qEnd);
 }
 
-void BFSSeqBranchless(uint32_t* off, uint32_t* ind, uint32_t* queue, uint32_t* level, uint32_t currRoot) {
-
+void BFS_TopDown_Branchless(uint32_t* off, uint32_t* ind, uint32_t* queue, uint32_t* level, uint32_t currRoot) {
 	level[currRoot] = 0;
 
 	queue[0] = currRoot;
@@ -117,11 +109,10 @@ void BFSSeqBranchless(uint32_t* off, uint32_t* ind, uint32_t* queue, uint32_t* l
 			level[k] += isINF * (temp);
 		}
 	}
-	//~ printf("\nQE %d\n",qEnd);
 }
 
 #if defined(__x86_64__) && !defined(__MIC__)
-	void BFSSeqBranchlessAsm(uint32_t* off, uint32_t* ind, uint32_t* queue, uint32_t* level, uint32_t currRoot) {
+	void BFS_TopDown_Branchless_CMOV(uint32_t* off, uint32_t* ind, uint32_t* queue, uint32_t* level, uint32_t currRoot) {
 		level[currRoot] = 0;
 
 		queue[0] = currRoot;
@@ -149,7 +140,6 @@ void BFSSeqBranchless(uint32_t* off, uint32_t* ind, uint32_t* queue, uint32_t* l
 				level[k] = levelK;
 			}
 		}
-		//~ printf("\nQE %d\n",qEnd);
 	}
 #endif
 
@@ -210,12 +200,11 @@ void BFSSeqBranchlessSSE(int64_t* off, int64_t* ind, int64_t* queue, int64_t* le
 		}
 
 	}
-	printf("\nQE %d\n",qEnd);
 }
 */
 
 #ifdef __SSE4_1__
-	void BFSSeqBranchlessSSE4_1(uint32_t* off, uint32_t* ind, uint32_t* queue, uint32_t* level, uint32_t currRoot) {
+	void BFS_TopDown_Branchless_SSE4_1(uint32_t* off, uint32_t* ind, uint32_t* queue, uint32_t* level, uint32_t currRoot) {
 		level[currRoot] = 0;
 
 		queue[0] = currRoot;
@@ -301,12 +290,11 @@ void BFSSeqBranchlessSSE(int64_t* off, int64_t* ind, int64_t* queue, int64_t* le
 			}
 
 		}
-		//~ printf("\nQE %d\n",qEnd);
 	}
 #endif
 
 #ifdef __AVX2__
-	void BFSSeqBranchlessAVX2(uint32_t* off, uint32_t* ind, uint32_t* queue, uint32_t* level, uint32_t currRoot) {
+	void BFS_TopDown_Branchless_AVX2(uint32_t* off, uint32_t* ind, uint32_t* queue, uint32_t* level, uint32_t currRoot) {
 		level[currRoot] = 0;
 
 		queue[0] = currRoot;
@@ -634,7 +622,7 @@ void BFSSeqBranchlessSSE(int64_t* off, int64_t* ind, int64_t* queue, int64_t* le
 #endif
 
 #ifdef __MIC__
-	void BFSSeqBranchlessMIC(uint32_t* off, uint32_t* ind, uint32_t* queue, uint32_t* level, uint32_t currRoot) {
+	void BFS_TopDown_Branchless_MIC(uint32_t* off, uint32_t* ind, uint32_t* queue, uint32_t* level, uint32_t currRoot) {
 		level[currRoot] = 0;
 
 		queue[0] = currRoot;
