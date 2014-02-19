@@ -51,95 +51,71 @@ void BFS_TopDown_Branchy_LevelInformation(uint32_t* off, uint32_t* ind, uint32_t
 
 
 
-void BFS_TopDown_Branchy(uint32_t* off, uint32_t* ind, uint32_t* queue, uint32_t* level, uint32_t currRoot) {
-	level[currRoot] = 0;
+uint32_t BFS_TopDown_Branchy(uint32_t* off, uint32_t* ind, const uint32_t* inputQueue, uint32_t inputVerteces, uint32_t* outputQueue, uint32_t* level, uint32_t currentLevel) {
+	uint32_t* outputQueueStart = outputQueue;
+	while (inputVerteces--) {
+		uint32_t current_vertex = *inputQueue++;
+		
+		const uint32_t startEdge = off[current_vertex];
+		const uint32_t stopEdge = off[current_vertex+1];
 
+		for (uint32_t edge = startEdge; edge != stopEdge; edge++) {
+			const uint32_t neighborVertex = ind[edge];
 
-	queue[0] = currRoot;
-	uint32_t qStart = 0, qEnd = 1;
-
-	// While queue is not empty
-	while (qStart != qEnd) {
-		uint64_t currElement = queue[qStart];
-		qStart++;
-
-		uint32_t startEdge = off[currElement];
-		uint32_t stopEdge = off[currElement+1];
-
-		uint32_t nextLevel = level[currElement] + 1;
-		for (uint32_t j = startEdge; startEdge < stopEdge; startEdge++) {
-			uint32_t k = ind[startEdge];
-
-			// If this is a neighbor and has not been found
-			if (level[k] > level[currElement]) {
-				// Checking if "k" has been found.
-				if (level[k] == INT32_MAX) {
-					level[k] = nextLevel;
-					queue[qEnd++] = k;
-				}
+			if (level[neighborVertex] > currentLevel) {
+				level[neighborVertex] = currentLevel;
+				*outputQueue++ = neighborVertex;
 			}
 		}
-
 	}
+	return outputQueue - outputQueueStart;
 }
 
-void BFS_TopDown_Branchless(uint32_t* off, uint32_t* ind, uint32_t* queue, uint32_t* level, uint32_t currRoot) {
-	level[currRoot] = 0;
+uint32_t BFS_TopDown_Branchless(uint32_t* off, uint32_t* ind, const uint32_t* inputQueue, uint32_t inputVerteces, uint32_t* outputQueue, uint32_t* level, uint32_t currentLevel) {
+	uint32_t outputIndex = 0;
+	while (inputVerteces--) {
+		uint32_t current_vertex = *inputQueue++;
+		
+		const uint32_t startEdge = off[current_vertex];
+		const uint32_t stopEdge = off[current_vertex+1];
 
-	queue[0] = currRoot;
-	uint32_t qStart=0,qEnd=1;
-
-	uint32_t flag=1;
-	uint32_t isINF=1;
-	uint32_t pre=0;
-	uint32_t temp;
-	// While queue is not empty
-	while (qStart < qEnd) {
-		uint32_t currElement = queue[qStart++];
-
-		uint32_t startEdge = off[currElement];
-		uint32_t stopEdge = off[currElement+1];
-		uint32_t nextLevel=level[currElement]+1;
-		for (uint32_t j = startEdge; j < stopEdge; j++) {
-			const int64_t k = ind[j];
-			temp = nextLevel - level[k];
-			queue[qEnd] = k;
-			isINF = (uint32_t)(temp) >> 31;
-			qEnd += isINF;
-			level[k] += isINF * (temp);
+		for (uint32_t edge = startEdge; edge != stopEdge; edge++) {
+			const uint32_t neighborVertex = ind[edge];
+			const uint32_t levelDiff = currentLevel - level[neighborVertex];
+			outputQueue[outputIndex] = neighborVertex;
+			const uint32_t isFrontier = levelDiff >> 31;
+			outputIndex += isFrontier;
+			level[neighborVertex] += isFrontier * levelDiff;
 		}
 	}
+	return outputIndex;
 }
 
 #if defined(__x86_64__) && !defined(__MIC__)
-	void BFS_TopDown_Branchless_CMOV(uint32_t* off, uint32_t* ind, uint32_t* queue, uint32_t* level, uint32_t currRoot) {
-		level[currRoot] = 0;
+	uint32_t BFS_TopDown_Branchless_CMOV(uint32_t* off, uint32_t* ind, const uint32_t* inputQueue, uint32_t inputVerteces, uint32_t* outputQueue, uint32_t* level, uint32_t currentLevel) {
+		uint32_t outputIndex = 0;
+		while (inputVerteces--) {
+			uint32_t current_vertex = *inputQueue++;
+			
+			const uint32_t startEdge = off[current_vertex];
+			const uint32_t stopEdge = off[current_vertex+1];
 
-		queue[0] = currRoot;
-		uint32_t qStart = 0, qEnd = 1;
-
-		// While queue is not empty
-		while (qStart < qEnd) {
-			uint32_t currElement = queue[qStart++];
-
-			const uint32_t startEdge = off[currElement];
-			const uint32_t stopEdge = off[currElement + 1];
-			const uint32_t nextLevel = level[currElement] + 1;
-			for (uint32_t j = startEdge; j < stopEdge; j++) {
-				const uint32_t k = ind[j];
-				uint32_t levelK = level[k];
-				queue[qEnd] = k;
+			for (uint32_t edge = startEdge; edge != stopEdge; edge++) {
+				const uint32_t neighborVertex = ind[edge];
+				uint32_t neighborLevel = level[neighborVertex];
+				outputQueue[outputIndex] = neighborVertex;
 				__asm__ __volatile__ (
-					"CMPL %[levelK], %[nextLevel];"
-					"CMOVNGEL %[nextLevel], %[levelK];"
-					"ADCL $0, %[qEnd];"
-					: [qEnd] "+r" (qEnd), [levelK] "+r" (levelK)
-					: [nextLevel] "r" (nextLevel)
+					"CMPL %[neighborLevel], %[currentLevel];"
+					"CMOVNGEL %[currentLevel], %[neighborLevel];"
+					"ADCL $0, %[outputIndex];"
+					: [outputIndex] "+r" (outputIndex), [neighborLevel] "+r" (neighborLevel)
+					: [currentLevel] "r" (currentLevel)
 					: "cc"
 				);
-				level[k] = levelK;
+				level[neighborVertex] = neighborLevel;
 			}
 		}
+		return outputIndex;
 	}
 #endif
 
@@ -204,93 +180,164 @@ void BFSSeqBranchlessSSE(int64_t* off, int64_t* ind, int64_t* queue, int64_t* le
 */
 
 #ifdef __SSE4_1__
-	void BFS_TopDown_Branchless_SSE4_1(uint32_t* off, uint32_t* ind, uint32_t* queue, uint32_t* level, uint32_t currRoot) {
-		level[currRoot] = 0;
-
-		queue[0] = currRoot;
-		uint32_t qStart = 0, qEnd = 1;
-
-		const __m128i shuffleTable[16] = {
-			_mm_setr_epi8(0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80),
-			_mm_setr_epi8(   0,    1,    2,    3, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80),
-			_mm_setr_epi8(   4,    5,    6,    7, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80),
-			_mm_setr_epi8(   0,    1,    2,    3,    4,    5,    6,    7, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80),
-			_mm_setr_epi8(   8,    9,   10,   11, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80),
-			_mm_setr_epi8(   0,    1,    2,    3,    8,    9,   10,   11, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80),
-			_mm_setr_epi8(   4,    5,    6,    7,    8,    9,   10,   11, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80),
-			_mm_setr_epi8(   0,    1,    2,    3,    4,    5,    6,    7,    8,    9,   10,   11, 0x80, 0x80, 0x80, 0x80),
-			_mm_setr_epi8(  12,   13,   14,   15, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80),
-			_mm_setr_epi8(   0,    1,    2,    3,   12,   13,   14,   15, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80),
-			_mm_setr_epi8(   4,    5,    6,    7,   12,   13,   14,   15, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80),
-			_mm_setr_epi8(   0,    1,    2,    3,    4,    5,    6,    7,   12,   13,   14,   15, 0x80, 0x80, 0x80, 0x80),
-			_mm_setr_epi8(   8,    9,   10,   11,   12,   13,   14,   15, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80),
-			_mm_setr_epi8(   0,    1,    2,    3,    8,    9,   10,   11,   12,   13,   14,   15, 0x80, 0x80, 0x80, 0x80),
-			_mm_setr_epi8(   4,    5,    6,    7,    8,    9,   10,   11,   12,   13,   14,   15, 0x80, 0x80, 0x80, 0x80),
-			_mm_setr_epi8(   0,    1,    2,    3,    4,    5,    6,    7,    8,    9,   10,   11,   12,   13,   14,   15)
+	uint32_t BFS_TopDown_Branchless_SSE4_1(uint32_t* off, uint32_t* ind, const uint32_t* inputQueue, uint32_t inputVerteces, uint32_t* outputQueue, uint32_t* level, uint32_t currentLevel) {
+		#define _ 0x80
+		const __m128i compactionTable[16] = {
+			_mm_setr_epi8(  _,  _,  _,  _,  _,  _,  _,  _,  _,  _,  _,  _,  _,  _,  _,  _ ),
+			_mm_setr_epi8(  0,  1,  2,  3,  _,  _,  _,  _,  _,  _,  _,  _,  _,  _,  _,  _ ),
+			_mm_setr_epi8(  4,  5,  6,  7,  _,  _,  _,  _,  _,  _,  _,  _,  _,  _,  _,  _ ),
+			_mm_setr_epi8(  0,  1,  2,  3,  4,  5,  6,  7,  _,  _,  _,  _,  _,  _,  _,  _ ),
+			_mm_setr_epi8(  8,  9, 10, 11,  _,  _,  _,  _,  _,  _,  _,  _,  _,  _,  _,  _ ),
+			_mm_setr_epi8(  0,  1,  2,  3,  8,  9, 10, 11,  _,  _,  _,  _,  _,  _,  _,  _ ),
+			_mm_setr_epi8(  4,  5,  6,  7,  8,  9, 10, 11,  _,  _,  _,  _,  _,  _,  _,  _ ),
+			_mm_setr_epi8(  0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11,  _,  _,  _,  _ ),
+			_mm_setr_epi8( 12, 13, 14, 15,  _,  _,  _,  _,  _,  _,  _,  _,  _,  _,  _,  _ ),
+			_mm_setr_epi8(  0,  1,  2,  3, 12, 13, 14, 15,  _,  _,  _,  _,  _,  _,  _,  _ ),
+			_mm_setr_epi8(  4,  5,  6,  7, 12, 13, 14, 15,  _,  _,  _,  _,  _,  _,  _,  _ ),
+			_mm_setr_epi8(  0,  1,  2,  3,  4,  5,  6,  7, 12, 13, 14, 15,  _,  _,  _,  _ ),
+			_mm_setr_epi8(  8,  9, 10, 11, 12, 13, 14, 15,  _,  _,  _,  _,  _,  _,  _,  _ ),
+			_mm_setr_epi8(  0,  1,  2,  3,  8,  9, 10, 11, 12, 13, 14, 15,  _,  _,  _,  _ ),
+			_mm_setr_epi8(  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15,  _,  _,  _,  _ ),
+			_mm_setr_epi8(  0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15 )
 		};
+		#undef _
+		const __m128i currentLevelX4 = _mm_set1_epi32(currentLevel);
+		uint32_t outputIndex = 0;
+		while (inputVerteces--) {
+			uint32_t currentVertex = *inputQueue++;
+			const uint32_t startEdge = off[currentVertex];
+			const uint32_t stopEdge = off[currentVertex + 1];
 
-		// While queue is not empty
-		while (qStart < qEnd) {
-			uint32_t currElement = queue[qStart];
-			qStart++;
+			uint32_t edge = startEdge;
+			for (; edge + 4 <= stopEdge; edge += 4) {
+				const uint32_t neighborVertex0 = ind[edge];
+				const uint32_t neighborVertex1 = ind[edge + 1];
+				const uint32_t neighborVertex2 = ind[edge + 2];
+				const uint32_t neighborVertex3 = ind[edge + 3];
+				const __m128i neightborVertices = _mm_loadu_si128((__m128i*)&ind[edge]);
+				__m128i neighborLevels = _mm_unpacklo_epi64(
+					_mm_insert_epi32(_mm_cvtsi32_si128(level[neighborVertex0]), level[neighborVertex1], 1),
+					_mm_insert_epi32(_mm_cvtsi32_si128(level[neighborVertex2]), level[neighborVertex3], 1)
+				);
+				__m128i frontierPredicates = _mm_cmpgt_epi32(neighborLevels, currentLevelX4);
+				const uint32_t frontierMask = _mm_movemask_ps(_mm_castsi128_ps(frontierPredicates));
+				const __m128i compactedNeightborVertices = _mm_shuffle_epi8(neightborVertices, compactionTable[frontierMask]);
+				_mm_storeu_si128((__m128i*)&outputQueue[outputIndex], compactedNeightborVertices);
 
-			const uint32_t startEdge = off[currElement];
-
-			const uint32_t stopEdge = off[currElement + 1];
-			const uint32_t nextLevel = level[currElement] + 1;
-			const __m128i mmNextLevel = _mm_set1_epi32(nextLevel);
-			
-			uint32_t j = startEdge;
-			for (; j + 4 < stopEdge; j += 4) {
-				const uint32_t k0 = ind[j];
-				const uint32_t k1 = ind[j + 1];
-				const uint32_t k2 = ind[j + 2];
-				const uint32_t k3 = ind[j + 3];
-				const __m128i mmK = _mm_loadu_si128((__m128i*)&ind[j]);
-				__m128i mmLevelK = _mm_insert_epi32(_mm_insert_epi32(_mm_insert_epi32(_mm_cvtsi32_si128(level[k0]), level[k1], 1), level[k2], 2), level[k3], 3);
-				__m128i predicate = _mm_cmpgt_epi32(mmLevelK, mmNextLevel);
-				const unsigned qMask = _mm_movemask_ps(_mm_castsi128_ps(predicate));
-				//const unsigned qMask = _mm_movemask_epi8(predicate);
-
-				//predicate = _mm_and_si128(predicate, _mm_set1_epi8(4));
-				//__m128i mask = predicate;
-				/*
-				mask = _mm_add_epi8(mask, _mm_srli_si128(predicate, 4));
-				mask = _mm_add_epi8(mask, _mm_srli_si128(predicate, 8));
-				mask = _mm_add_epi8(mask, _mm_srli_si128(predicate, 12));
-				*/
-				//~ mask = _mm_add_epi8(mask, _mm_srli_si128(mask, 4));
-				//~ mask = _mm_add_epi8(mask, _mm_srli_si128(mask, 8));
-				//~ mask = _mm_add_epi8(mask, _mm_setr_epi8(0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3));
-				//const __m128i compressed = _mm_shuffle_epi8(mmK, mask);
-				const __m128i compressed = _mm_shuffle_epi8(mmK, shuffleTable[qMask]);
-				_mm_storeu_si128((__m128i*)&queue[qEnd], compressed);
-
-				qEnd += __builtin_popcount(qMask);
-				//~ qEnd += __builtin_popcount(qMask) >> 2;
-				mmLevelK = _mm_min_epi32(mmLevelK, mmNextLevel);
-				level[k0] = _mm_cvtsi128_si32(mmLevelK);
-				level[k1] = _mm_extract_epi32(mmLevelK, 1);
-				level[k2] = _mm_extract_epi32(mmLevelK, 2);
-				level[k3] = _mm_extract_epi32(mmLevelK, 3);
+				outputIndex += __builtin_popcount(frontierMask);
+				neighborLevels = _mm_min_epi32(neighborLevels, currentLevelX4);
+				level[neighborVertex0] = _mm_cvtsi128_si32(neighborLevels);
+				level[neighborVertex1] = _mm_extract_epi32(neighborLevels, 1);
+				level[neighborVertex2] = _mm_extract_epi32(neighborLevels, 2);
+				level[neighborVertex3] = _mm_extract_epi32(neighborLevels, 3);
 			}
-			for (; j < stopEdge; j ++) {
-				const uint32_t k = ind[j];
-				uint32_t levelK = level[k];
-				queue[qEnd] = k;
+			for (; edge != stopEdge; edge++) {
+				const uint32_t neighborVertex = ind[edge];
+				uint32_t neighborLevel = level[neighborVertex];
+				outputQueue[outputIndex] = neighborVertex;
 				__asm__ __volatile__ (
-					"CMPL %[levelK], %[nextLevel];"
-					"CMOVNGEL %[nextLevel], %[levelK];"
-					"ADCL $0, %[qEnd];"
-					: [qEnd] "+r" (qEnd), [levelK] "+r" (levelK)
-					: [nextLevel] "r" (nextLevel)
+					"CMPL %[neighborLevel], %[currentLevel];"
+					"CMOVNGEL %[currentLevel], %[neighborLevel];"
+					"ADCL $0, %[outputIndex];"
+					: [outputIndex] "+r" (outputIndex), [neighborLevel] "+r" (neighborLevel)
+					: [currentLevel] "r" (currentLevel)
 					: "cc"
 				);
-				level[k] = levelK;
+				level[neighborVertex] = neighborLevel;
 			}
-
 		}
+		return outputIndex;
 	}
+
+	//~ void BFS_TopDown_Branchless_SSE4_1(uint32_t* off, uint32_t* ind, uint32_t* queue, uint32_t* level, uint32_t currRoot) {
+		//~ level[currRoot] = 0;
+
+		//~ queue[0] = currRoot;
+		//~ uint32_t qStart = 0, qEnd = 1;
+
+		//~ #define _ 0x80
+		//~ const __m128i shuffleTable[16] = {
+			//~ _mm_setr_epi8(  _,  _,  _,  _,  _,  _,  _,  _,  _,  _,  _,  _,  _,  _,  _,  _ ),
+			//~ _mm_setr_epi8(  0,  1,  2,  3,  _,  _,  _,  _,  _,  _,  _,  _,  _,  _,  _,  _ ),
+			//~ _mm_setr_epi8(  4,  5,  6,  7,  _,  _,  _,  _,  _,  _,  _,  _,  _,  _,  _,  _ ),
+			//~ _mm_setr_epi8(  0,  1,  2,  3,  4,  5,  6,  7,  _,  _,  _,  _,  _,  _,  _,  _ ),
+			//~ _mm_setr_epi8(  8,  9, 10, 11,  _,  _,  _,  _,  _,  _,  _,  _,  _,  _,  _,  _ ),
+			//~ _mm_setr_epi8(  0,  1,  2,  3,  8,  9, 10, 11,  _,  _,  _,  _,  _,  _,  _,  _ ),
+			//~ _mm_setr_epi8(  4,  5,  6,  7,  8,  9, 10, 11,  _,  _,  _,  _,  _,  _,  _,  _ ),
+			//~ _mm_setr_epi8(  0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11,  _,  _,  _,  _ ),
+			//~ _mm_setr_epi8( 12, 13, 14, 15,  _,  _,  _,  _,  _,  _,  _,  _,  _,  _,  _,  _ ),
+			//~ _mm_setr_epi8(  0,  1,  2,  3, 12, 13, 14, 15,  _,  _,  _,  _,  _,  _,  _,  _ ),
+			//~ _mm_setr_epi8(  4,  5,  6,  7, 12, 13, 14, 15,  _,  _,  _,  _,  _,  _,  _,  _ ),
+			//~ _mm_setr_epi8(  0,  1,  2,  3,  4,  5,  6,  7, 12, 13, 14, 15,  _,  _,  _,  _ ),
+			//~ _mm_setr_epi8(  8,  9, 10, 11, 12, 13, 14, 15,  _,  _,  _,  _,  _,  _,  _,  _ ),
+			//~ _mm_setr_epi8(  0,  1,  2,  3,  8,  9, 10, 11, 12, 13, 14, 15,  _,  _,  _,  _ ),
+			//~ _mm_setr_epi8(  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15,  _,  _,  _,  _ ),
+			//~ _mm_setr_epi8(  0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15 )
+		//~ };
+		//~ #undef _
+
+		//~ // While queue is not empty
+		//~ while (qStart < qEnd) {
+			//~ uint32_t currElement = queue[qStart];
+			//~ qStart++;
+
+			//~ const uint32_t startEdge = off[currElement];
+
+			//~ const uint32_t stopEdge = off[currElement + 1];
+			//~ const uint32_t nextLevel = level[currElement] + 1;
+			//~ const __m128i mmNextLevel = _mm_set1_epi32(nextLevel);
+			
+			//~ uint32_t j = startEdge;
+			//~ for (; j + 4 < stopEdge; j += 4) {
+				//~ const uint32_t k0 = ind[j];
+				//~ const uint32_t k1 = ind[j + 1];
+				//~ const uint32_t k2 = ind[j + 2];
+				//~ const uint32_t k3 = ind[j + 3];
+				//~ const __m128i mmK = _mm_loadu_si128((__m128i*)&ind[j]);
+				//~ __m128i mmLevelK = _mm_insert_epi32(_mm_insert_epi32(_mm_insert_epi32(_mm_cvtsi32_si128(level[k0]), level[k1], 1), level[k2], 2), level[k3], 3);
+				//~ __m128i predicate = _mm_cmpgt_epi32(mmLevelK, mmNextLevel);
+				//~ const unsigned qMask = _mm_movemask_ps(_mm_castsi128_ps(predicate));
+				//~ //const unsigned qMask = _mm_movemask_epi8(predicate);
+
+				//~ //predicate = _mm_and_si128(predicate, _mm_set1_epi8(4));
+				//~ //__m128i mask = predicate;
+				//~ /*
+				//~ mask = _mm_add_epi8(mask, _mm_srli_si128(predicate, 4));
+				//~ mask = _mm_add_epi8(mask, _mm_srli_si128(predicate, 8));
+				//~ mask = _mm_add_epi8(mask, _mm_srli_si128(predicate, 12));
+				//~ */
+				//~ //~ mask = _mm_add_epi8(mask, _mm_srli_si128(mask, 4));
+				//~ //~ mask = _mm_add_epi8(mask, _mm_srli_si128(mask, 8));
+				//~ //~ mask = _mm_add_epi8(mask, _mm_setr_epi8(0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3));
+				//~ //const __m128i compressed = _mm_shuffle_epi8(mmK, mask);
+				//~ const __m128i compressed = _mm_shuffle_epi8(mmK, shuffleTable[qMask]);
+				//~ _mm_storeu_si128((__m128i*)&queue[qEnd], compressed);
+
+				//~ qEnd += __builtin_popcount(qMask);
+				//~ //~ qEnd += __builtin_popcount(qMask) >> 2;
+				//~ mmLevelK = _mm_min_epi32(mmLevelK, mmNextLevel);
+				//~ level[k0] = _mm_cvtsi128_si32(mmLevelK);
+				//~ level[k1] = _mm_extract_epi32(mmLevelK, 1);
+				//~ level[k2] = _mm_extract_epi32(mmLevelK, 2);
+				//~ level[k3] = _mm_extract_epi32(mmLevelK, 3);
+			//~ }
+			//~ for (; j < stopEdge; j ++) {
+				//~ const uint32_t k = ind[j];
+				//~ uint32_t levelK = level[k];
+				//~ queue[qEnd] = k;
+				//~ __asm__ __volatile__ (
+					//~ "CMPL %[levelK], %[nextLevel];"
+					//~ "CMOVNGEL %[nextLevel], %[levelK];"
+					//~ "ADCL $0, %[qEnd];"
+					//~ : [qEnd] "+r" (qEnd), [levelK] "+r" (levelK)
+					//~ : [nextLevel] "r" (nextLevel)
+					//~ : "cc"
+				//~ );
+				//~ level[k] = levelK;
+			//~ }
+
+		//~ }
+	//~ }
 #endif
 
 #ifdef __AVX2__

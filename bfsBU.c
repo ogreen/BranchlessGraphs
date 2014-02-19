@@ -100,7 +100,7 @@ uint32_t BFS_BottomUp_Branchy_LevelInformation(uint32_t* off, uint32_t* ind, uin
 	return changed;
 }
 
-uint32_t BFS_BottomUp_Branchy(uint32_t* off, uint32_t* ind, uint32_t* bitmap, uint32_t* level, uint32_t currRoot, uint32_t nv, uint32_t currLevel) {
+uint32_t BFS_BottomUp_Branchy(uint32_t* off, uint32_t* ind, uint32_t* bitmap, uint32_t* level, uint32_t nv, uint32_t currLevel) {
 	const uint32_t nextLevel = currLevel + 1;
 	uint32_t changed=0;
 
@@ -133,7 +133,7 @@ uint32_t BFS_BottomUp_Branchy(uint32_t* off, uint32_t* ind, uint32_t* bitmap, ui
 	return changed;
 }
 
-uint32_t BFS_BottomUp_Branchless(uint32_t* off, uint32_t* ind, uint32_t* bitmap, uint32_t* level, uint32_t currRoot, uint32_t nv, uint32_t currLevel) {
+uint32_t BFS_BottomUp_Branchless(uint32_t* off, uint32_t* ind, uint32_t* bitmap, uint32_t* level, uint32_t nv, uint32_t currLevel) {
 	const uint32_t nextLevel = currLevel + 1;
 	uint32_t changed=0;
 
@@ -157,7 +157,7 @@ uint32_t BFS_BottomUp_Branchless(uint32_t* off, uint32_t* ind, uint32_t* bitmap,
 }
 
 #if defined(__x86_64__) && !defined(__MIC__)
-	uint32_t BFS_BottomUp_Branchless_CMOV(uint32_t* off, uint32_t* ind, uint32_t* bitmap, uint32_t* level, uint32_t currRoot, uint32_t nv, uint32_t currLevel) {
+	uint32_t BFS_BottomUp_Branchless_CMOV(uint32_t* off, uint32_t* ind, uint32_t* bitmap, uint32_t* level, uint32_t nv, uint32_t currLevel) {
 		const uint32_t nextLevel = currLevel + 1;
 		uint32_t changed=0;
 
