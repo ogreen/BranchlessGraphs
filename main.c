@@ -65,6 +65,7 @@ int main (const int argc, char *argv[]) {
 
 	#if defined(BENCHMARK_BFS)	
 		uint32_t* edgesTraversed = (uint32_t*)memalign(64, nv * sizeof(uint32_t));
+		memset(edgesTraversed, 0, nv * sizeof(uint32_t));
 		{
 			uint32_t* queue = (uint32_t*)memalign(64, nv * sizeof(uint32_t));
 			uint32_t* level = (uint32_t*)memalign(64, nv * sizeof(uint32_t));
@@ -190,25 +191,25 @@ int main (const int argc, char *argv[]) {
 			const uint32_t inputVerteces = outputVerteces;
 			vertices[currentLevel-1] = inputVerteces;
 
-			ioctl(fd_branches, PERF_EVENT_IOC_RESET, 0);
-			ioctl(fd_mispredictions, PERF_EVENT_IOC_RESET, 0);
-			ioctl(fd_instructions, PERF_EVENT_IOC_RESET, 0);
+			assert(ioctl(fd_branches, PERF_EVENT_IOC_RESET, 0) == 0);
+			assert(ioctl(fd_mispredictions, PERF_EVENT_IOC_RESET, 0) == 0);
+			assert(ioctl(fd_instructions, PERF_EVENT_IOC_RESET, 0) == 0);
 
-			ioctl(fd_branches, PERF_EVENT_IOC_ENABLE, 0);
-			ioctl(fd_mispredictions, PERF_EVENT_IOC_ENABLE, 0);
-			ioctl(fd_instructions, PERF_EVENT_IOC_ENABLE, 0);
+			assert(ioctl(fd_branches, PERF_EVENT_IOC_ENABLE, 0) == 0);
+			assert(ioctl(fd_mispredictions, PERF_EVENT_IOC_ENABLE, 0) == 0);
+			assert(ioctl(fd_instructions, PERF_EVENT_IOC_ENABLE, 0) == 0);
 			tic();
 
 			outputVerteces = bfs_function(off, ind, queuePosition, inputVerteces, queuePosition + inputVerteces, level, currentLevel);
 			queuePosition += inputVerteces;
 
-			seconds[currentLevel] = toc();
-			ioctl(fd_branches, PERF_EVENT_IOC_DISABLE, 0);
-			ioctl(fd_mispredictions, PERF_EVENT_IOC_DISABLE, 0);
-			ioctl(fd_instructions, PERF_EVENT_IOC_DISABLE, 0);
-			read(fd_branches, &branches[currentLevel-1], sizeof(uint64_t));
-			read(fd_mispredictions, &mispredictions[currentLevel-1], sizeof(uint64_t));
-			read(fd_instructions, &instructions[currentLevel-1], sizeof(uint64_t));
+			seconds[currentLevel-1] = toc();
+			assert(ioctl(fd_branches, PERF_EVENT_IOC_DISABLE, 0) == 0);
+			assert(ioctl(fd_mispredictions, PERF_EVENT_IOC_DISABLE, 0) == 0);
+			assert(ioctl(fd_instructions, PERF_EVENT_IOC_DISABLE, 0) == 0);
+			assert(read(fd_branches, &branches[currentLevel-1], sizeof(uint64_t)) == sizeof(uint64_t));
+			assert(read(fd_mispredictions, &mispredictions[currentLevel-1], sizeof(uint64_t)) == sizeof(uint64_t));
+			assert(read(fd_instructions, &instructions[currentLevel-1], sizeof(uint64_t)) == sizeof(uint64_t));
 			currentLevel += 1;
 		} while (outputVerteces != 0);
 		const uint32_t levelCount = currentLevel - 1;
