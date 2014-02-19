@@ -104,15 +104,14 @@ uint32_t BFS_BottomUp_Branchy(uint32_t* off, uint32_t* ind, uint32_t* bitmap, ui
 	const uint32_t nextLevel = currLevel + 1;
 	uint32_t changed=0;
 
-	uint32_t stopEdge = off[0];
 	for (uint32_t v = 0; v != nv; v++) {
 #if BFS_USE_BITSETS
 		if (IsReset(bitmap + (v / 32), v % 32)) {
 #else
 		if (!bitmap[v / 32]) {
 #endif
-			const uint32_t startEdge = stopEdge;
-			stopEdge = off[v+1];
+			const uint32_t startEdge = off[v];
+			const uint32_t stopEdge = off[v+1];
 			for (uint32_t edge = startEdge; edge < stopEdge; edge++) {
 				uint32_t k = ind[edge];
 
@@ -137,21 +136,31 @@ uint32_t BFS_BottomUp_Branchless(uint32_t* off, uint32_t* ind, uint32_t* bitmap,
 	const uint32_t nextLevel = currLevel + 1;
 	uint32_t changed=0;
 
-	uint32_t stopEdge = off[0];
 	for (uint32_t v = 0; v != nv; v++) {
-		const uint32_t startEdge = stopEdge;
-		stopEdge = off[v+1];
-		const uint32_t levelV = level[v];
-		uint32_t newLevelV = levelV;
-		for (uint32_t edge = startEdge; edge != stopEdge; edge++) {
-			uint32_t k = ind[edge];
+#if BFS_USE_BITSETS
+		if (IsReset(bitmap + (v / 32), v % 32)) {
+#else
+		if (!bitmap[v / 32]) {
+#endif
+			const uint32_t startEdge = off[v];
+			const uint32_t stopEdge = off[v+1];
+			const uint32_t levelV = level[v];
+			uint32_t newLevelV = levelV;
+			uint8_t newFrontierPredicate = 0;
+			for (uint32_t edge = startEdge; edge != stopEdge; edge++) {
+				uint32_t k = ind[edge];
 
-			// If this is a neighbor and has not been found
-			const uint32_t levelK = level[k];
-			const uint32_t mask = -((int32_t)(levelK == currLevel));
-			newLevelV ^= (newLevelV ^ nextLevel) & mask;
+				// If this is a neighbor and has not been found
+				const uint32_t levelK = level[k];
+				const uint8_t frontierPredicate = (levelK == currLevel);
+				newFrontierPredicate |= frontierPredicate;
+				const uint32_t frontierMask = -((int32_t)frontierPredicate);
+				newLevelV ^= (newLevelV ^ nextLevel) & frontierMask;
+			}
+			bitmap[v / 32] |= ((uint32_t)newFrontierPredicate) << (v % 32);
+			level[v] = newLevelV;
+			changed |= newLevelV ^ levelV;
 		}
-		changed |= newLevelV ^ levelV;
 	}
 	return changed;
 }
@@ -161,26 +170,37 @@ uint32_t BFS_BottomUp_Branchless(uint32_t* off, uint32_t* ind, uint32_t* bitmap,
 		const uint32_t nextLevel = currLevel + 1;
 		uint32_t changed=0;
 
-		uint32_t stopEdge = off[0];
 		for (uint32_t v = 0; v != nv; v++) {
-			const uint32_t startEdge = stopEdge;
-			stopEdge = off[v+1];
-			const uint32_t levelV = level[v];
-			uint32_t newLevelV = levelV;
-			for (uint32_t edge = startEdge; edge != stopEdge; edge++) {
-				uint32_t k = ind[edge];
+	#if BFS_USE_BITSETS
+			if (IsReset(bitmap + (v / 32), v % 32)) {
+	#else
+			if (!bitmap[v / 32]) {
+	#endif
+				const uint32_t startEdge = off[v];
+				const uint32_t stopEdge = off[v+1];
+				const uint32_t levelV = level[v];
+				uint32_t newLevelV = levelV;
+				uint8_t newFrontierPredicate = 0;
+				for (uint32_t edge = startEdge; edge != stopEdge; edge++) {
+					uint32_t k = ind[edge];
 
-				// If this is a neighbor and has not been found
-				const uint32_t levelK = level[k];
-				__asm__ __volatile__ (
-					"CMPL %[levelK], %[currLevel];"
-					"CMOVE %[nextLevel], %[newLevelV];"
-					: [newLevelV] "+r" (newLevelV)
-					: [levelK] "r" (levelK), [currLevel] "r" (currLevel), [nextLevel] "r" (nextLevel)
-					: "cc"
-				);
+					// If this is a neighbor and has not been found
+					const uint32_t levelK = level[k];
+					uint8_t frontierPredicate;
+					__asm__ __volatile__ (
+						"CMPL %[levelK], %[currLevel];"
+						"SETE %[frontierPredicate];"
+						"CMOVE %[nextLevel], %[newLevelV];"
+						: [newLevelV] "+r" (newLevelV), [frontierPredicate] "=r" (frontierPredicate)
+						: [levelK] "r" (levelK), [currLevel] "r" (currLevel), [nextLevel] "r" (nextLevel)
+						: "cc"
+					);
+					newFrontierPredicate |= frontierPredicate;
+				}
+				bitmap[v / 32] |= ((uint32_t)newFrontierPredicate) << (v % 32);
+				level[v] = newLevelV;
+				changed |= newLevelV ^ levelV;
 			}
-			changed |= newLevelV ^ levelV;
 		}
 		return changed;
 	}
