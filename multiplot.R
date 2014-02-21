@@ -1,8 +1,3 @@
-rm(list = ls())
-library(ggplot2)
-
-perfdata = read.table("preferentialAttachment.log", sep="\t")
-
 # Multiple plot function
 #
 # ggplot objects can be passed in ..., or to plotlist (as a list of ggplot objects)
@@ -48,31 +43,3 @@ multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
     }
   }
 }
-
-names(perfdata) <- c("Algorithm", "Iteration", "Time", "Mispredictions", "Branches", "Instructions", "Vertices", "Edges")
-perfdata$Algorithm <- factor(perfdata$Algorithm, levels=unique(perfdata$Algorithm))
-timePlot <- 
-  ggplot(perfdata, aes(x=Iteration, y=Time * 1.0e+3, colour=Algorithm)) +
-  geom_line() +
-  ylab("Time per iteration, ms") +
-  ggtitle("Execution Time")
-
-branchesPlot <- 
-  ggplot(perfdata, aes(x=Iteration, y=Branches, colour=Algorithm)) +
-  geom_line() +
-  ylab("Branches per iteration") +
-  ggtitle("Retired Branch Instructions")
-
-mispredictionsPlot <- 
-  ggplot(perfdata, aes(x=Iteration, y=Mispredictions, colour=Algorithm)) +
-  geom_line() +
-  ylab("Branch Mispredictions per iteration") +
-  ggtitle("Mispredicted Branch Instructions")
-
-instructionsPlot <- 
-  ggplot(perfdata, aes(x=Iteration, y=Instructions, colour=Algorithm)) +
-  geom_line() +
-  ylab("Instructions per iteration") +
-  ggtitle("Retired Instructions")
-
-multiplot(timePlot, branchesPlot, mispredictionsPlot, instructionsPlot, cols=2)  
