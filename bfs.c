@@ -24,7 +24,6 @@ void BFS_TopDown_Branchy_LevelInformation(uint32_t* off, uint32_t* ind, uint32_t
 		uint32_t nextLevel = level[currElement] + 1;
 		if (level[currElement] > currLevel){
 			queueStartPosition[currLevel+1] = qStart;			
-			edgesTraversed[currLevel] = travEdge;
 			travEdge = 0;
 			currLevel = level[currElement];	
 //			printf("curr level %ld",currLevel); fflush(stdout);					
@@ -32,7 +31,7 @@ void BFS_TopDown_Branchy_LevelInformation(uint32_t* off, uint32_t* ind, uint32_t
 		
 		for (uint32_t j = startEdge; startEdge < stopEdge; startEdge++) {
 			uint32_t k = ind[startEdge];
-			travEdge++;
+			edgesTraversed[currLevel]++;
 			// If this is a neighbor and has not been found
 			if (level[k] > level[currElement]) {
 				// Checking if "k" has been found.
@@ -44,9 +43,7 @@ void BFS_TopDown_Branchy_LevelInformation(uint32_t* off, uint32_t* ind, uint32_t
 		}
 		qStart++;
 	}
-
 	queueStartPosition[currLevel+1] = qStart;			
-	edgesTraversed[currLevel] = travEdge;
 }
 
 

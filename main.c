@@ -19,7 +19,7 @@ static uint32_t * restrict ind;
 static uint32_t * restrict weight;
 static uint32_t * restrict action;
 
-void Benchmark_BFS_TopDown(const char* implementation_name, BFS_TopDown_Function bfs_function, uint32_t* off, uint32_t* ind);
+void Benchmark_BFS_TopDown(const char* implementation_name, BFS_TopDown_Function bfs_function, uint32_t* off, uint32_t* ind, uint32_t* edgesTraversed);
 void Benchmark_BFS_BottomUp(const char* implementation_name, BFS_BottomUp_Function bfs_function, uint32_t* off, uint32_t* ind);
 void Benchmark_ConnectedComponents_SV(const char* implementation_name, ConnectedComponents_SV_Function sv_function, size_t nv, uint32_t* off, uint32_t* ind);
 
@@ -64,10 +64,11 @@ int main (const int argc, char *argv[]) {
 	fclose(fp);
 
 	#if defined(BENCHMARK_BFS)	
+		uint32_t* edgesTraversed = (uint32_t*)memalign(64, nv * sizeof(uint32_t));
+		memset(edgesTraversed, 0, nv * sizeof(uint32_t));
 		{
 			uint32_t* queue = (uint32_t*)memalign(64, nv * sizeof(uint32_t));
 			uint32_t* level = (uint32_t*)memalign(64, nv * sizeof(uint32_t));
-			uint32_t* edgesTraversed = (uint32_t*)memalign(64, nv * sizeof(uint32_t));
 			uint32_t* queueStartPosition = (uint32_t*)memalign(64, nv * sizeof(uint32_t));
 			for (size_t i = 0; i < nv; i++) {
 				level[i] = INT32_MAX;
@@ -76,29 +77,29 @@ int main (const int argc, char *argv[]) {
 			BFS_TopDown_Branchy_LevelInformation(off, ind, queue, level, 1, edgesTraversed, queueStartPosition);
 
 			free(queueStartPosition);
-			free(edgesTraversed);
 			free(level);
 			free(queue);
 		}
 
-		Benchmark_BFS_TopDown("BFS/TD brachy", BFS_TopDown_Branchy, off, ind);
-		Benchmark_BFS_TopDown("BFS/TD branchless (C)", BFS_TopDown_Branchless, off, ind);
+		Benchmark_BFS_TopDown("BFS/TD brachy", BFS_TopDown_Branchy, off, ind, edgesTraversed);
+		Benchmark_BFS_TopDown("BFS/TD branchless (C)", BFS_TopDown_Branchless, off, ind, edgesTraversed);
 		#if defined(__x86_64__) && !defined(__MIC__)
-		Benchmark_BFS_TopDown("BFS/TD branchless (CMOV)", BFS_TopDown_Branchless_CMOV, off, ind);
+		Benchmark_BFS_TopDown("BFS/TD branchless (CMOV)", BFS_TopDown_Branchless_CMOV, off, ind, edgesTraversed);
 		#endif
 		#ifdef __SSE4_1__
-		Benchmark_BFS_TopDown("BFS/TD bracnhless (SSE 4.1)", BFS_TopDown_Branchless_SSE4_1, off, ind);
+		Benchmark_BFS_TopDown("BFS/TD bracnhless (SSE 4.1)", BFS_TopDown_Branchless_SSE4_1, off, ind, edgesTraversed);
 		#endif
 		#ifdef __AVX2__
-		//~ Benchmark_BFS_TopDown("BFS/TD bracnhless (AVX 2)", BFS_TopDown_Branchless_AVX2, off, ind);
+		//~ Benchmark_BFS_TopDown("BFS/TD bracnhless (AVX 2)", BFS_TopDown_Branchless_AVX2, off, ind, edgesTraversed);
 		#endif
 		#ifdef __MIC__
-		//~ Benchmark_BFS_TopDown("BFS/TD bracnhless (MIC)", BFS_TopDown_Branchless_MIC, off, ind);
+		//~ Benchmark_BFS_TopDown("BFS/TD bracnhless (MIC)", BFS_TopDown_Branchless_MIC, off, ind, edgesTraversed);
 		#endif
 		//~ Benchmark_BFS_BottomUp("BFS/BU brachy", BFS_BottomUp_Branchy, off, ind);
 		//~ Benchmark_BFS_BottomUp("BFS/BU branchless (C)", BFS_BottomUp_Branchless, off, ind);
 		//~ Benchmark_BFS_BottomUp("BFS/BU branchless (CMOV)", BFS_BottomUp_Branchless_CMOV, off, ind);
 
+		free(edgesTraversed);
 	#endif
 
 #if defined(BENCHMARK_SV)
@@ -119,7 +120,7 @@ int main (const int argc, char *argv[]) {
 }
 
 #if defined(BENCHMARK_BFS)
-	void Benchmark_BFS_TopDown(const char* implementation_name, BFS_TopDown_Function bfs_function, uint32_t* off, uint32_t* ind) {
+	void Benchmark_BFS_TopDown(const char* implementation_name, BFS_TopDown_Function bfs_function, uint32_t* off, uint32_t* ind, uint32_t* edgesTraversed) {
 		struct perf_event_attr perf_branches;
 		struct perf_event_attr perf_mispredictions;
 		struct perf_event_attr perf_instructions;
@@ -176,6 +177,7 @@ int main (const int argc, char *argv[]) {
 		uint64_t* branches = (uint64_t*)memalign(64, nv * sizeof(uint64_t));
 		uint64_t* mispredictions = (uint64_t*)memalign(64, nv * sizeof(uint64_t));
 		uint64_t* instructions = (uint64_t*)memalign(64, nv * sizeof(uint64_t));
+		uint32_t* vertices = (uint32_t*)memalign(64, nv * sizeof(uint32_t));
 		double* seconds = (double*)memalign(64, nv * sizeof(double));
 
 		const uint32_t rootVertex = 1;
@@ -186,31 +188,34 @@ int main (const int argc, char *argv[]) {
 
 		uint32_t outputVerteces = 1;
 		do {
-			ioctl(fd_branches, PERF_EVENT_IOC_RESET, 0);
-			ioctl(fd_mispredictions, PERF_EVENT_IOC_RESET, 0);
-			ioctl(fd_instructions, PERF_EVENT_IOC_RESET, 0);
-
-			tic();
-			ioctl(fd_branches, PERF_EVENT_IOC_ENABLE, 0);
-			ioctl(fd_mispredictions, PERF_EVENT_IOC_ENABLE, 0);
-			ioctl(fd_instructions, PERF_EVENT_IOC_ENABLE, 0);
-
 			const uint32_t inputVerteces = outputVerteces;
+			vertices[currentLevel-1] = inputVerteces;
+
+			assert(ioctl(fd_branches, PERF_EVENT_IOC_RESET, 0) == 0);
+			assert(ioctl(fd_mispredictions, PERF_EVENT_IOC_RESET, 0) == 0);
+			assert(ioctl(fd_instructions, PERF_EVENT_IOC_RESET, 0) == 0);
+
+			assert(ioctl(fd_branches, PERF_EVENT_IOC_ENABLE, 0) == 0);
+			assert(ioctl(fd_mispredictions, PERF_EVENT_IOC_ENABLE, 0) == 0);
+			assert(ioctl(fd_instructions, PERF_EVENT_IOC_ENABLE, 0) == 0);
+			tic();
+
 			outputVerteces = bfs_function(off, ind, queuePosition, inputVerteces, queuePosition + inputVerteces, level, currentLevel);
 			queuePosition += inputVerteces;
 
-			ioctl(fd_branches, PERF_EVENT_IOC_DISABLE, 0);
-			ioctl(fd_mispredictions, PERF_EVENT_IOC_DISABLE, 0);
-			ioctl(fd_instructions, PERF_EVENT_IOC_DISABLE, 0);
-			seconds[currentLevel] = toc();
-			read(fd_branches, &branches[currentLevel], sizeof(uint64_t));
-			read(fd_mispredictions, &mispredictions[currentLevel], sizeof(uint64_t));
-			read(fd_instructions, &instructions[currentLevel], sizeof(uint64_t));
+			seconds[currentLevel-1] = toc();
+			assert(ioctl(fd_branches, PERF_EVENT_IOC_DISABLE, 0) == 0);
+			assert(ioctl(fd_mispredictions, PERF_EVENT_IOC_DISABLE, 0) == 0);
+			assert(ioctl(fd_instructions, PERF_EVENT_IOC_DISABLE, 0) == 0);
+			assert(read(fd_branches, &branches[currentLevel-1], sizeof(uint64_t)) == sizeof(uint64_t));
+			assert(read(fd_mispredictions, &mispredictions[currentLevel-1], sizeof(uint64_t)) == sizeof(uint64_t));
+			assert(read(fd_instructions, &instructions[currentLevel-1], sizeof(uint64_t)) == sizeof(uint64_t));
 			currentLevel += 1;
 		} while (outputVerteces != 0);
+		const uint32_t levelCount = currentLevel - 1;
 
-		for (uint32_t level = 0; level < currentLevel; level++) {
-			printf("%s\t%"PRIu32"\t%.1lf\t%"PRIu64"\t%"PRIu64"\t%"PRIu64"\n", implementation_name, level, seconds[level] *1.0e+9, mispredictions[level], branches[level], instructions[level]);
+		for (uint32_t level = 0; level < levelCount; level++) {
+			printf("%s\t%"PRIu32"\t%.10lf\t%"PRIu64"\t%"PRIu64"\t%"PRIu64"\t%"PRIu32"\t%"PRIu32"\n", implementation_name, level, seconds[level], mispredictions[level], branches[level], instructions[level], vertices[level], edgesTraversed[level]);
 		}
 
 		close(fd_branches);
@@ -221,6 +226,7 @@ int main (const int argc, char *argv[]) {
 		free(branches);
 		free(mispredictions);
 		free(instructions);
+		free(vertices);
 		free(seconds);
 	}
 
@@ -288,7 +294,7 @@ int main (const int argc, char *argv[]) {
 		bool changed;
 
 		const uint32_t rootVertex = 1;
-		levels[rootVertex] = currentLevel++;
+		levels[rootVertex] = currentLevel;
 		bitmap[rootVertex / 32] = 1 << (rootVertex % 32);
 		do {
 			ioctl(fd_branches, PERF_EVENT_IOC_RESET, 0);
@@ -314,7 +320,7 @@ int main (const int argc, char *argv[]) {
 		} while (changed);
 
 		for (uint32_t level = 0; level < currentLevel; level++) {
-			printf("%s\t%"PRIu32"\t%.1lf\t%"PRIu64"\t%"PRIu64"\t%"PRIu64"\n", implementation_name, level, seconds[level] *1.0e+9, mispredictions[level], branches[level], instructions[level]);
+			printf("%s\t%"PRIu32"\t%.10lf\t%"PRIu64"\t%"PRIu64"\t%"PRIu64"\n", implementation_name, level, seconds[level], mispredictions[level], branches[level], instructions[level]);
 		}
 
 		close(fd_branches);
@@ -331,8 +337,6 @@ int main (const int argc, char *argv[]) {
 
 #if defined(BENCHMARK_SV)
 	void Benchmark_ConnectedComponents_SV(const char* implementation_name, ConnectedComponents_SV_Function sv_function, size_t nv, uint32_t* off, uint32_t* ind) {
-		uint32_t* components_map = (uint32_t*)memalign(64, nv * sizeof(uint32_t));
-
 		struct perf_event_attr perf_branches;
 		struct perf_event_attr perf_mispredictions;
 		struct perf_event_attr perf_instructions;
@@ -379,41 +383,50 @@ int main (const int argc, char *argv[]) {
 			exit(EXIT_FAILURE);
 		}
 
-		{
-			printf("%s:\n", implementation_name);
-			for (size_t i = 0; i < nv; i++) {
-				components_map[i] = i;
-			}
-			bool changed = true;
-			size_t iteration = 0;
-			while (changed) {
-				ioctl(fd_branches, PERF_EVENT_IOC_RESET, 0);
-				ioctl(fd_mispredictions, PERF_EVENT_IOC_RESET, 0);
-				ioctl(fd_instructions, PERF_EVENT_IOC_RESET, 0);
-				tic();
-				ioctl(fd_branches, PERF_EVENT_IOC_ENABLE, 0);
-				ioctl(fd_mispredictions, PERF_EVENT_IOC_ENABLE, 0);
-				ioctl(fd_instructions, PERF_EVENT_IOC_ENABLE, 0);
+		uint32_t* components_map = (uint32_t*)memalign(64, nv * sizeof(uint32_t));
+		uint64_t* branches = (uint64_t*)memalign(64, nv * sizeof(uint64_t));
+		uint64_t* mispredictions = (uint64_t*)memalign(64, nv * sizeof(uint64_t));
+		uint64_t* instructions = (uint64_t*)memalign(64, nv * sizeof(uint64_t));
+		double* seconds = (double*)memalign(64, nv * sizeof(double));
 
-				changed = sv_function(nv, components_map, off, ind);
+		for (size_t i = 0; i < nv; i++) {
+			components_map[i] = i;
+		}
 
-				ioctl(fd_branches, PERF_EVENT_IOC_DISABLE, 0);
-				ioctl(fd_mispredictions, PERF_EVENT_IOC_DISABLE, 0);
-				ioctl(fd_instructions, PERF_EVENT_IOC_DISABLE, 0);
-				const double secs = toc() * 1.0e+9;
-				long long branches, mispredictions, instructions;
-				read(fd_branches, &branches, sizeof(long long));
-				read(fd_mispredictions, &mispredictions, sizeof(long long));
-				read(fd_instructions, &instructions, sizeof(long long));
-				const double branch_misprections = (double)(mispredictions) / (double)(branches - nv);
-				if ((iteration++ < 7) || (!changed))
-					printf("\tIteration %3zu: %9.lf\t%5.3lf%%\t%11lld\t%11lld\t%11lld\n", iteration, secs, branch_misprections * 100.0, mispredictions, branches, instructions);
-			}
+		bool changed;
+		size_t iteration = 0;
+		do {
+			ioctl(fd_branches, PERF_EVENT_IOC_RESET, 0);
+			ioctl(fd_mispredictions, PERF_EVENT_IOC_RESET, 0);
+			ioctl(fd_instructions, PERF_EVENT_IOC_RESET, 0);
+			tic();
+			ioctl(fd_branches, PERF_EVENT_IOC_ENABLE, 0);
+			ioctl(fd_mispredictions, PERF_EVENT_IOC_ENABLE, 0);
+			ioctl(fd_instructions, PERF_EVENT_IOC_ENABLE, 0);
+
+			changed = sv_function(nv, components_map, off, ind);
+
+			ioctl(fd_branches, PERF_EVENT_IOC_DISABLE, 0);
+			ioctl(fd_mispredictions, PERF_EVENT_IOC_DISABLE, 0);
+			ioctl(fd_instructions, PERF_EVENT_IOC_DISABLE, 0);
+			seconds[iteration] = toc();
+			read(fd_branches, &branches[iteration], sizeof(long long));
+			read(fd_mispredictions, &mispredictions[iteration], sizeof(long long));
+			read(fd_instructions, &instructions[iteration], sizeof(long long));
+			iteration += 1;
+		} while (changed);
+
+		for (uint32_t i = 0; i < iteration; i++) {
+			printf("%s\t%"PRIu32"\t%.10lf\t%"PRIu64"\t%"PRIu64"\t%"PRIu64"\n", implementation_name, i, seconds[i], mispredictions[i], branches[i], instructions[i]);
 		}
 
 		close(fd_branches);
 		close(fd_mispredictions);
 		close(fd_instructions);
 		free(components_map);
+		free(branches);
+		free(mispredictions);
+		free(instructions);
+		free(seconds);
 	}
 #endif
