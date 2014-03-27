@@ -5,7 +5,10 @@
 
 void BFS_TopDown_Branchy_LevelInformation(uint32_t* off, uint32_t* ind, uint32_t* queue, uint32_t* level, uint32_t currRoot, uint32_t* edgesTraversed, uint32_t* queueStartPosition);
 
-typedef uint32_t (*BFS_TopDown_Function)(uint32_t* off, uint32_t* ind, const uint32_t* inputQueue, uint32_t inputVerteces, uint32_t* outputQueue, uint32_t* level, uint32_t currentLevel);
+typedef uint32_t (*BFS_TopDown_Function)(uint32_t* off, uint32_t* ind, const uint32_t* inputQueue, uint32_t inputVerteces, uint32_t* outputQueue, uint32_t outputCapacity, uint32_t* level, uint32_t currentLevel);
+
+uint32_t _BFS_TopDown_Branchy_CortexA15(uint32_t* vertexEdges, uint32_t* neighbors, const uint32_t* inputQueue, uint32_t inputVertices, uint32_t* outputQueue, uint32_t outputCapacity, uint32_t* levels, uint32_t currentLevel);
+uint32_t _BFS_TopDown_Branchless_CortexA15(uint32_t* vertexEdges, uint32_t* neighbors, const uint32_t* inputQueue, uint32_t inputVertices, uint32_t* outputQueue, uint32_t outputCapacity, uint32_t* levels, uint32_t currentLevel);
 
 uint32_t BFS_TopDown_Branchy(uint32_t* off, uint32_t* ind, const uint32_t* inputQueue, uint32_t inputVerteces, uint32_t* outputQueue, uint32_t* level, uint32_t currentLevel);
 uint32_t BFS_TopDown_Branchless(uint32_t* off, uint32_t* ind, const uint32_t* inputQueue, uint32_t inputVerteces, uint32_t* outputQueue, uint32_t* level, uint32_t currentLevel);

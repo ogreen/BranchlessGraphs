@@ -81,8 +81,10 @@ int main (const int argc, char *argv[]) {
 			free(queue);
 		}
 
-		Benchmark_BFS_TopDown("BFS/TD brachy", BFS_TopDown_Branchy, off, ind, edgesTraversed);
-		Benchmark_BFS_TopDown("BFS/TD branchless (C)", BFS_TopDown_Branchless, off, ind, edgesTraversed);
+		//~ Benchmark_BFS_TopDown("BFS/TD brachy", BFS_TopDown_Branchy, off, ind, edgesTraversed);
+		//~ Benchmark_BFS_TopDown("BFS/TD branchless (C)", BFS_TopDown_Branchless, off, ind, edgesTraversed);
+		Benchmark_BFS_TopDown("BFS/TD brachy (CA15)", _BFS_TopDown_Branchy_CortexA15, off, ind, edgesTraversed);
+		Benchmark_BFS_TopDown("BFS/TD branchless (CA15)", _BFS_TopDown_Branchless_CortexA15, off, ind, edgesTraversed);
 		#if defined(__x86_64__) && !defined(__MIC__)
 		Benchmark_BFS_TopDown("BFS/TD branchless (CMOV)", BFS_TopDown_Branchless_CMOV, off, ind, edgesTraversed);
 		#endif
@@ -200,7 +202,7 @@ int main (const int argc, char *argv[]) {
 			assert(ioctl(fd_instructions, PERF_EVENT_IOC_ENABLE, 0) == 0);
 			tic();
 
-			outputVerteces = bfs_function(off, ind, queuePosition, inputVerteces, queuePosition + inputVerteces, level, currentLevel);
+			outputVerteces = bfs_function(off, ind, queuePosition, inputVerteces, queuePosition + inputVerteces, nv, level, currentLevel);
 			queuePosition += inputVerteces;
 
 			seconds[currentLevel-1] = toc();
