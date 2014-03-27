@@ -105,8 +105,10 @@ int main (const int argc, char *argv[]) {
 	#endif
 
 #if defined(BENCHMARK_SV)
-	Benchmark_ConnectedComponents_SV("SV regular", ConnectedComponents_SV_Branchy, nv, off, ind);
-	Benchmark_ConnectedComponents_SV("SV branchless (C)", ConnectedComponents_SV_Branchless, nv, off, ind);
+	//~ Benchmark_ConnectedComponents_SV("SV branchy", ConnectedComponents_SV_Branchy, nv, off, ind);
+	Benchmark_ConnectedComponents_SV("SV branchy (CA15)", _ConnectedComponents_SV_Branchy_CortexA15, nv, off, ind);
+	Benchmark_ConnectedComponents_SV("SV branchless (CA15)", _ConnectedComponents_SV_Branchless_CortexA15, nv, off, ind);
+	//~ Benchmark_ConnectedComponents_SV("SV branchless (C)", ConnectedComponents_SV_Branchless, nv, off, ind);
 	#if defined(__x86_64__) && !defined(__MIC__)
 	Benchmark_ConnectedComponents_SV("SV branchless (asm)", ConnectedComponents_SV_Branchless_CMOV, nv, off, ind);
 	#endif

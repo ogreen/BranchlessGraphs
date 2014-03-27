@@ -152,25 +152,141 @@ with Function(assembler, "BFS_TopDown_Branchless", arguments, "CortexA15"):
 
     RETURN()
 
+vertexCountArgument = peachpy.c.Parameter("vertexCount", peachpy.c.Type("size_t"))
+componentMapArgument = peachpy.c.Parameter("componentMap", peachpy.c.Type("uint32_t*"))
+vertexEdgesArgument = peachpy.c.Parameter("vertexEdges", peachpy.c.Type("uint32_t*"))
+neighborsArgument = peachpy.c.Parameter("neighbors", peachpy.c.Type("uint32_t*"))
+
+arguments = (vertexCountArgument, componentMapArgument, vertexEdgesArgument, neighborsArgument)
+
+with Function(assembler, "ConnectedComponents_SV_Branchy", arguments, "CortexA15"):
+    # Load arguments into registers
+    (vertexCount, componentMap, vertexEdges, neighbors) = LOAD.PARAMETERS()
+
+    changed = GeneralPurposeRegister()
+    MOV( changed, 0 )
+
+    neighborsEnd = GeneralPurposeRegister()
+    LDR( neighborsEnd, [vertexEdges], 4 )
+    ADD( neighborsEnd, neighbors, neighborsEnd.LSL(2) )
+
+    currentComponentPointer = GeneralPurposeRegister()
+    MOV( currentComponentPointer, componentMap )
+
+    with Block("per_vertex_loop") as per_vertex_loop:
+        neighborsPointer = GeneralPurposeRegister()
+        MOV( neighborsPointer, neighborsEnd )
+
+        LDR( neighborsEnd, [vertexEdges], 4 )
+        ADD( neighborsEnd, neighbors, neighborsEnd.LSL(2) )
+
+        currentComponent = GeneralPurposeRegister()
+        LDR( currentComponent, [currentComponentPointer], 4 )
+
+        per_edge_loop = Block("per_edge_loop")
+        CMP( neighborsPointer, neighborsEnd )
+        BEQ( per_edge_loop.end )
+        
+        with per_edge_loop:
+            neighborVertex = GeneralPurposeRegister()
+            LDR( neighborVertex, [neighborsPointer], 4 )
+
+            neighborComponent = GeneralPurposeRegister()
+            LDR( neighborComponent, [componentMap, neighborVertex.LSL(2)] )
+
+            skip_update = Label("skip_update")
+            CMP( neighborComponent, currentComponent )
+            BHS( skip_update )
+
+            MOV( currentComponent, neighborComponent )
+            STR( neighborComponent, [currentComponentPointer, -4] )
+            MOV( changed, 1 )
+
+            LABEL( skip_update )
+
+            CMP( neighborsPointer, neighborsEnd )
+            BNE( per_edge_loop.begin )
+
+        SUBS( vertexCount, 1 )
+        BNE( per_vertex_loop.begin )
+
+    MOV( r0, changed )
+    RETURN()
+
+with Function(assembler, "ConnectedComponents_SV_Branchless", arguments, "CortexA15"):
+    # Load arguments into registers
+    (vertexCount, componentMap, vertexEdges, neighbors) = LOAD.PARAMETERS()
+
+    changed = GeneralPurposeRegister()
+    MOV( changed, 0 )
+
+    neighborsEnd = GeneralPurposeRegister()
+    LDR( neighborsEnd, [vertexEdges], 4 )
+    ADD( neighborsEnd, neighbors, neighborsEnd.LSL(2) )
+
+    currentComponentPointer = GeneralPurposeRegister()
+    MOV( currentComponentPointer, componentMap )
+
+    with Block("per_vertex_loop") as per_vertex_loop:
+        neighborsPointer = GeneralPurposeRegister()
+        MOV( neighborsPointer, neighborsEnd )
+
+        LDR( neighborsEnd, [vertexEdges], 4 )
+        ADD( neighborsEnd, neighbors, neighborsEnd.LSL(2) )
+
+        newComponent = GeneralPurposeRegister()
+        LDR( newComponent, [currentComponentPointer] )
+
+        currentComponent = GeneralPurposeRegister()
+        MOV( currentComponent, newComponent )
+
+        per_edge_loop = Block("per_edge_loop")
+        CMP( neighborsPointer, neighborsEnd )
+        BEQ( per_edge_loop.end )
+
+        with per_edge_loop:
+            neighborVertex = GeneralPurposeRegister()
+            LDR( neighborVertex, [neighborsPointer], 4 )
+
+            neighborComponent = GeneralPurposeRegister()
+            LDR( neighborComponent, [componentMap, neighborVertex.LSL(2)] )
+
+            CMP( neighborComponent, newComponent )
+            MOVLO( newComponent, neighborComponent )
+
+            CMP( neighborsPointer, neighborsEnd )
+            BNE( per_edge_loop.begin )
+
+        TEQ( currentComponent, newComponent )
+        MOVNE( changed, 1 )
+
+        STR( newComponent, [currentComponentPointer], 4 )
+
+        SUBS( vertexCount, 1 )
+        BNE( per_vertex_loop.begin )
+
+    MOV( r0, changed )
+    RETURN()
+
 epilog = r"""
 .macro BEGIN_ARM_FUNCTION name
-	.section .text.\name,"ax",%progbits
-	.arm
-	.globl \name
-	.align 2
-	.func \name
-	.internal \name
+    .section .text.\name,"ax",%progbits
+    .arm
+    .globl \name
+    .align 2
+    .func \name
+    .internal \name
 \name:
 .endm
 
 .macro END_ARM_FUNCTION name
-	.endfunc
-	.type \name, %function
-	.size \name, .-\name
+    .endfunc
+    .type \name, %function
+    .size \name, .-\name
 .endm
 """
 
-with open("bfs_asm.s", "w") as bfs_file:
+with open("graph_arm.s", "w") as bfs_file:
     bfs_file.write(epilog)
     bfs_file.write(str(assembler))
 
