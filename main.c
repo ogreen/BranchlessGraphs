@@ -29,39 +29,84 @@ static int perf_event_open(struct perf_event_attr *hw_event, pid_t pid, int cpu,
 	return syscall(__NR_perf_event_open, hw_event, pid, cpu, group_fd, flags);
 }
 
+void readGraphDIMACS(char* filePath, int32_t** prmoff,  int32_t** prmind, int32_t* prmnv,int32_t* prmne){
+	FILE *fp = fopen (filePath, "r");
+	int32_t nv,ne;
+
+	char* line=NULL;
+	
+	// Read data from file
+	int32_t temp,lineRead;
+	size_t bytesRead=0;
+	getline (&line, &bytesRead, fp);	
+	
+//	fgets (line, bytesRead, fp);
+	sscanf (line, "%d %d", &nv, &ne);
+//	printf ( "%ld %ld\n", nv, ne);		
+		
+	free(line);
+	int32_t * off = (int32_t *) malloc ((nv + 2) * sizeof (int32_t));
+	int32_t * ind = (int32_t *) malloc ((ne * 2) * sizeof (int32_t));
+	off[0] = 0;
+	off[1] = 0;
+	int32_t counter = 0;
+	int32_t u;
+	line=NULL;
+	bytesRead=0;
+
+//	  for (u = 1; fgets (line, &bytesRead, fp); u++)
+	for (u = 1; (temp=getline (&line, &bytesRead, fp))!=-1; u++)
+	{	
+//		printf("%s",line);	
+/*		bytesRead=0;	
+		free(line);	
+		if (u>10) 
+			break;
+
+		continue;
+*/		
+		uint32_t neigh = 0;
+		uint32_t v = 0;
+		char *ptr = line;
+		int read = 0;
+		char tempStr[1000];
+		lineRead=0;
+		while (lineRead<bytesRead && (read=sscanf (ptr, "%s", tempStr)) > 0)
+		{
+			v=atoi(tempStr);
+			read=strlen(tempStr);
+			ptr += read+1;
+			lineRead=read+1;
+			neigh++;
+			ind[counter++] = v;
+		}
+		off[u + 1] = off[u] + neigh;
+		free(line);	  
+		bytesRead=0;
+	}
+
+
+	  fclose (fp);
+
+
+	   nv++;
+	   ne*=2;
+	*prmnv=nv;
+	*prmne=ne;
+	*prmind=ind;
+	*prmoff=off;
+}
+
+
+
 int main (const int argc, char *argv[]) {
 	if (argc != 2) {
 		fprintf(stderr, "Usage: bfs <graph-name>\n");
 		exit(EXIT_FAILURE);
 	}
-	char line[LINE_SIZE];
 
-	FILE * fp = fopen(argv[1], "r");
-	fgets(line, LINE_SIZE, fp);
-	sscanf(line, "%d %d", &nv, &ne);
-	nv += 1;
-	off = memalign(64, (nv+2) * sizeof(uint32_t));
-	ind = memalign(64, (ne*2) * sizeof(uint32_t));
-	off[0]=0;
-	off[1]=0;
-	uint32_t counter=0;
-	for (uint32_t u = 1; fgets(line, LINE_SIZE, fp); u++) {
-
-		uint64_t neigh=0;
-		uint64_t v = 0;
-		char * ptr = line;
-		int read = 0;
-
-		while (sscanf(ptr, "%" SCNu64 "%n", &v, &read) > 0) {
-			ptr += read;
-			neigh++;
-			ind[counter++]=v;
-		}
-		off[u+1]=off[u]+neigh;
-	}
-
-
-	fclose(fp);
+	readGraphDIMACS(argv[1], &off,  &ind, &nv,&ne);
+	
 
 	#if defined(BENCHMARK_BFS)	
 		uint32_t* edgesTraversed = (uint32_t*)memalign(64, nv * sizeof(uint32_t));
@@ -97,7 +142,7 @@ int main (const int argc, char *argv[]) {
 		#ifdef __MIC__
 		//~ Benchmark_BFS_TopDown("BFS/TD bracnhless (MIC)", BFS_TopDown_Branchless_MIC, off, ind, edgesTraversed);
 		#endif
-		//~ Benchmark_BFS_BottomUp("BFS/BU brachy", BFS_BottomUp_Branchy, off, ind);
+		Benchmark_BFS_BottomUp("BFS/BU brachy", BFS_BottomUp_Branchy, off, ind);
 		//~ Benchmark_BFS_BottomUp("BFS/BU branchless (C)", BFS_BottomUp_Branchless, off, ind);
 		//~ Benchmark_BFS_BottomUp("BFS/BU branchless (CMOV)", BFS_BottomUp_Branchless_CMOV, off, ind);
 
@@ -105,7 +150,7 @@ int main (const int argc, char *argv[]) {
 	#endif
 
 #if defined(BENCHMARK_SV)
-	//~ Benchmark_ConnectedComponents_SV("SV branchy", ConnectedComponents_SV_Branchy, nv, off, ind);
+//	Benchmark_ConnectedComponents_SV("SV branchy", ConnectedComponents_SV_Branchy, nv, off, ind);
 	Benchmark_ConnectedComponents_SV("SV branchy (CA15)", _ConnectedComponents_SV_Branchy_CortexA15, nv, off, ind);
 	Benchmark_ConnectedComponents_SV("SV branchless (CA15)", _ConnectedComponents_SV_Branchless_CortexA15, nv, off, ind);
 	//~ Benchmark_ConnectedComponents_SV("SV branchless (C)", ConnectedComponents_SV_Branchless, nv, off, ind);
@@ -324,7 +369,7 @@ int main (const int argc, char *argv[]) {
 		} while (changed);
 
 		for (uint32_t level = 0; level < currentLevel; level++) {
-			printf("%s\t%"PRIu32"\t%.10lf\t%"PRIu64"\t%"PRIu64"\t%"PRIu64"\n", implementation_name, level, seconds[level], mispredictions[level], branches[level], instructions[level]);
+			printf("%s\t%"PRIu32"\t%.10lf\t%"PRIu64"\t%"PRIu64"\t%"PRIu64" \t1 \t1\n", implementation_name, level, seconds[level], mispredictions[level], branches[level], instructions[level]);
 		}
 
 		close(fd_branches);
