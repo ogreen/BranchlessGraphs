@@ -9,103 +9,103 @@
 
 #define SV_USE_INDEX
 
-bool ConnectedComponents_SV_Branchy(size_t nv, uint32_t* component_map, uint32_t* off, uint32_t* ind) {
+bool ConnectedComponents_SV_Branchy(size_t vertexCount, uint32_t* componentMap, uint32_t* vertexEdges, uint32_t* neighbors) {
 	bool changed = 0;
 
 #if defined(SV_USE_INDEX)
-	uint32_t *restrict vindend = ind + off[0];
-	for (size_t v = 0; v < nv; v++) {
-		const uint32_t *restrict vind = vindend;
-		vindend = ind + off[v+1];
-		uint32_t component_v = component_map[v];
-		for (; vind != vindend; vind++){
-			const uint32_t u = *vind;
-			const uint32_t component_u = component_map[u];
-			if (component_u < component_v) {
-				component_v = component_u;
-				component_map[v] = component_u;
+	uint32_t *restrict neighborsEnd = neighbors + vertexEdges[0];
+	for (size_t vertex = 0; vertex < vertexCount; vertex++) {
+		const uint32_t *restrict neighborPointer = neighborsEnd;
+		neighborsEnd = neighbors + vertexEdges[vertex+1];
+		uint32_t currentComponent = componentMap[vertex];
+		for (; neighborPointer != neighborsEnd; neighborPointer++){
+			const uint32_t neighborVertex = *neighborPointer;
+			const uint32_t component_u = componentMap[neighborVertex];
+			if (component_u < currentComponent) {
+				currentComponent = component_u;
+				componentMap[vertex] = component_u;
 				changed = true;
 			}
 		}
 	}
 #else
-	uint32_t* vindend = ind + (*off++);
-	uint32_t* component_map_v = component_map;
-	for (size_t v = nv; v != 0; v--) {
-		const uint32_t *restrict vind = vindend;
-		vindend = ind + (*off++);
-		uint32_t component_v = *component_map_v;
-		for (; vind != vindend; vind++){
-			const uint32_t u = *vind;
-			const uint32_t component_u = component_map[u];
-			if (component_u < component_v) {
-				component_v = component_u;
-				*component_map_v = component_u;
+	uint32_t* neighborsEnd = neighbors + (*vertexEdges++);
+	uint32_t* currentComponentPointer = componentMap;
+	for (size_t vertex = vertexCount; vertex != 0; vertex--) {
+		const uint32_t *restrict neighborPointer = neighborsEnd;
+		neighborsEnd = neighbors + (*vertexEdges++);
+		uint32_t currentComponent = *currentComponentPointer;
+		for (; neighborPointer != neighborsEnd; neighborPointer++){
+			const uint32_t neighborVertex = *neighborPointer;
+			const uint32_t component_u = componentMap[neighborVertex];
+			if (component_u < currentComponent) {
+				currentComponent = component_u;
+				*currentComponentPointer = component_u;
 				changed = true;
 			}
 		}
-		component_map_v++;
+		currentComponentPointer++;
 	}
 #endif
 
 	if (!changed)
 		return false;
 
-	//~ for (size_t i = 0; i < nv; i++) {
-		//~ while (component_map[i] != component_map[component_map[i]]) {
-			//~ component_map[i] = component_map[component_map[i]];
+	//~ for (size_t i = 0; i < vertexCount; i++) {
+		//~ while (componentMap[i] != componentMap[componentMap[i]]) {
+			//~ componentMap[i] = componentMap[componentMap[i]];
 		//~ }
 	//~ }
 
 	return true;
 }
 
-bool ConnectedComponents_SV_Branchless(size_t nv, uint32_t* component_map, uint32_t* off, uint32_t* ind) {
+bool ConnectedComponents_SV_Branchless(size_t vertexCount, uint32_t* componentMap, uint32_t* vertexEdges, uint32_t* neighbors) {
 	uint32_t changed = 0;
 
 #if defined(SV_USE_INDEX)
-	uint32_t *restrict vindend = ind + off[0];
-	for (size_t v = 0; v < nv; v++) {
-		const uint32_t *restrict vind = vindend;
-		vindend = ind + off[v+1];
-		const uint32_t component_v = component_map[v];
-		uint32_t component_v_new = component_v;
-		for (; vind != vindend; vind++){
-			const uint32_t u = *vind;
-			const uint32_t component_u = component_map[u];
+	uint32_t *restrict neighborsEnd = neighbors + vertexEdges[0];
+	for (size_t vertex = 0; vertex < vertexCount; vertex++) {
+		const uint32_t *restrict neighborPointer = neighborsEnd;
+		neighborsEnd = neighbors + vertexEdges[vertex+1];
+		const uint32_t currentComponent = componentMap[vertex];
+		uint32_t component_v_new = currentComponent;
+		for (; neighborPointer != neighborsEnd; neighborPointer++){
+			const uint32_t neighborVertex = *neighborPointer;
+			const uint32_t component_u = componentMap[neighborVertex];
 			const uint32_t component_diff = component_u - component_v_new;
 			const uint32_t flag = (uint32_t)((int32_t)component_u - (int32_t)component_v_new) >> 31;
 			component_v_new += (-flag) & (component_u - component_v_new);
 		}
-		changed |= component_v ^ component_v_new;
-		component_map[v] = component_v_new;
+		changed |= currentComponent ^ component_v_new;
+		componentMap[vertex] = component_v_new;
 	}
 #else
-	uint32_t* vindend = ind + (*off++);
-	uint32_t* component_map_v = component_map;
-	for (size_t v = nv; v != 0; v--) {
-		const uint32_t *restrict vind = vindend;
-		vindend = ind + (*off++);
-		const uint32_t component_v = *component_map_v;
-		uint32_t component_v_new = component_v;
-		for (; vind != vindend; vind++){
-			const uint32_t u = *vind;
-			const uint32_t component_u = component_map[u];
+	uint32_t* neighborsEnd = neighbors + (*vertexEdges++);
+	uint32_t* currentComponentPointer = componentMap;
+	for (size_t vertex = vertexCount; vertex != 0; vertex--) {
+		const uint32_t *restrict neighborPointer = neighborsEnd;
+		neighborsEnd = neighbors + (*vertexEdges++);
+		const uint32_t currentComponent = *currentComponentPointer;
+		uint32_t component_v_new = currentComponent;
+		for (; neighborPointer != neighborsEnd; neighborPointer++){
+			const uint32_t neighborVertex = *neighborPointer;
+			const uint32_t component_u = componentMap[neighborVertex];
 			const uint32_t component_diff = component_u - component_v_new;
 			const uint32_t flag = (uint32_t)((int32_t)component_u - (int32_t)component_v_new) >> 31;
 			component_v_new += (-flag) & (component_u - component_v_new);
 		}
-		changed |= component_v ^ component_v_new;
-		*component_map_v++ = component_v_new;
+		changed |= currentComponent ^ component_v_new;
+		*currentComponentPointer++ = component_v_new;
 	}
 #endif
 
 	if (!changed)
 		return false;
 
-	//~ for (size_t i = 0; i < nv; i++) {
-		//~ while (component_map[i] != component_map[component_map[i]]) {
-			//~ component_map[i] = component_map[component_map[i]];
+	//~ for (size_t i = 0; i < vertexCount; i++) {
+		//~ while (componentMap[i] != componentMap[componentMap[i]]) {
+			//~ componentMap[i] = componentMap[componentMap[i]];
 		//~ }
 	//~ }
 
@@ -113,19 +113,19 @@ bool ConnectedComponents_SV_Branchless(size_t nv, uint32_t* component_map, uint3
 }
 
 #if defined(__x86_64__) && !defined(__MIC__)
-	bool ConnectedComponents_SV_Branchless_CMOV(size_t nv, uint32_t* component_map, uint32_t* off, uint32_t* ind) {
+	bool ConnectedComponents_SV_Branchless_CMOV(size_t vertexCount, uint32_t* componentMap, uint32_t* vertexEdges, uint32_t* neighbors) {
 		uint32_t changed = 0;
 
 		#if defined(SV_USE_INDEX)
-			uint32_t *restrict vindend = ind + off[0];
-			for (size_t v = 0; v < nv; v++) {
-				const uint32_t *restrict vind = vindend;
-				vindend = ind + off[v+1];
-				const uint32_t component_v = component_map[v];
-				uint32_t component_v_new = component_v;
-				for (; vind != vindend; vind++){
-					const uint32_t u = *vind;
-					const uint32_t component_u = component_map[u];
+			uint32_t *restrict neighborsEnd = neighbors + vertexEdges[0];
+			for (size_t vertex = 0; vertex < vertexCount; vertex++) {
+				const uint32_t *restrict neighborPointer = neighborsEnd;
+				neighborsEnd = neighbors + vertexEdges[vertex+1];
+				const uint32_t currentComponent = componentMap[vertex];
+				uint32_t component_v_new = currentComponent;
+				for (; neighborPointer != neighborsEnd; neighborPointer++){
+					const uint32_t neighborVertex = *neighborPointer;
+					const uint32_t component_u = componentMap[neighborVertex];
 					__asm__ __volatile__ (
 						"CMPL %[component_v_new], %[component_u];"
 						"CMOVBL %[component_u], %[component_v_new];"
@@ -134,20 +134,20 @@ bool ConnectedComponents_SV_Branchless(size_t nv, uint32_t* component_map, uint3
 						: "cc"
 					);
 				}
-				changed |= component_v ^ component_v_new;
-				component_map[v] = component_v_new;
+				changed |= currentComponent ^ component_v_new;
+				componentMap[vertex] = component_v_new;
 			}
 		#else
-			uint32_t* vindend = ind + (*off++);
-			uint32_t* component_map_v = component_map;
-			for (size_t v = nv; v != 0; v--) {
-				const uint32_t *restrict vind = vindend;
-				vindend = ind + (*off++);
-				const uint32_t component_v = *component_map_v;
-				uint32_t component_v_new = component_v;
-				for (; vind != vindend; vind++){
-					const uint32_t u = *vind;
-					const uint32_t component_u = component_map[u];
+			uint32_t* neighborsEnd = neighbors + (*vertexEdges++);
+			uint32_t* currentComponentPointer = componentMap;
+			for (size_t vertex = vertexCount; vertex != 0; vertex--) {
+				const uint32_t *restrict neighborPointer = neighborsEnd;
+				neighborsEnd = neighbors + (*vertexEdges++);
+				const uint32_t currentComponent = *currentComponentPointer;
+				uint32_t component_v_new = currentComponent;
+				for (; neighborPointer != neighborsEnd; neighborPointer++){
+					const uint32_t neighborVertex = *neighborPointer;
+					const uint32_t component_u = componentMap[neighborVertex];
 					__asm__ __volatile__ (
 						"CMPL %[component_v_new], %[component_u];"
 						"CMOVBL %[component_u], %[component_v_new];"
@@ -156,17 +156,17 @@ bool ConnectedComponents_SV_Branchless(size_t nv, uint32_t* component_map, uint3
 						: "cc"
 					);
 				}
-				changed |= component_v ^ component_v_new;
-				*component_map_v++ = component_v_new;
+				changed |= currentComponent ^ component_v_new;
+				*currentComponentPointer++ = component_v_new;
 			}
 		#endif
 
 		if (!changed)
 			return false;
 
-		//~ for (size_t i = 0; i < nv; i++) {
-			//~ while (component_map[i] != component_map[component_map[i]]) {
-				//~ component_map[i] = component_map[component_map[i]];
+		//~ for (size_t i = 0; i < vertexCount; i++) {
+			//~ while (componentMap[i] != componentMap[componentMap[i]]) {
+				//~ componentMap[i] = componentMap[componentMap[i]];
 			//~ }
 		//~ }
 
@@ -175,23 +175,23 @@ bool ConnectedComponents_SV_Branchless(size_t nv, uint32_t* component_map, uint3
 #endif
 
 #ifdef __SSE4_1__
-	bool ConnectedComponents_SV_Branchless_SSE4_1(size_t nv, uint32_t* component_map, uint32_t* off, uint32_t* ind) {
+	bool ConnectedComponents_SV_Branchless_SSE4_1(size_t vertexCount, uint32_t* componentMap, uint32_t* vertexEdges, uint32_t* neighbors) {
 		uint32_t changed = 0;
 
-		for (size_t v=0; v < nv; v++) {
-			const uint32_t *restrict vind = &ind[off[v]];
-			const size_t vdeg = off[v + 1] - off[v];
-			const uint32_t component_v = component_map[v];
-			uint32_t component_v_new = component_v;
+		for (size_t vertex=0; vertex < vertexCount; vertex++) {
+			const uint32_t *restrict neighborPointer = &neighbors[vertexEdges[vertex]];
+			const size_t vdeg = vertexEdges[vertex + 1] - vertexEdges[vertex];
+			const uint32_t currentComponent = componentMap[vertex];
+			uint32_t component_v_new = currentComponent;
 			size_t edge = 0;
 			if (vdeg >= 4) {
 				__m128i vec_component_v_new = _mm_set1_epi32(component_v_new);
 				for (; edge < (vdeg & -4); edge += 4){
-					const uint32_t u0 = vind[edge];
-					const uint32_t u1 = vind[edge + 1];
-					const uint32_t u2 = vind[edge + 2];
-					const uint32_t u3 = vind[edge + 3];
-					const __m128i vec_component_u = _mm_insert_epi32(_mm_insert_epi32(_mm_insert_epi32(_mm_cvtsi32_si128(component_map[u0]), component_map[u1], 1), component_map[u2], 2), component_map[u3], 3);
+					const uint32_t u0 = neighborPointer[edge];
+					const uint32_t u1 = neighborPointer[edge + 1];
+					const uint32_t u2 = neighborPointer[edge + 2];
+					const uint32_t u3 = neighborPointer[edge + 3];
+					const __m128i vec_component_u = _mm_insert_epi32(_mm_insert_epi32(_mm_insert_epi32(_mm_cvtsi32_si128(componentMap[u0]), componentMap[u1], 1), componentMap[u2], 2), componentMap[u3], 3);
 					vec_component_v_new = _mm_min_epu32(vec_component_u, vec_component_v_new);
 				}
 				vec_component_v_new = _mm_min_epu32(vec_component_v_new, _mm_shuffle_epi32(vec_component_v_new, _MM_SHUFFLE(3, 2, 3, 2)));
@@ -199,22 +199,22 @@ bool ConnectedComponents_SV_Branchless(size_t nv, uint32_t* component_map, uint3
 				component_v_new = _mm_cvtsi128_si32(vec_component_v_new);
 			}
 			for (; edge < vdeg; edge += 1){
-				const uint32_t u = vind[edge];
-				const uint32_t component_u = component_map[u];
+				const uint32_t neighborVertex = neighborPointer[edge];
+				const uint32_t component_u = componentMap[neighborVertex];
 				if (component_u < component_v_new) {
 					component_v_new = component_u;
 				}
 			}
-			changed |= component_v ^ component_v_new;
-			component_map[v] = component_v_new;
+			changed |= currentComponent ^ component_v_new;
+			componentMap[vertex] = component_v_new;
 		}
 
 		if (!changed)
 			return false;
 
-		//~ for (size_t i = 0; i < nv; i++) {
-			//~ while (component_map[i] != component_map[component_map[i]]) {
-				//~ component_map[i] = component_map[component_map[i]];
+		//~ for (size_t i = 0; i < vertexCount; i++) {
+			//~ while (componentMap[i] != componentMap[componentMap[i]]) {
+				//~ componentMap[i] = componentMap[componentMap[i]];
 			//~ }
 		//~ }
 
@@ -223,38 +223,38 @@ bool ConnectedComponents_SV_Branchless(size_t nv, uint32_t* component_map, uint3
 #endif
 
 #ifdef __MIC__
-	bool ConnectedComponents_SV_Branchless_MIC(size_t nv, uint32_t* component_map, uint32_t* off, uint32_t* ind) {
+	bool ConnectedComponents_SV_Branchless_MIC(size_t vertexCount, uint32_t* componentMap, uint32_t* vertexEdges, uint32_t* neighbors) {
 		__mmask16 changed = 0;
 
-		for (size_t v=0; v < nv; v++) {
-			const uint32_t *restrict vind = &ind[off[v]];
-			const size_t vdeg = off[v + 1] - off[v];
+		for (size_t vertex=0; vertex < vertexCount; vertex++) {
+			const uint32_t *restrict neighborPointer = &neighbors[vertexEdges[vertex]];
+			const size_t vdeg = vertexEdges[vertex + 1] - vertexEdges[vertex];
 			if (vdeg != 0) {
-				const __m512i component_v = _mm512_extload_epi32(&component_map[v], _MM_UPCONV_EPI32_NONE, _MM_BROADCAST_1X16, _MM_HINT_NONE);
-				__m512i component_v_new = component_v;
+				const __m512i currentComponent = _mm512_extload_epi32(&componentMap[vertex], _MM_UPCONV_EPI32_NONE, _MM_BROADCAST_1X16, _MM_HINT_NONE);
+				__m512i component_v_new = currentComponent;
 				if (vdeg >= 16) {
 					size_t edge = 0;
 					for (; edge + 15 < vdeg; edge += 16){
-						const __m512i u = _mm512_loadunpackhi_epi32(_mm512_loadunpacklo_epi32(_mm512_undefined_epi32(), &vind[edge]), &vind[edge + 16]);
-						const __m512i component_u = _mm512_i32gather_epi32(u, component_map, sizeof(uint32_t));
+						const __m512i neighborVertex = _mm512_loadunpackhi_epi32(_mm512_loadunpacklo_epi32(_mm512_undefined_epi32(), &neighborPointer[edge]), &neighborPointer[edge + 16]);
+						const __m512i component_u = _mm512_i32gather_epi32(neighborVertex, componentMap, sizeof(uint32_t));
 						component_v_new = _mm512_min_epu32(component_v_new, component_u);
 					}
 					const size_t remainder = vdeg - edge;
 					if (remainder != 0) {
 						__mmask16 mask = _mm512_int2mask((1 << remainder) - 1);
-						const __m512i u = _mm512_mask_loadunpackhi_epi32(_mm512_mask_loadunpacklo_epi32(_mm512_undefined_epi32(), mask, &vind[edge]), mask, &vind[edge + 16]);
-						const __m512i component_u = _mm512_mask_i32gather_epi32(_mm512_undefined_epi32(), mask, u, component_map, sizeof(uint32_t));
+						const __m512i neighborVertex = _mm512_mask_loadunpackhi_epi32(_mm512_mask_loadunpacklo_epi32(_mm512_undefined_epi32(), mask, &neighborPointer[edge]), mask, &neighborPointer[edge + 16]);
+						const __m512i component_u = _mm512_mask_i32gather_epi32(_mm512_undefined_epi32(), mask, neighborVertex, componentMap, sizeof(uint32_t));
 						component_v_new = _mm512_mask_min_epu32(component_v_new, mask, component_v_new, component_u);
 					}
-					changed = _mm512_kor(changed, _mm512_cmp_epu32_mask(component_v, component_v_new, _MM_CMPINT_NE));
-					component_map[v] = _mm512_reduce_min_epu32(component_v_new);
+					changed = _mm512_kor(changed, _mm512_cmp_epu32_mask(currentComponent, component_v_new, _MM_CMPINT_NE));
+					componentMap[vertex] = _mm512_reduce_min_epu32(component_v_new);
 				} else {
 					__mmask16 mask = _mm512_int2mask((1 << vdeg) - 1);
-					const __m512i u = _mm512_mask_loadunpackhi_epi32(_mm512_mask_loadunpacklo_epi32(_mm512_undefined_epi32(), mask, &vind[0]), mask, &vind[16]);
-					const __m512i component_u = _mm512_mask_i32gather_epi32(_mm512_undefined_epi32(), mask, u, component_map, sizeof(uint32_t));
+					const __m512i neighborVertex = _mm512_mask_loadunpackhi_epi32(_mm512_mask_loadunpacklo_epi32(_mm512_undefined_epi32(), mask, &neighborPointer[0]), mask, &neighborPointer[16]);
+					const __m512i component_u = _mm512_mask_i32gather_epi32(_mm512_undefined_epi32(), mask, neighborVertex, componentMap, sizeof(uint32_t));
 					component_v_new = _mm512_mask_min_epu32(component_v_new, mask, component_v_new, component_u);
-					changed = _mm512_kor(changed, _mm512_cmp_epu32_mask(component_v, component_v_new, _MM_CMPINT_NE));
-					component_map[v] = _mm512_mask_reduce_min_epu32(mask, component_v_new);
+					changed = _mm512_kor(changed, _mm512_cmp_epu32_mask(currentComponent, component_v_new, _MM_CMPINT_NE));
+					componentMap[vertex] = _mm512_mask_reduce_min_epu32(mask, component_v_new);
 				}
 			}
 		}
@@ -262,9 +262,9 @@ bool ConnectedComponents_SV_Branchless(size_t nv, uint32_t* component_map, uint3
 		if (_mm512_kortestz(changed, changed))
 			return false;
 
-		//~ for (size_t i = 0; i < nv; i++) {
-			//~ while (component_map[i] != component_map[component_map[i]]) {
-				//~ component_map[i] = component_map[component_map[i]];
+		//~ for (size_t i = 0; i < vertexCount; i++) {
+			//~ while (componentMap[i] != componentMap[componentMap[i]]) {
+				//~ componentMap[i] = componentMap[componentMap[i]];
 			//~ }
 		//~ }
 
