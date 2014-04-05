@@ -12,15 +12,8 @@
 #include <linux/perf_event.h>
 #include <asm/unistd.h>
 
-static uint32_t nv, ne, naction;
-static uint32_t * restrict off;
-static uint32_t * restrict from;
-static uint32_t * restrict ind;
-static uint32_t * restrict weight;
-static uint32_t * restrict action;
-
-void Benchmark_BFS_TopDown(const char* implementation_name, BFS_TopDown_Function bfs_function, uint32_t* off, uint32_t* ind, uint32_t* edgesTraversed);
-void Benchmark_BFS_BottomUp(const char* implementation_name, BFS_BottomUp_Function bfs_function, uint32_t* off, uint32_t* ind);
+void Benchmark_BFS_TopDown(const char* implementation_name, BFS_TopDown_Function bfs_function, uint32_t numVerteces, uint32_t* off, uint32_t* ind, uint32_t* edgesTraversed);
+void Benchmark_BFS_BottomUp(const char* implementation_name, BFS_BottomUp_Function bfs_function, uint32_t numVerteces, uint32_t* off, uint32_t* ind);
 void Benchmark_ConnectedComponents_SV(const char* implementation_name, ConnectedComponents_SV_Function sv_function, size_t nv, uint32_t* off, uint32_t* ind);
 
 #define LINE_SIZE 10000
@@ -29,7 +22,7 @@ static int perf_event_open(struct perf_event_attr *hw_event, pid_t pid, int cpu,
 	return syscall(__NR_perf_event_open, hw_event, pid, cpu, group_fd, flags);
 }
 
-void readGraphDIMACS(char* filePath, int32_t** prmoff,  int32_t** prmind, int32_t* prmnv,int32_t* prmne){
+void readGraphDIMACS(char* filePath, uint32_t** prmoff, uint32_t** prmind, uint32_t* prmnv, uint32_t* prmne){
 	FILE *fp = fopen (filePath, "r");
 	int32_t nv,ne;
 
@@ -105,7 +98,10 @@ int main (const int argc, char *argv[]) {
 		exit(EXIT_FAILURE);
 	}
 
-	readGraphDIMACS(argv[1], &off,  &ind, &nv,&ne);
+    uint32_t nv, ne, naction;
+    uint32_t* off;
+    uint32_t* ind;
+	readGraphDIMACS(argv[1], &off, &ind, &nv, &ne);
 	
 
 	#if defined(BENCHMARK_BFS)	
@@ -126,34 +122,34 @@ int main (const int argc, char *argv[]) {
 			free(queue);
 		}
 
-		Benchmark_BFS_TopDown("BFS/TD brachy", BFS_TopDown_Branchy, off, ind, edgesTraversed);
+		Benchmark_BFS_TopDown("BFS/TD brachy", BFS_TopDown_Branchy, nv, off, ind, edgesTraversed);
 		//~ Benchmark_BFS_TopDown("BFS/TD brachy+reordered", BFS_TopDown_BranchyPlus, off, ind, edgesTraversed);
-		Benchmark_BFS_TopDown("BFS/TD branchless (C)", BFS_TopDown_Branchless, off, ind, edgesTraversed);
+		Benchmark_BFS_TopDown("BFS/TD branchless (C)", BFS_TopDown_Branchless, nv, off, ind, edgesTraversed);
         #ifdef __arm__
-		Benchmark_BFS_TopDown("BFS/TD brachy (Peach-Py)", _BFS_TopDown_Branchy_CortexA15, off, ind, edgesTraversed);
-		Benchmark_BFS_TopDown("BFS/TD branchless (Peach-Py)", _BFS_TopDown_Branchless_CortexA15, off, ind, edgesTraversed);
+		Benchmark_BFS_TopDown("BFS/TD brachy (Peach-Py)", _BFS_TopDown_Branchy_CortexA15, nv, off, ind, edgesTraversed);
+		Benchmark_BFS_TopDown("BFS/TD branchless (Peach-Py)", _BFS_TopDown_Branchless_CortexA15, nv, off, ind, edgesTraversed);
         #elif defined(__x86_64__)
-		Benchmark_BFS_TopDown("BFS/TD brachy (Peach-Py)", BFS_TopDown_Branchy_PeachPy, off, ind, edgesTraversed);
-		Benchmark_BFS_TopDown("BFS/TD brachless (Peach-Py)", BFS_TopDown_Branchless_PeachPy, off, ind, edgesTraversed);
+		Benchmark_BFS_TopDown("BFS/TD brachy (Peach-Py)", BFS_TopDown_Branchy_PeachPy, nv, off, ind, edgesTraversed);
+		Benchmark_BFS_TopDown("BFS/TD brachless (Peach-Py)", BFS_TopDown_Branchless_PeachPy, nv, off, ind, edgesTraversed);
         #else
-		//~ Benchmark_BFS_TopDown("BFS/TD brachy (Peach-Py)", _BFS_TopDown_Branchy_Unknown, off, ind, edgesTraversed);
+		//~ Benchmark_BFS_TopDown("BFS/TD brachy (Peach-Py)", _BFS_TopDown_Branchy_Unknown, nv, off, ind, edgesTraversed);
         #endif
 		#if defined(__x86_64__) && !defined(__MIC__)
-		//~ Benchmark_BFS_TopDown("BFS/TD branchless (CMOV)", BFS_TopDown_Branchless_CMOV, off, ind, edgesTraversed);
-		//~ Benchmark_BFS_TopDown("BFS/TD branchless+reordered (CMOV)", BFS_TopDown_Branchless_CMOVPlus, off, ind, edgesTraversed);
+		//~ Benchmark_BFS_TopDown("BFS/TD branchless (CMOV)", BFS_TopDown_Branchless_CMOV, nv, off, ind, edgesTraversed);
+		//~ Benchmark_BFS_TopDown("BFS/TD branchless+reordered (CMOV)", BFS_TopDown_Branchless_CMOVPlus, nv, off, ind, edgesTraversed);
 		#endif
 		#ifdef __SSE4_1__
-		//~ Benchmark_BFS_TopDown("BFS/TD bracnhless (SSE 4.1)", BFS_TopDown_Branchless_SSE4_1, off, ind, edgesTraversed);
+		//~ Benchmark_BFS_TopDown("BFS/TD bracnhless (SSE 4.1)", BFS_TopDown_Branchless_SSE4_1, nv, off, ind, edgesTraversed);
 		#endif
 		#ifdef __AVX2__
-		//~ Benchmark_BFS_TopDown("BFS/TD bracnhless (AVX 2)", BFS_TopDown_Branchless_AVX2, off, ind, edgesTraversed);
+		//~ Benchmark_BFS_TopDown("BFS/TD bracnhless (AVX 2)", BFS_TopDown_Branchless_AVX2, nv, off, ind, edgesTraversed);
 		#endif
 		#ifdef __MIC__
-		//~ Benchmark_BFS_TopDown("BFS/TD bracnhless (MIC)", BFS_TopDown_Branchless_MIC, off, ind, edgesTraversed);
+		//~ Benchmark_BFS_TopDown("BFS/TD bracnhless (MIC)", BFS_TopDown_Branchless_MIC, nv, off, ind, edgesTraversed);
 		#endif
-		Benchmark_BFS_BottomUp("BFS/BU brachy", BFS_BottomUp_Branchy, off, ind);
-		//~ Benchmark_BFS_BottomUp("BFS/BU branchless (C)", BFS_BottomUp_Branchless, off, ind);
-		//~ Benchmark_BFS_BottomUp("BFS/BU branchless (CMOV)", BFS_BottomUp_Branchless_CMOV, off, ind);
+		Benchmark_BFS_BottomUp("BFS/BU brachy", BFS_BottomUp_Branchy, nv, off, ind);
+		//~ Benchmark_BFS_BottomUp("BFS/BU branchless (C)", BFS_BottomUp_Branchless, nv, off, ind);
+		//~ Benchmark_BFS_BottomUp("BFS/BU branchless (CMOV)", BFS_BottomUp_Branchless_CMOV, nv, off, ind);
 
 		free(edgesTraversed);
 	#endif
@@ -178,7 +174,7 @@ int main (const int argc, char *argv[]) {
 }
 
 #if defined(BENCHMARK_BFS)
-	void Benchmark_BFS_TopDown(const char* implementation_name, BFS_TopDown_Function bfs_function, uint32_t* off, uint32_t* ind, uint32_t* edgesTraversed) {
+	void Benchmark_BFS_TopDown(const char* implementation_name, BFS_TopDown_Function bfs_function, uint32_t numVerteces, uint32_t* off, uint32_t* ind, uint32_t* edgesTraversed) {
 		struct perf_event_attr perf_branches;
 		struct perf_event_attr perf_mispredictions;
 		struct perf_event_attr perf_instructions;
@@ -225,18 +221,18 @@ int main (const int argc, char *argv[]) {
 			exit(EXIT_FAILURE);
 		}
 
-		uint32_t* queue = (uint32_t*)memalign(64, (nv + 3) * sizeof(uint32_t));
-		uint32_t* level = (uint32_t*)memalign(64, nv * sizeof(uint32_t));
+		uint32_t* queue = (uint32_t*)memalign(64, (numVerteces + 3) * sizeof(uint32_t));
+		uint32_t* level = (uint32_t*)memalign(64, numVerteces * sizeof(uint32_t));
 		/* Initialize level array */
-		for (size_t i = 0; i < nv; i++) {
+		for (size_t i = 0; i < numVerteces; i++) {
 			level[i] = INT32_MAX;
 		}
 
-		uint64_t* branches = (uint64_t*)memalign(64, nv * sizeof(uint64_t));
-		uint64_t* mispredictions = (uint64_t*)memalign(64, nv * sizeof(uint64_t));
-		uint64_t* instructions = (uint64_t*)memalign(64, nv * sizeof(uint64_t));
-		uint32_t* vertices = (uint32_t*)memalign(64, nv * sizeof(uint32_t));
-		double* seconds = (double*)memalign(64, nv * sizeof(double));
+		uint64_t* branches = (uint64_t*)memalign(64, numVerteces * sizeof(uint64_t));
+		uint64_t* mispredictions = (uint64_t*)memalign(64, numVerteces * sizeof(uint64_t));
+		uint64_t* instructions = (uint64_t*)memalign(64, numVerteces * sizeof(uint64_t));
+		uint32_t* vertices = (uint32_t*)memalign(64, numVerteces * sizeof(uint32_t));
+		double* seconds = (double*)memalign(64, numVerteces * sizeof(double));
 
 		const uint32_t rootVertex = 1;
 		uint32_t currentLevel = 0;
@@ -288,7 +284,7 @@ int main (const int argc, char *argv[]) {
 		free(seconds);
 	}
 
-	void Benchmark_BFS_BottomUp(const char* implementation_name, BFS_BottomUp_Function bfs_function, uint32_t* off, uint32_t* ind) {
+	void Benchmark_BFS_BottomUp(const char* implementation_name, BFS_BottomUp_Function bfs_function, uint32_t numVerteces, uint32_t* off, uint32_t* ind) {
 		struct perf_event_attr perf_branches;
 		struct perf_event_attr perf_mispredictions;
 		struct perf_event_attr perf_instructions;
@@ -335,18 +331,18 @@ int main (const int argc, char *argv[]) {
 			exit(EXIT_FAILURE);
 		}
 
-		uint32_t* levels = (uint32_t*)memalign(64, nv * sizeof(uint32_t));
-		uint32_t* bitmap = (uint32_t*)memalign(64, nv * sizeof(uint32_t));
+		uint32_t* levels = (uint32_t*)memalign(64, numVerteces * sizeof(uint32_t));
+		uint32_t* bitmap = (uint32_t*)memalign(64, numVerteces * sizeof(uint32_t));
 		/* Initialize level array */
-		for (size_t i = 0; i < nv; i++) {
+		for (size_t i = 0; i < numVerteces; i++) {
 			levels[i] = INT32_MAX;
 			bitmap[i] = 0;
 		}
 
-		uint64_t* branches = (uint64_t*)memalign(64, nv * sizeof(uint64_t));
-		uint64_t* mispredictions = (uint64_t*)memalign(64, nv * sizeof(uint64_t));
-		uint64_t* instructions = (uint64_t*)memalign(64, nv * sizeof(uint64_t));
-		double* seconds = (double*)memalign(64, nv * sizeof(double));
+		uint64_t* branches = (uint64_t*)memalign(64, numVerteces * sizeof(uint64_t));
+		uint64_t* mispredictions = (uint64_t*)memalign(64, numVerteces * sizeof(uint64_t));
+		uint64_t* instructions = (uint64_t*)memalign(64, numVerteces * sizeof(uint64_t));
+		double* seconds = (double*)memalign(64, numVerteces * sizeof(double));
 
 		uint32_t currentLevel = 0;
 		bool changed;
@@ -365,7 +361,7 @@ int main (const int argc, char *argv[]) {
 			ioctl(fd_instructions, PERF_EVENT_IOC_ENABLE, 0);
 
 			/* Call the bfs implementation */
-			changed = bfs_function(off, ind, bitmap, levels, nv, currentLevel);
+			changed = bfs_function(off, ind, bitmap, levels, numVerteces, currentLevel);
 
 			ioctl(fd_branches, PERF_EVENT_IOC_DISABLE, 0);
 			ioctl(fd_mispredictions, PERF_EVENT_IOC_DISABLE, 0);
