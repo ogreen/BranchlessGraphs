@@ -20,48 +20,89 @@ static uint32_t * restrict permutation;
 #define LINE_SIZE 10000
 
 
+void readGraphDIMACS(char* filePath, int32_t** prmoff,  int32_t** prmind, int32_t* prmnv,int32_t* prmne){
+	FILE *fp = fopen (filePath, "r");
+	int32_t nv,ne;
+
+	char* line=NULL;
+	
+	// Read data from file
+	int32_t temp,lineRead;
+	size_t bytesRead=0;
+	getline (&line, &bytesRead, fp);	
+	
+//	fgets (line, bytesRead, fp);
+	sscanf (line, "%d %d", &nv, &ne);
+//	printf ( "%ld %ld\n", nv, ne);		
+		
+	free(line);
+	int32_t * off = (int32_t *) malloc ((nv + 2) * sizeof (int32_t));
+	int32_t * ind = (int32_t *) malloc ((ne * 2) * sizeof (int32_t));
+	off[0] = 0;
+	off[1] = 0;
+	int32_t counter = 0;
+	int32_t u;
+	line=NULL;
+	bytesRead=0;
+
+//	  for (u = 1; fgets (line, &bytesRead, fp); u++)
+	for (u = 1; (temp=getline (&line, &bytesRead, fp))!=-1; u++)
+	{	
+//		printf("%s",line);	
+/*		bytesRead=0;	
+		free(line);	
+		if (u>10) 
+			break;
+
+		continue;
+*/		
+		uint32_t neigh = 0;
+		uint32_t v = 0;
+		char *ptr = line;
+		int read = 0;
+		char tempStr[1000];
+		lineRead=0;
+		while (lineRead<bytesRead && (read=sscanf (ptr, "%s", tempStr)) > 0)
+		{
+			v=atoi(tempStr);
+			read=strlen(tempStr);
+			ptr += read+1;
+			lineRead=read+1;
+			neigh++;
+			ind[counter++] = v;
+		}
+		off[u + 1] = off[u] + neigh;
+		free(line);	  
+		bytesRead=0;
+	}
+
+
+	  fclose (fp);
+
+
+	   nv++;
+	   ne*=2;
+	*prmnv=nv;
+	*prmne=ne;
+	*prmind=ind;
+	*prmoff=off;
+}
+
+
+
+
 int main (const int argc, char *argv[]) {
 		
 	if (argc != 3) {
 		fprintf(stderr, "Usage: a <graph-name> <unsorted-graph-name>\n");
 		exit(EXIT_FAILURE);
 	}
-	char line[LINE_SIZE];
 
-	FILE * fp = fopen(argv[1], "r");
+	readGraphDIMACS(argv[1], &off,  &ind, &nv,&ne);
 
-	fgets(line, LINE_SIZE, fp);
-	sscanf(line, "%d %d", &nv, &ne);
-	nv += 1;
-	off = memalign(64, (nv+2) * sizeof(uint32_t));
-	ind = memalign(64, (ne*2) * sizeof(uint32_t));
-	
 	indUnsorted = memalign(64, (ne*2) * sizeof(uint32_t));	
 	permutation = memalign(64, (nv+2) * sizeof(uint32_t));
 	
-	
-	off[0]=0;
-	off[1]=0;
-	uint32_t counter=0;
-	for (uint32_t u = 1; fgets(line, LINE_SIZE, fp); u++) {
-
-		uint64_t neigh=0;
-		uint64_t v = 0;
-		char * ptr = line;
-		int read = 0;
-
-		while (sscanf(ptr, "%" SCNu64 "%n", &v, &read) > 0) {
-			ptr += read;
-			neigh++;
-			ind[counter++]=v;
-		}
-		off[u+1]=off[u]+neigh;
-	}
-
-	fclose(fp);
-
-//	printf("done reading the graph\n");
-
 	srand(0);
 	
 	for(uint32_t u=1; u<nv; u++)
@@ -90,13 +131,12 @@ int main (const int argc, char *argv[]) {
 		}	
 	}	
 
-	
-//	printf("done converting the graph\n");
+	printf("done converting the graph\n");
 	
 	FILE * fp2 = fopen(argv[2], "w");
 
 //	fprintf("oded\n");
-	fprintf(fp2,"%d %d\n", nv, ne);
+	fprintf(fp2,"%d %d 0\n", nv-1, ne/2);
 	
 	for(uint32_t u=1; u<nv; u++)
 	{
@@ -108,7 +148,6 @@ int main (const int argc, char *argv[]) {
 	
 		fprintf(fp2, "\n");
 	}
-
 	
 	fclose(fp2);
 	
@@ -118,6 +157,8 @@ int main (const int argc, char *argv[]) {
 	free(off);
 	free(ind);
 
+	printf("finito\n");
+	
 	return 1;
 	
 }
