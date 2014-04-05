@@ -68,6 +68,35 @@ uint32_t BFS_TopDown_Branchy(uint32_t* off, uint32_t* ind, const uint32_t* input
 	return outputQueue - outputQueueStart;
 }
 
+uint32_t BFS_TopDown_BranchyPlus(uint32_t* off, uint32_t* ind, const uint32_t* inputQueue, uint32_t inputVerteces, uint32_t* outputQueue, uint32_t* level, uint32_t currentLevel) {
+    uint32_t* offtmp = (uint32_t*)alloca(inputVerteces * 2 * sizeof(uint32_t));
+    uint32_t* offtmp2 = offtmp;
+    uint32_t inputVerteces2 = inputVerteces;
+    while (inputVerteces2--) {
+        const uint32_t current_vertex = *inputQueue++;
+        const uint32_t startEdge = off[current_vertex];
+        const uint32_t stopEdge = off[current_vertex+1];
+        *offtmp2++ = stopEdge - startEdge;
+        *offtmp2++ = startEdge;
+    };
+    
+	uint32_t* outputQueueStart = outputQueue;
+	while (inputVerteces--) {
+        uint32_t edges = *offtmp++;
+        const uint32_t* currentNeighbor = ind + (*offtmp++);
+
+        while (edges--) {
+			const uint32_t neighborVertex = *currentNeighbor++;
+
+			if (level[neighborVertex] > currentLevel) {
+				level[neighborVertex] = currentLevel;
+				*outputQueue++ = neighborVertex;
+			}
+		}
+	}
+	return outputQueue - outputQueueStart;
+}
+
 uint32_t BFS_TopDown_Branchless(uint32_t* off, uint32_t* ind, const uint32_t* inputQueue, uint32_t inputVerteces, uint32_t* outputQueue, uint32_t* level, uint32_t currentLevel) {
 	uint32_t outputIndex = 0;
 	while (inputVerteces--) {
@@ -89,6 +118,41 @@ uint32_t BFS_TopDown_Branchless(uint32_t* off, uint32_t* ind, const uint32_t* in
 }
 
 #if defined(__x86_64__) && !defined(__MIC__)
+	uint32_t BFS_TopDown_Branchless_CMOVPlus(uint32_t* off, uint32_t* ind, const uint32_t* inputQueue, uint32_t inputVerteces, uint32_t* outputQueue, uint32_t* level, uint32_t currentLevel) {
+        uint32_t* offtmp = (uint32_t*)alloca(inputVerteces * 2 * sizeof(uint32_t));
+        uint32_t* offtmp2 = offtmp;
+        uint32_t inputVerteces2 = inputVerteces;
+        while (inputVerteces2--) {
+			const uint32_t current_vertex = *inputQueue++;
+			const uint32_t startEdge = off[current_vertex];
+			const uint32_t stopEdge = off[current_vertex+1];
+            *offtmp2++ = stopEdge - startEdge;
+            *offtmp2++ = startEdge;
+        };
+        
+		uint32_t outputIndex = 0;
+		while (inputVerteces--) {
+            uint32_t edges = *offtmp++;
+            const uint32_t* currentNeighbor = ind + (*offtmp++);
+
+            while (edges--) {
+				const uint32_t neighborVertex = *currentNeighbor++;
+				uint32_t neighborLevel = level[neighborVertex];
+				outputQueue[outputIndex] = neighborVertex;
+				__asm__ __volatile__ (
+					"CMPL %[neighborLevel], %[currentLevel];"
+					"CMOVNGEL %[currentLevel], %[neighborLevel];"
+					"ADCL $0, %[outputIndex];"
+					: [outputIndex] "+r" (outputIndex), [neighborLevel] "+r" (neighborLevel)
+					: [currentLevel] "r" (currentLevel)
+					: "cc"
+				);
+				level[neighborVertex] = neighborLevel;
+			}
+		}
+		return outputIndex;
+	}
+
 	uint32_t BFS_TopDown_Branchless_CMOV(uint32_t* off, uint32_t* ind, const uint32_t* inputQueue, uint32_t inputVerteces, uint32_t* outputQueue, uint32_t* level, uint32_t currentLevel) {
 		uint32_t outputIndex = 0;
 		while (inputVerteces--) {

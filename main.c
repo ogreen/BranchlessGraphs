@@ -81,15 +81,24 @@ int main (const int argc, char *argv[]) {
 			free(queue);
 		}
 
-		//~ Benchmark_BFS_TopDown("BFS/TD brachy", BFS_TopDown_Branchy, off, ind, edgesTraversed);
-		//~ Benchmark_BFS_TopDown("BFS/TD branchless (C)", BFS_TopDown_Branchless, off, ind, edgesTraversed);
-		Benchmark_BFS_TopDown("BFS/TD brachy (CA15)", _BFS_TopDown_Branchy_CortexA15, off, ind, edgesTraversed);
-		Benchmark_BFS_TopDown("BFS/TD branchless (CA15)", _BFS_TopDown_Branchless_CortexA15, off, ind, edgesTraversed);
+		Benchmark_BFS_TopDown("BFS/TD brachy", BFS_TopDown_Branchy, off, ind, edgesTraversed);
+		//~ Benchmark_BFS_TopDown("BFS/TD brachy+reordered", BFS_TopDown_BranchyPlus, off, ind, edgesTraversed);
+		Benchmark_BFS_TopDown("BFS/TD branchless (C)", BFS_TopDown_Branchless, off, ind, edgesTraversed);
+        #ifdef __arm__
+		Benchmark_BFS_TopDown("BFS/TD brachy (Peach-Py)", _BFS_TopDown_Branchy_CortexA15, off, ind, edgesTraversed);
+		Benchmark_BFS_TopDown("BFS/TD branchless (Peach-Py)", _BFS_TopDown_Branchless_CortexA15, off, ind, edgesTraversed);
+        #elif defined(__x86_64__)
+		Benchmark_BFS_TopDown("BFS/TD brachy (Peach-Py)", BFS_TopDown_Branchy_PeachPy, off, ind, edgesTraversed);
+		Benchmark_BFS_TopDown("BFS/TD brachless (Peach-Py)", BFS_TopDown_Branchless_PeachPy, off, ind, edgesTraversed);
+        #else
+		//~ Benchmark_BFS_TopDown("BFS/TD brachy (Peach-Py)", _BFS_TopDown_Branchy_Unknown, off, ind, edgesTraversed);
+        #endif
 		#if defined(__x86_64__) && !defined(__MIC__)
-		Benchmark_BFS_TopDown("BFS/TD branchless (CMOV)", BFS_TopDown_Branchless_CMOV, off, ind, edgesTraversed);
+		//~ Benchmark_BFS_TopDown("BFS/TD branchless (CMOV)", BFS_TopDown_Branchless_CMOV, off, ind, edgesTraversed);
+		//~ Benchmark_BFS_TopDown("BFS/TD branchless+reordered (CMOV)", BFS_TopDown_Branchless_CMOVPlus, off, ind, edgesTraversed);
 		#endif
 		#ifdef __SSE4_1__
-		Benchmark_BFS_TopDown("BFS/TD bracnhless (SSE 4.1)", BFS_TopDown_Branchless_SSE4_1, off, ind, edgesTraversed);
+		//~ Benchmark_BFS_TopDown("BFS/TD bracnhless (SSE 4.1)", BFS_TopDown_Branchless_SSE4_1, off, ind, edgesTraversed);
 		#endif
 		#ifdef __AVX2__
 		//~ Benchmark_BFS_TopDown("BFS/TD bracnhless (AVX 2)", BFS_TopDown_Branchless_AVX2, off, ind, edgesTraversed);
@@ -204,7 +213,7 @@ int main (const int argc, char *argv[]) {
 			assert(ioctl(fd_instructions, PERF_EVENT_IOC_ENABLE, 0) == 0);
 			tic();
 
-			outputVerteces = bfs_function(off, ind, queuePosition, inputVerteces, queuePosition + inputVerteces, nv, level, currentLevel);
+			outputVerteces = bfs_function(off, ind, queuePosition, inputVerteces, queuePosition + inputVerteces, level, currentLevel);
 			queuePosition += inputVerteces;
 
 			seconds[currentLevel-1] = toc();

@@ -1,11 +1,14 @@
 .PHONY:	all clean bench
 all: bfs sv
 
-bfs: main.c timer.c bfs.c bfsBU.c graph_arm.py Makefile
-	python graph_arm.py
-	$(CC) -g -O3 -std=gnu99 $(CFLAGS) -Wno-unused-result -DBENCHMARK_BFS -o $@ main.c timer.c bfs.c bfsBU.c graph_arm.s $(LDFLAGS) -lrt
+bfs: main.c timer.c bfs.c bfsBU.c graph_x86_64.py Makefile
+	python graph_x86_64.py
+	nasm -f elf64 -o graph_x86_64.o graph_x86_64.s
+	$(CC) -g -O3 -std=gnu99 $(CFLAGS) -Wno-unused-result -DBENCHMARK_BFS -o $@ main.c timer.c bfs.c bfsBU.c graph_x86_64.o $(LDFLAGS) -lrt
 sv: main.c timer.c sv.c Makefile
-	$(CC) -g -O3 -std=gnu99 $(CFLAGS) -Wno-unused-result -DBENCHMARK_SV -o $@ main.c timer.c sv.c graph_arm.s $(LDFLAGS) -lrt
+	python graph_x86_64.py
+	nasm -f elf64 -o graph_x86_64.o graph_x86_64.s
+	$(CC) -g -O3 -std=gnu99 $(CFLAGS) -Wno-unused-result -DBENCHMARK_SV -o $@ main.c timer.c sv.c graph_x86_64.o $(LDFLAGS) -lrt
 
 bench-bfs: bfs
 	./bfs data/astro-ph.graph > astro-ph.log
