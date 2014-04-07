@@ -466,7 +466,7 @@ int main (const int argc, char *argv[]) {
 		} while (changed);
 
 		for (uint32_t i = 0; i < iteration; i++) {
-			printf("%s\t%"PRIu32"\t%.10lf\t%"PRIu64"\t%"PRIu64"\t%"PRIu64"\n", implementation_name, i, seconds[i], mispredictions[i], branches[i], instructions[i]);
+			printf("%s\t%"PRIu32"\t%.10lf\t%"PRIu64"\t%"PRIu64"\t%"PRIu64"\t%"PRIu32"\t%"PRIu32"\n", implementation_name, i, seconds[i], mispredictions[i], branches[i], instructions[i],nv,ne);
 		}
 
 		close(fd_branches);
