@@ -10,9 +10,9 @@ levelsArgument = Argument(ptr(uint32_t))
 currentLevelArgument = Argument(uint32_t)
 
 with Function("BFS_TopDown_Branchy_PeachPy",
-                      (vertexEdgesArgument, neighborsArgument, inputQueueArgument, inputVerticesArgument,
-                      outputQueueArgument, levelsArgument, currentLevelArgument),
-                      abi=ABI.SystemV) as bfs_branchy:
+        (vertexEdgesArgument, neighborsArgument, inputQueueArgument, inputVerticesArgument,
+        outputQueueArgument, levelsArgument, currentLevelArgument),
+        abi=ABI.SystemV) as bfs_branchy:
 
     vertexEdges = GeneralPurposeRegister64()
     LOAD.ARGUMENT( vertexEdges, vertexEdgesArgument )
@@ -92,9 +92,9 @@ with Function("BFS_TopDown_Branchy_PeachPy",
     RETURN()
 
 with Function("BFS_TopDown_Branchless_PeachPy",
-                      (vertexEdgesArgument, neighborsArgument, inputQueueArgument, inputVerticesArgument,
-                      outputQueueArgument, levelsArgument, currentLevelArgument),
-                      abi=ABI.SystemV) as bfs_branchless:
+        (vertexEdgesArgument, neighborsArgument, inputQueueArgument, inputVerticesArgument,
+        outputQueueArgument, levelsArgument, currentLevelArgument),
+        abi=ABI.SystemV) as bfs_branchless:
 
     vertexEdges = GeneralPurposeRegister64()
     LOAD.ARGUMENT( vertexEdges, vertexEdgesArgument )
@@ -182,9 +182,9 @@ vertexEdgesArgument = Argument(ptr(uint32_t))
 neighborsArgument = Argument(ptr(uint32_t))
 
 with Function("ConnectedComponents_SV_Branchy_PeachPy",
-                      (vertexCountArgument, componentMapArgument, vertexEdgesArgument, neighborsArgument),
-                      abi=ABI.SystemV) as sv_branchy:
-    # Load arguments into registers
+        (vertexCountArgument, componentMapArgument, vertexEdgesArgument, neighborsArgument),
+        abi=ABI.SystemV) as sv_branchy:
+
     (vertexCount, componentMap, vertexEdges, neighbors) = LOAD.ARGUMENTS()
 
     changed = GeneralPurposeRegister32()
@@ -244,9 +244,9 @@ with Function("ConnectedComponents_SV_Branchy_PeachPy",
     RETURN()
 
 with Function("ConnectedComponents_SV_Branchless_PeachPy",
-                      (vertexCountArgument, componentMapArgument, vertexEdgesArgument, neighborsArgument),
-                      abi=ABI.SystemV) as sv_branchless:
-    # Load arguments into registers
+        (vertexCountArgument, componentMapArgument, vertexEdgesArgument, neighborsArgument),
+        abi=ABI.SystemV) as sv_branchless:
+
     (vertexCount, componentMap, vertexEdges, neighbors) = LOAD.ARGUMENTS()
 
     changed = GeneralPurposeRegister32()
