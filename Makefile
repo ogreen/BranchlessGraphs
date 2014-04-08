@@ -18,38 +18,40 @@ sv: main.c timer.c sv.c graph.o Makefile
 
 
 bench-bfs: bfs
-	./bfs ../../marat/Bgraphs/astro-ph.graph > arn-bfs/astro-ph.log
-	./bfs ../../marat/Bgraphs/audikw1.graph > arn-bfs/audikw1.log
-	./bfs ../../marat/Bgraphs/auto.graph > arn-bfs/auto.log
-	./bfs ../../marat/Bgraphs/coAuthorsDBLP.graph > arn-bfs/coAuthorsDBLP.log
-	./bfs ../../marat/Bgraphs/coPapersDBLP.graph > arn-bfs/coPapersDBLP.log
-	./bfs ../../marat/Bgraphs/cond-mat-2003.graph > arn-bfs/cond-mat-2003.log
-	./bfs ../../marat/Bgraphs/cond-mat-2005.graph > arn-bfs/cond-mat-2005.log
-	./bfs ../../marat/Bgraphs/ecology1.graph > arn-bfs/ecology1.log
-#	./bfs ../../marat/Bgraphs/italy.graph > arn-bfs/italy.log
-#	./bfs ../../marat/Bgraphs/kron_g500-simple-logn16.graph > arn-bfs/kron_g500-simple-logn16.log
-	./bfs ../../marat/Bgraphs/ldoor.graph > arn-bfs/ldoor.log
-#	./bfs ../../marat/Bgraphs/netherlands.graph > arn-bfs/netherlands.log
-	./bfs ../../marat/Bgraphs/netscience.graph > arn-bfs/netscience.log
-	./bfs ../../marat/Bgraphs/power.graph > arn-bfs/power.log
-	./bfs ../../marat/Bgraphs/preferentialAttachment.graph > arn-bfs/preferentialAttachment.log
+	-mkdir -p $(SYSNAME)-bfs
+	./bfs ../../marat/Bgraphs/astro-ph.graph > $(SYSNAME)-bfs/astro-ph.log
+	./bfs ../../marat/Bgraphs/audikw1.graph > $(SYSNAME)-bfs/audikw1.log
+	./bfs ../../marat/Bgraphs/auto.graph > $(SYSNAME)-bfs/auto.log
+	./bfs ../../marat/Bgraphs/coAuthorsDBLP.graph > $(SYSNAME)-bfs/coAuthorsDBLP.log
+	./bfs ../../marat/Bgraphs/coPapersDBLP.graph > $(SYSNAME)-bfs/coPapersDBLP.log
+	./bfs ../../marat/Bgraphs/cond-mat-2003.graph > $(SYSNAME)-bfs/cond-mat-2003.log
+	./bfs ../../marat/Bgraphs/cond-mat-2005.graph > $(SYSNAME)-bfs/cond-mat-2005.log
+	./bfs ../../marat/Bgraphs/ecology1.graph > $(SYSNAME)-bfs/ecology1.log
+#	./bfs ../../marat/Bgraphs/italy.graph > $(SYSNAME)-bfs/italy.log
+#	./bfs ../../marat/Bgraphs/kron_g500-simple-logn16.graph > $(SYSNAME)-bfs/kron_g500-simple-logn16.log
+	./bfs ../../marat/Bgraphs/ldoor.graph > $(SYSNAME)-bfs/ldoor.log
+#	./bfs ../../marat/Bgraphs/netherlands.graph > $(SYSNAME)-bfs/netherlands.log
+	./bfs ../../marat/Bgraphs/netscience.graph > $(SYSNAME)-bfs/netscience.log
+	./bfs ../../marat/Bgraphs/power.graph > $(SYSNAME)-bfs/power.log
+	./bfs ../../marat/Bgraphs/preferentialAttachment.graph > $(SYSNAME)-bfs/preferentialAttachment.log
 
 bench-sv: sv
-	./sv ../../marat/Bgraphs/astro-ph.graph > arn-sv/astro-ph.log
-	./sv ../../marat/Bgraphs/audikw1.graph > arn-sv/audikw1.log
-	./sv ../../marat/Bgraphs/auto.graph > arn-sv/auto.log
-	./sv ../../marat/Bgraphs/coAuthorsDBLP.graph > arn-sv/coAuthorsDBLP.log
-	./sv ../../marat/Bgraphs/coPapersDBLP.graph > arn-sv/coPapersDBLP.log
-	./sv ../../marat/Bgraphs/cond-mat-2003.graph > arn-sv/cond-mat-2003.log
-	./sv ../../marat/Bgraphs/cond-mat-2005.graph > arn-sv/cond-mat-2005.log
-	./sv ../../marat/Bgraphs/ecology1.graph > arn-sv/ecology1.log
-#	./sv ../../marat/Bgraphs/italy.graph > arn-sv/italy.log
-#	./sv ../../marat/Bgraphs/kron_g500-simple-logn16.graph > arn-sv/kron_g500-simple-logn16.log
-	./sv ../../marat/Bgraphs/ldoor.graph > arn-sv/ldoor.log
-#	./sv ../../marat/Bgraphs/netherlands.graph > arn-sv/netherlands.log
-	./sv ../../marat/Bgraphs/netscience.graph > arn-sv/netscience.log
-	./sv ../../marat/Bgraphs/power.graph > arn-sv/power.log
-	./sv ../../marat/Bgraphs/preferentialAttachment.graph > arn-sv/preferentialAttachment.log
+	-mkdir -p $(SYSNAME)-sv
+	./sv ../../marat/Bgraphs/astro-ph.graph > $(SYSNAME)-sv/astro-ph.log
+	./sv ../../marat/Bgraphs/audikw1.graph > $(SYSNAME)-sv/audikw1.log
+	./sv ../../marat/Bgraphs/auto.graph > $(SYSNAME)-sv/auto.log
+	./sv ../../marat/Bgraphs/coAuthorsDBLP.graph > $(SYSNAME)-sv/coAuthorsDBLP.log
+	./sv ../../marat/Bgraphs/coPapersDBLP.graph > $(SYSNAME)-sv/coPapersDBLP.log
+	./sv ../../marat/Bgraphs/cond-mat-2003.graph > $(SYSNAME)-sv/cond-mat-2003.log
+	./sv ../../marat/Bgraphs/cond-mat-2005.graph > $(SYSNAME)-sv/cond-mat-2005.log
+	./sv ../../marat/Bgraphs/ecology1.graph > $(SYSNAME)-sv/ecology1.log
+#	./sv ../../marat/Bgraphs/italy.graph > $(SYSNAME)-sv/italy.log
+#	./sv ../../marat/Bgraphs/kron_g500-simple-logn16.graph > $(SYSNAME)-sv/kron_g500-simple-logn16.log
+	./sv ../../marat/Bgraphs/ldoor.graph > $(SYSNAME)-sv/ldoor.log
+#	./sv ../../marat/Bgraphs/netherlands.graph > $(SYSNAME)-sv/netherlands.log
+	./sv ../../marat/Bgraphs/netscience.graph > $(SYSNAME)-sv/netscience.log
+	./sv ../../marat/Bgraphs/power.graph > $(SYSNAME)-sv/power.log
+	./sv ../../marat/Bgraphs/preferentialAttachment.graph > $(SYSNAME)-sv/preferentialAttachment.log
 
 
 clean:
