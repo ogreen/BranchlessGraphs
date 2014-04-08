@@ -1,8 +1,6 @@
 from peachpy import *
 from peachpy.x86_64 import *
 
-abi = ABI.SystemV
-
 vertexEdgesArgument = Argument(ptr(const_uint32_t))
 neighborsArgument = Argument(ptr(const_uint32_t))
 inputQueueArgument = Argument(ptr(const_uint32_t))
@@ -10,7 +8,6 @@ inputVerticesArgument = Argument(uint32_t)
 outputQueueArgument = Argument(ptr(uint32_t))
 levelsArgument = Argument(ptr(uint32_t))
 currentLevelArgument = Argument(uint32_t)
-arguments = (vertexEdgesArgument, neighborsArgument, inputQueueArgument, inputVerticesArgument, outputQueueArgument, levelsArgument, currentLevelArgument)
 
 with Function("BFS_TopDown_Branchy_PeachPy",
                       (vertexEdgesArgument, neighborsArgument, inputQueueArgument, inputVerticesArgument,
@@ -178,7 +175,143 @@ with Function("BFS_TopDown_Branchless_PeachPy",
     MOV( rax, outputQueue )
 
     RETURN()
+    
+vertexCountArgument = Argument(size_t)
+componentMapArgument = Argument(ptr(uint32_t))
+vertexEdgesArgument = Argument(ptr(uint32_t))
+neighborsArgument = Argument(ptr(uint32_t))
 
-with open("graph_x86_64.s", "w") as bfs_file:
-    bfs_file.write(bfs_branchy.assembly)
-    bfs_file.write(bfs_branchless.assembly)
+with Function("ConnectedComponents_SV_Branchy_PeachPy",
+                      (vertexCountArgument, componentMapArgument, vertexEdgesArgument, neighborsArgument),
+                      abi=ABI.SystemV) as sv_branchy:
+    # Load arguments into registers
+    (vertexCount, componentMap, vertexEdges, neighbors) = LOAD.ARGUMENTS()
+
+    changed = GeneralPurposeRegister32()
+    MOV( changed, 0 )
+
+    vertexEdgesEnd = GeneralPurposeRegister64()
+    MOV( vertexEdgesEnd.as_dword, [vertexEdges] )
+    ADD( vertexEdges, 4 )
+    neighborsEnd = GeneralPurposeRegister64()
+    LEA( neighborsEnd, [neighbors + vertexEdgesEnd * 4] )
+
+    currentComponentPointer = GeneralPurposeRegister64()
+    MOV( currentComponentPointer, componentMap )
+
+    with Loop() as per_vertex_loop:
+        neighborsPointer = GeneralPurposeRegister64()
+        MOV( neighborsPointer, neighborsEnd )
+
+        vertexEdgesEnd = GeneralPurposeRegister64()
+        MOV( vertexEdgesEnd.as_dword, [vertexEdges] )
+        ADD( vertexEdges, 4 )
+        LEA( neighborsEnd, [neighbors + vertexEdgesEnd * 4] )
+
+        currentComponent = GeneralPurposeRegister32()
+        MOV( currentComponent, [currentComponentPointer] )
+
+        per_edge_loop = Loop()
+        CMP( neighborsPointer, neighborsEnd )
+        JE( per_edge_loop.end )
+
+        with per_edge_loop:
+            neighborVertex = GeneralPurposeRegister64()
+            MOV( neighborVertex.as_dword, [neighborsPointer] )
+            ADD( neighborsPointer, 4 )
+
+            neighborComponent = GeneralPurposeRegister32()
+            MOV( neighborComponent.as_dword, [componentMap + neighborVertex * 4] )
+
+            skip_update = Label("skip_update")
+            CMP( neighborComponent, currentComponent )
+            JAE( skip_update )
+
+            MOV( currentComponent, neighborComponent )
+            MOV( [currentComponentPointer], neighborComponent )
+            OR( changed, 1 )
+
+            LABEL( skip_update )
+
+            CMP( neighborsPointer, neighborsEnd )
+            JNE( per_edge_loop.begin )
+
+        ADD( currentComponentPointer, 4 )
+        SUB( vertexCount, 1 )
+        JNE( per_vertex_loop.begin )
+
+    MOV( eax, changed )
+    RETURN()
+
+with Function("ConnectedComponents_SV_Branchless_PeachPy",
+                      (vertexCountArgument, componentMapArgument, vertexEdgesArgument, neighborsArgument),
+                      abi=ABI.SystemV) as sv_branchless:
+    # Load arguments into registers
+    (vertexCount, componentMap, vertexEdges, neighbors) = LOAD.ARGUMENTS()
+
+    changed = GeneralPurposeRegister32()
+    MOV( changed, 0 )
+
+    vertexEdgesEnd = GeneralPurposeRegister64()
+    MOV( vertexEdgesEnd.as_dword, [vertexEdges] )
+    ADD( vertexEdges, 4 )
+    neighborsEnd = GeneralPurposeRegister64()
+    LEA( neighborsEnd, [neighbors + vertexEdgesEnd * 4] )
+
+    currentComponentPointer = GeneralPurposeRegister64()
+    MOV( currentComponentPointer, componentMap )
+
+    with Loop() as per_vertex_loop:
+        neighborsPointer = GeneralPurposeRegister64()
+        MOV( neighborsPointer, neighborsEnd )
+
+        vertexEdgesEnd = GeneralPurposeRegister64()
+        MOV( vertexEdgesEnd.as_dword, [vertexEdges] )
+        ADD( vertexEdges, 4 )
+        LEA( neighborsEnd, [neighbors + vertexEdgesEnd * 4] )
+
+        newComponent = GeneralPurposeRegister32()
+        MOV( newComponent, [currentComponentPointer] )
+
+        currentComponent = GeneralPurposeRegister32()
+        MOV( currentComponent, newComponent )
+
+        per_edge_loop = Loop()
+        CMP( neighborsPointer, neighborsEnd )
+        JE( per_edge_loop.end )
+
+        with per_edge_loop:
+            neighborVertex = GeneralPurposeRegister64()
+            MOV( neighborVertex.as_dword, [neighborsPointer] )
+            ADD( neighborsPointer, 4 )
+
+            neighborComponent = GeneralPurposeRegister32()
+            MOV( neighborComponent.as_dword, [componentMap + neighborVertex * 4] )
+
+            CMP( neighborComponent, newComponent )
+            CMOVB( newComponent, neighborComponent )
+
+            LABEL( skip_update )
+
+            CMP( neighborsPointer, neighborsEnd )
+            JNE( per_edge_loop.begin )
+
+        XOR( currentComponent, newComponent )
+        OR( changed, currentComponent )
+
+        MOV( [currentComponentPointer], newComponent )
+        ADD( currentComponentPointer, 4 )
+
+        SUB( vertexCount, 1 )
+        JNE( per_vertex_loop.begin )
+
+    TEST( changed, changed )
+    SETNZ( al )
+    RETURN()
+
+with open("graph_x86_64.s", "w") as graph_file:
+    graph_file.write(bfs_branchy.assembly)
+    graph_file.write(bfs_branchless.assembly)
+    graph_file.write(sv_branchy.assembly)
+    graph_file.write(sv_branchless.assembly)
+

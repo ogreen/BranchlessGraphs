@@ -14,7 +14,7 @@
 
 void Benchmark_BFS_TopDown(const char* implementation_name, BFS_TopDown_Function bfs_function, uint32_t numVerteces, uint32_t* off, uint32_t* ind, uint32_t* edgesTraversed);
 void Benchmark_BFS_BottomUp(const char* implementation_name, BFS_BottomUp_Function bfs_function, uint32_t numVerteces, uint32_t* off, uint32_t* ind);
-void Benchmark_ConnectedComponents_SV(const char* implementation_name, ConnectedComponents_SV_Function sv_function, size_t nv, uint32_t* off, uint32_t* ind);
+void Benchmark_ConnectedComponents_SV(const char* implementation_name, ConnectedComponents_SV_Function sv_function, size_t numVerteces, size_t numEdges, uint32_t* off, uint32_t* ind);
 
 #define LINE_SIZE 10000
 
@@ -155,18 +155,18 @@ int main (const int argc, char *argv[]) {
 	#endif
 
 #if defined(BENCHMARK_SV)
-//	Benchmark_ConnectedComponents_SV("SV branchy", ConnectedComponents_SV_Branchy, nv, off, ind);
-	Benchmark_ConnectedComponents_SV("SV branchy (CA15)", _ConnectedComponents_SV_Branchy_CortexA15, nv, off, ind);
-	Benchmark_ConnectedComponents_SV("SV branchless (CA15)", _ConnectedComponents_SV_Branchless_CortexA15, nv, off, ind);
-	//~ Benchmark_ConnectedComponents_SV("SV branchless (C)", ConnectedComponents_SV_Branchless, nv, off, ind);
+    Benchmark_ConnectedComponents_SV("SV branchy", ConnectedComponents_SV_Branchy, nv, ne, off, ind);
+	Benchmark_ConnectedComponents_SV("SV branchless (C)", ConnectedComponents_SV_Branchless, nv, ne, off, ind);
+	Benchmark_ConnectedComponents_SV("SV branchy (Peach-Py)", ConnectedComponents_SV_Branchy_PeachPy, nv, ne, off, ind);
+	Benchmark_ConnectedComponents_SV("SV branchless (Peach-Py)", ConnectedComponents_SV_Branchless_PeachPy, nv, ne, off, ind);
 	#if defined(__x86_64__) && !defined(__MIC__)
-	Benchmark_ConnectedComponents_SV("SV branchless (asm)", ConnectedComponents_SV_Branchless_CMOV, nv, off, ind);
+	Benchmark_ConnectedComponents_SV("SV branchless (asm)", ConnectedComponents_SV_Branchless_CMOV, nv, ne, off, ind);
 	#endif
 	#ifdef __SSE4_1__
-	Benchmark_ConnectedComponents_SV("SV branchless (SSE4.1)", ConnectedComponents_SV_Branchless_SSE4_1, nv, off, ind);
+	Benchmark_ConnectedComponents_SV("SV branchless (SSE4.1)", ConnectedComponents_SV_Branchless_SSE4_1, nv, ne, off, ind);
 	#endif
 	#ifdef __MIC__
-	Benchmark_ConnectedComponents_SV("SV branchless (MIC)", ConnectedComponents_SV_Branchless_MIC, nv, off, ind);
+	Benchmark_ConnectedComponents_SV("SV branchless (MIC)", ConnectedComponents_SV_Branchless_MIC, nv, ne, off, ind);
 	#endif
 #endif
  	free(off);
@@ -390,7 +390,7 @@ int main (const int argc, char *argv[]) {
 #endif
 
 #if defined(BENCHMARK_SV)
-	void Benchmark_ConnectedComponents_SV(const char* implementation_name, ConnectedComponents_SV_Function sv_function, size_t nv, uint32_t* off, uint32_t* ind) {
+	void Benchmark_ConnectedComponents_SV(const char* implementation_name, ConnectedComponents_SV_Function sv_function, size_t numVertices, size_t numEdges, uint32_t* off, uint32_t* ind) {
 		struct perf_event_attr perf_branches;
 		struct perf_event_attr perf_mispredictions;
 		struct perf_event_attr perf_instructions;
@@ -437,13 +437,13 @@ int main (const int argc, char *argv[]) {
 			exit(EXIT_FAILURE);
 		}
 
-		uint32_t* components_map = (uint32_t*)memalign(64, nv * sizeof(uint32_t));
-		uint64_t* branches = (uint64_t*)memalign(64, nv * sizeof(uint64_t));
-		uint64_t* mispredictions = (uint64_t*)memalign(64, nv * sizeof(uint64_t));
-		uint64_t* instructions = (uint64_t*)memalign(64, nv * sizeof(uint64_t));
-		double* seconds = (double*)memalign(64, nv * sizeof(double));
+		uint32_t* components_map = (uint32_t*)memalign(64, numVertices * sizeof(uint32_t));
+		uint64_t* branches = (uint64_t*)memalign(64, numVertices * sizeof(uint64_t));
+		uint64_t* mispredictions = (uint64_t*)memalign(64, numVertices * sizeof(uint64_t));
+		uint64_t* instructions = (uint64_t*)memalign(64, numVertices * sizeof(uint64_t));
+		double* seconds = (double*)memalign(64, numVertices * sizeof(double));
 
-		for (size_t i = 0; i < nv; i++) {
+		for (size_t i = 0; i < numVertices; i++) {
 			components_map[i] = i;
 		}
 
@@ -458,7 +458,7 @@ int main (const int argc, char *argv[]) {
 			ioctl(fd_mispredictions, PERF_EVENT_IOC_ENABLE, 0);
 			ioctl(fd_instructions, PERF_EVENT_IOC_ENABLE, 0);
 
-			changed = sv_function(nv, components_map, off, ind);
+			changed = sv_function(numVertices, components_map, off, ind);
 
 			ioctl(fd_branches, PERF_EVENT_IOC_DISABLE, 0);
 			ioctl(fd_mispredictions, PERF_EVENT_IOC_DISABLE, 0);
@@ -471,7 +471,7 @@ int main (const int argc, char *argv[]) {
 		} while (changed);
 
 		for (uint32_t i = 0; i < iteration; i++) {
-			printf("%s\t%"PRIu32"\t%.10lf\t%"PRIu64"\t%"PRIu64"\t%"PRIu64"\t%"PRIu32"\t%"PRIu32"\n", implementation_name, i, seconds[i], mispredictions[i], branches[i], instructions[i],nv,ne);
+			printf("%s\t%"PRIu32"\t%.10lf\t%"PRIu64"\t%"PRIu64"\t%"PRIu64"\t%zu\t%zu\n", implementation_name, i, seconds[i], mispredictions[i], branches[i], instructions[i], numVertices, numEdges);
 		}
 
 		close(fd_branches);
