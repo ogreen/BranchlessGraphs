@@ -12,9 +12,9 @@
 #include <linux/perf_event.h>
 #include <asm/unistd.h>
 
-void Benchmark_BFS_TopDown(const char* implementation_name, BFS_TopDown_Function bfs_function, uint32_t numVerteces, uint32_t* off, uint32_t* ind, uint32_t* edgesTraversed);
-void Benchmark_BFS_BottomUp(const char* implementation_name, BFS_BottomUp_Function bfs_function, uint32_t numVerteces, uint32_t* off, uint32_t* ind);
-void Benchmark_ConnectedComponents_SV(const char* implementation_name, ConnectedComponents_SV_Function sv_function, size_t numVerteces, size_t numEdges, uint32_t* off, uint32_t* ind);
+void Benchmark_BFS_TopDown(const char* algorithm_name, const char* implementation_name, BFS_TopDown_Function bfs_function, uint32_t numVerteces, uint32_t* off, uint32_t* ind, uint32_t* edgesTraversed);
+void Benchmark_BFS_BottomUp(const char* algorithm_name, const char* implementation_name, BFS_BottomUp_Function bfs_function, uint32_t numVerteces, uint32_t* off, uint32_t* ind);
+void Benchmark_ConnectedComponents_SV(const char* algorithm_name, const char* implementation_name, ConnectedComponents_SV_Function sv_function, size_t numVerteces, size_t numEdges, uint32_t* off, uint32_t* ind);
 
 #define LINE_SIZE 10000
 
@@ -122,42 +122,32 @@ int main (const int argc, char *argv[]) {
 			free(queue);
 		}
 
-		Benchmark_BFS_TopDown("BFS/TD brachy (C)", BFS_TopDown_Branchy, nv, off, ind, edgesTraversed);
-		Benchmark_BFS_TopDown("BFS/TD branchless (C)", BFS_TopDown_Branchless, nv, off, ind, edgesTraversed);
-		Benchmark_BFS_TopDown("BFS/TD brachy (Peach-Py)", BFS_TopDown_Branchy_PeachPy, nv, off, ind, edgesTraversed);
-		Benchmark_BFS_TopDown("BFS/TD brachless (Peach-Py)", BFS_TopDown_Branchless_PeachPy, nv, off, ind, edgesTraversed);
-		#if defined(__x86_64__) && !defined(__MIC__)
-		Benchmark_BFS_TopDown("BFS/TD branchless (inline asm)", BFS_TopDown_Branchless_CMOV, nv, off, ind, edgesTraversed);
-		#endif
+		Benchmark_BFS_TopDown("BFS/TD", "Branch-based", BFS_TopDown_Branchy_PeachPy, nv, off, ind, edgesTraversed);
+		Benchmark_BFS_TopDown("BFS/TD", "Branch-avoiding", BFS_TopDown_Branchless_PeachPy, nv, off, ind, edgesTraversed);
 		#ifdef __SSE4_1__
-		//~ Benchmark_BFS_TopDown("BFS/TD bracnhless (SSE 4.1)", BFS_TopDown_Branchless_SSE4_1, nv, off, ind, edgesTraversed);
+		Benchmark_BFS_TopDown("BFS/TD", "Branch-avoiding (SSE 4.1)", BFS_TopDown_Branchless_SSE4_1, nv, off, ind, edgesTraversed);
 		#endif
 		#ifdef __AVX2__
-		//~ Benchmark_BFS_TopDown("BFS/TD bracnhless (AVX 2)", BFS_TopDown_Branchless_AVX2, nv, off, ind, edgesTraversed);
+		Benchmark_BFS_TopDown("BFS/TD", "Branch-avoiding (AVX 2)", BFS_TopDown_Branchless_AVX2, nv, off, ind, edgesTraversed);
 		#endif
 		#ifdef __MIC__
-		//~ Benchmark_BFS_TopDown("BFS/TD bracnhless (MIC)", BFS_TopDown_Branchless_MIC, nv, off, ind, edgesTraversed);
+		Benchmark_BFS_TopDown("BFS/TD", "Branch-avoiding (MIC)", BFS_TopDown_Branchless_MIC, nv, off, ind, edgesTraversed);
 		#endif
-		Benchmark_BFS_BottomUp("BFS/BU brachy", BFS_BottomUp_Branchy, nv, off, ind);
-		//~ Benchmark_BFS_BottomUp("BFS/BU branchless (C)", BFS_BottomUp_Branchless, nv, off, ind);
-		//~ Benchmark_BFS_BottomUp("BFS/BU branchless (CMOV)", BFS_BottomUp_Branchless_CMOV, nv, off, ind);
+		//~ Benchmark_BFS_BottomUp("BFS/BU", "Branch-based", BFS_BottomUp_Branchy, nv, off, ind);
+		//~ Benchmark_BFS_BottomUp("BFS/BU", "Branch-avoiding (C)", BFS_BottomUp_Branchless, nv, off, ind);
+		//~ Benchmark_BFS_BottomUp("BFS/BU", "Branch-avoiding (CMOV)", BFS_BottomUp_Branchless_CMOV, nv, off, ind);
 
 		free(edgesTraversed);
 	#endif
 
 #if defined(BENCHMARK_SV)
-    Benchmark_ConnectedComponents_SV("SV branchy", ConnectedComponents_SV_Branchy, nv, ne, off, ind);
-	Benchmark_ConnectedComponents_SV("SV branchless (C)", ConnectedComponents_SV_Branchless, nv, ne, off, ind);
-	Benchmark_ConnectedComponents_SV("SV branchy (Peach-Py)", ConnectedComponents_SV_Branchy_PeachPy, nv, ne, off, ind);
-	Benchmark_ConnectedComponents_SV("SV branchless (Peach-Py)", ConnectedComponents_SV_Branchless_PeachPy, nv, ne, off, ind);
-	#if defined(__x86_64__) && !defined(__MIC__)
-	Benchmark_ConnectedComponents_SV("SV branchless (asm)", ConnectedComponents_SV_Branchless_CMOV, nv, ne, off, ind);
-	#endif
+	Benchmark_ConnectedComponents_SV("SV", "Branch-based", ConnectedComponents_SV_Branchy_PeachPy, nv, ne, off, ind);
+	Benchmark_ConnectedComponents_SV("SV", "Branch-avoiding", ConnectedComponents_SV_Branchless_PeachPy, nv, ne, off, ind);
 	#ifdef __SSE4_1__
-	Benchmark_ConnectedComponents_SV("SV branchless (SSE4.1)", ConnectedComponents_SV_Branchless_SSE4_1, nv, ne, off, ind);
+	Benchmark_ConnectedComponents_SV("SV", "SSE4.1", ConnectedComponents_SV_Branchless_SSE4_1, nv, ne, off, ind);
 	#endif
 	#ifdef __MIC__
-	Benchmark_ConnectedComponents_SV("SV branchless (MIC)", ConnectedComponents_SV_Branchless_MIC, nv, ne, off, ind);
+	Benchmark_ConnectedComponents_SV("SV", "MIC", ConnectedComponents_SV_Branchless_MIC, nv, ne, off, ind);
 	#endif
 #endif
  	free(off);
@@ -165,7 +155,7 @@ int main (const int argc, char *argv[]) {
 }
 
 #if defined(BENCHMARK_BFS)
-	void Benchmark_BFS_TopDown(const char* implementation_name, BFS_TopDown_Function bfs_function, uint32_t numVerteces, uint32_t* off, uint32_t* ind, uint32_t* edgesTraversed) {
+	void Benchmark_BFS_TopDown(const char* algorithm_name, const char* implementation_name, BFS_TopDown_Function bfs_function, uint32_t numVerteces, uint32_t* off, uint32_t* ind, uint32_t* edgesTraversed) {
 		struct perf_event_attr perf_branches;
 		struct perf_event_attr perf_mispredictions;
 		struct perf_event_attr perf_instructions;
@@ -260,7 +250,7 @@ int main (const int argc, char *argv[]) {
 		const uint32_t levelCount = currentLevel - 1;
 
 		for (uint32_t level = 0; level < levelCount; level++) {
-			printf("%s\t%"PRIu32"\t%.10lf\t%"PRIu64"\t%"PRIu64"\t%"PRIu64"\t%"PRIu32"\t%"PRIu32"\n", implementation_name, level, seconds[level], mispredictions[level], branches[level], instructions[level], vertices[level], edgesTraversed[level]);
+			printf("%s\t%s\t%"PRIu32"\t%.10lf\t%"PRIu64"\t%"PRIu64"\t%"PRIu64"\t%"PRIu32"\t%"PRIu32"\n", algorithm_name, implementation_name, level, seconds[level], mispredictions[level], branches[level], instructions[level], vertices[level], edgesTraversed[level]);
 		}
 
 		close(fd_branches);
@@ -275,7 +265,7 @@ int main (const int argc, char *argv[]) {
 		free(seconds);
 	}
 
-	void Benchmark_BFS_BottomUp(const char* implementation_name, BFS_BottomUp_Function bfs_function, uint32_t numVerteces, uint32_t* off, uint32_t* ind) {
+	void Benchmark_BFS_BottomUp(const char* algorithm_name, const char* implementation_name, BFS_BottomUp_Function bfs_function, uint32_t numVerteces, uint32_t* off, uint32_t* ind) {
 		struct perf_event_attr perf_branches;
 		struct perf_event_attr perf_mispredictions;
 		struct perf_event_attr perf_instructions;
@@ -365,7 +355,7 @@ int main (const int argc, char *argv[]) {
 		} while (changed);
 
 		for (uint32_t level = 0; level < currentLevel; level++) {
-			printf("%s\t%"PRIu32"\t%.10lf\t%"PRIu64"\t%"PRIu64"\t%"PRIu64" \t1 \t1\n", implementation_name, level, seconds[level], mispredictions[level], branches[level], instructions[level]);
+			printf("%s\t%s\t%"PRIu32"\t%.10lf\t%"PRIu64"\t%"PRIu64"\t%"PRIu64" \t1 \t1\n", algorithm_name, implementation_name, level, seconds[level], mispredictions[level], branches[level], instructions[level]);
 		}
 
 		close(fd_branches);
@@ -381,7 +371,7 @@ int main (const int argc, char *argv[]) {
 #endif
 
 #if defined(BENCHMARK_SV)
-	void Benchmark_ConnectedComponents_SV(const char* implementation_name, ConnectedComponents_SV_Function sv_function, size_t numVertices, size_t numEdges, uint32_t* off, uint32_t* ind) {
+	void Benchmark_ConnectedComponents_SV(const char* algorithm_name, const char* implementation_name, ConnectedComponents_SV_Function sv_function, size_t numVertices, size_t numEdges, uint32_t* off, uint32_t* ind) {
 		struct perf_event_attr perf_branches;
 		struct perf_event_attr perf_mispredictions;
 		struct perf_event_attr perf_instructions;
@@ -462,7 +452,7 @@ int main (const int argc, char *argv[]) {
 		} while (changed);
 
 		for (uint32_t i = 0; i < iteration; i++) {
-			printf("%s\t%"PRIu32"\t%.10lf\t%"PRIu64"\t%"PRIu64"\t%"PRIu64"\t%zu\t%zu\n", implementation_name, i, seconds[i], mispredictions[i], branches[i], instructions[i], numVertices, numEdges);
+			printf("%s\t%s\t%"PRIu32"\t%.10lf\t%"PRIu64"\t%"PRIu64"\t%"PRIu64"\t%zu\t%zu\n", algorithm_name, implementation_name, i, seconds[i], mispredictions[i], branches[i], instructions[i], numVertices, numEdges);
 		}
 
 		close(fd_branches);
