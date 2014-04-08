@@ -3,13 +3,13 @@ library(ggplot2)
 
 source("multiplot.R")
 
-for (arch in c("arn")){# "ivb", "pld", "slv")) {
+for (arch in c("hsw","arn")){# "ivb", "pld", "slv")) {
 #arch <- ""
   for (graph in c("astro-ph","audikw1","auto","coAuthorsDBLP","coPapersDBLP","cond-mat-2003", 
                   "cond-mat-2005","ecology1", "ldoor", "netscience", "power","preferentialAttachment")) {
   #for (graph in c("a")) {  
     perfdata = read.table(paste(arch,"-sv/", graph, ".log", sep=""), sep="\t")
-    names(perfdata) <- c("Algorithm", "Iteration", "Time", "Mispredictions", "Branches", "Instructions")
+    names(perfdata) <- c("dummy","Algorithm", "Iteration", "Time", "Mispredictions", "Branches", "Instructions","Vertices", "Edges")
     perfdata$Algorithm <- factor(perfdata$Algorithm, levels=unique(perfdata$Algorithm))
     
     timePlot <- 
