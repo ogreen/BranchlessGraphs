@@ -1,48 +1,25 @@
+from peachpy import *
 from peachpy.arm import *
 
-# Use 'x64-ms' for Microsoft x64 ABI
-abi = peachpy.c.ABI('arm-softeabi')
-assembler = Assembler(abi)
+vertexEdgesArgument = Argument(ptr(const_uint32_t))
+neighborsArgument = Argument(ptr(const_uint32_t))
+inputQueueArgument = Argument(ptr(const_uint32_t))
+inputVerticesArgument = Argument(ptr(uint32_t))
+outputQueueArgument = Argument(ptr(uint32_t))
+levelsArgument = Argument(ptr(uint32_t))
+currentLevelArgument = Argument(uint32_t)
 
-vertexEdgesArgument = peachpy.c.Parameter("vertexEdges", peachpy.c.Type("const uint32_t*"))
-neighborsArgument = peachpy.c.Parameter("neighbors", peachpy.c.Type("const uint32_t*"))
-inputQueueArgument = peachpy.c.Parameter("inputQueue", peachpy.c.Type("const uint32_t*"))
-inputVerticesArgument = peachpy.c.Parameter("inputVertices", peachpy.c.Type("uint32_t"))
-outputQueueArgument = peachpy.c.Parameter("outputQueue", peachpy.c.Type("uint32_t*"))
-outputCapacityArgument = peachpy.c.Parameter("outputCapacity", peachpy.c.Type("uint32_t"))
-levelsArgument = peachpy.c.Parameter("levels", peachpy.c.Type("uint32_t*"))
-currentLevelArgument = peachpy.c.Parameter("currentLevel", peachpy.c.Type("uint32_t"))
+with Function("BFS_TopDown_Branchy_PeachPy",
+        (vertexEdgesArgument, neighborsArgument, inputQueueArgument, inputVerticesArgument,
+        outputQueueArgument, levelsArgument, currentLevelArgument),
+        abi=ABI.GnuEABI) as bfs_branchy:
 
-arguments = (vertexEdgesArgument, neighborsArgument, inputQueueArgument, inputVerticesArgument, outputQueueArgument, outputCapacityArgument, levelsArgument, currentLevelArgument)
-
-class Block:
-    def __init__(self, name):
-        self.name = name
-        self.begin = Label(self.name + ".begin")
-        self.end = Label(self.name + ".end")
-    
-    def __enter__(self):
-        LABEL(self.begin)
-        return self
-
-    def __exit__(self, type, value, traceback):
-        if type is None:
-           LABEL(self.end)
-
-with Function(assembler, "BFS_TopDown_Branchy", arguments, "CortexA15"):
-    # Load arguments into registers
-    (vertexEdges, neighbors, inputQueue, inputVertices, outputQueue, outputCapacity, levels, currentLevel) = LOAD.PARAMETERS()
-
-    outputQueueEnd = GeneralPurposeRegister()
-    ADD( outputQueueEnd, outputQueue, outputCapacity.LSL(2) )
+    (vertexEdges, neighbors, inputQueue, inputVertices, outputQueue, levels, currentLevel) = LOAD.ARGUMENTS()
 
     outputQueueStart = GeneralPurposeRegister()
     MOV( outputQueueStart, outputQueue )
 
-    skip_neighbor = Label("skip_neighbor")
-    next_vertex = Label("next_vertex")
-
-    with Block("per_vertex_loop") as per_vertex_loop:
+    with Loop() as per_vertex_loop:
         currentVertex = GeneralPurposeRegister()
         LDR( currentVertex, [inputQueue], 4 )
 
@@ -57,9 +34,10 @@ with Function(assembler, "BFS_TopDown_Branchy", arguments, "CortexA15"):
         neighborsEnd = GeneralPurposeRegister()
         ADD( neighborsEnd, neighbors, endEdge.LSL(2) )
 
-        BEQ( next_vertex )
+        per_edge_loop = Loop()
+        BEQ( per_edge_loop.end )
 
-        with Block("per_edge_loop") as per_edge_loop:
+        with per_edge_loop:
             neighborVertex = GeneralPurposeRegister()
             LDR( neighborVertex, [neighborsEnd, currentEdgeIndex.LSL(2)] )
 
@@ -67,20 +45,16 @@ with Function(assembler, "BFS_TopDown_Branchy", arguments, "CortexA15"):
             LDR( neighborLevel, [levels, neighborVertex.LSL(2)] )
 
             CMP( neighborLevel, currentLevel )
+            skip_neighbor = Label("skip_neighbor")
             BLS( skip_neighbor )
 
             STR( neighborVertex, [outputQueue], 4 )
             STR( currentLevel, [levels, neighborVertex.LSL(2)] )
 
-            CMP( outputQueue, outputQueueEnd )
-            BEQ( per_vertex_loop.end )
-        
             LABEL( skip_neighbor )
             
             ADDS( currentEdgeIndex, 1 )
             BNE( per_edge_loop.begin )
-
-        LABEL( next_vertex )
 
         SUBS( inputVertices, 1 )
         BNE( per_vertex_loop.begin )
@@ -91,12 +65,12 @@ with Function(assembler, "BFS_TopDown_Branchy", arguments, "CortexA15"):
     
     RETURN()
 
-with Function(assembler, "BFS_TopDown_Branchless", arguments, "CortexA15"):
-    # Load arguments into registers
-    (vertexEdges, neighbors, inputQueue, inputVertices, outputQueue, outputCapacity, levels, currentLevel) = LOAD.PARAMETERS()
+with Function("BFS_TopDown_Branchless_PeachPy",
+        (vertexEdgesArgument, neighborsArgument, inputQueueArgument, inputVerticesArgument,
+        outputQueueArgument, levelsArgument, currentLevelArgument),
+        abi=ABI.GnuEABI) as bfs_branchless:
 
-    outputQueueEnd = GeneralPurposeRegister()
-    ADD( outputQueueEnd, outputQueue, outputCapacity.LSL(2) )
+    (vertexEdges, neighbors, inputQueue, inputVertices, outputQueue, levels, currentLevel) = LOAD.ARGUMENTS()
 
     outputQueueStart = GeneralPurposeRegister()
     MOV( outputQueueStart, outputQueue )
@@ -104,7 +78,7 @@ with Function(assembler, "BFS_TopDown_Branchless", arguments, "CortexA15"):
     skip_neighbor = Label("skip_neighbor")
     next_vertex = Label("next_vertex")
 
-    with Block("per_vertex_loop") as per_vertex_loop:
+    with Loop() as per_vertex_loop:
         currentVertex = GeneralPurposeRegister()
         LDR( currentVertex, [inputQueue], 4 )
 
@@ -119,9 +93,10 @@ with Function(assembler, "BFS_TopDown_Branchless", arguments, "CortexA15"):
         neighborsEnd = GeneralPurposeRegister()
         ADD( neighborsEnd, neighbors, endEdge.LSL(2) )
 
-        BEQ( next_vertex )
+        per_edge_loop = Loop()
+        BEQ( per_edge_loop.end )
 
-        with Block("per_edge_loop") as per_edge_loop:
+        with per_edge_loop:
             neighborVertex = GeneralPurposeRegister()
             LDR( neighborVertex, [neighborsEnd, currentEdgeIndex.LSL(2)] )
             
@@ -136,13 +111,8 @@ with Function(assembler, "BFS_TopDown_Branchless", arguments, "CortexA15"):
 
             STR( neighborLevel, [levels, neighborVertex.LSL(2)] )
 
-            CMP( outputQueue, outputQueueEnd )
-            BEQ( per_vertex_loop.end )
-        
             ADDS( currentEdgeIndex, 1 )
             BNE( per_edge_loop.begin )
-
-        LABEL( next_vertex )
 
         SUBS( inputVertices, 1 )
         BNE( per_vertex_loop.begin )
@@ -152,16 +122,16 @@ with Function(assembler, "BFS_TopDown_Branchless", arguments, "CortexA15"):
 
     RETURN()
 
-vertexCountArgument = peachpy.c.Parameter("vertexCount", peachpy.c.Type("size_t"))
-componentMapArgument = peachpy.c.Parameter("componentMap", peachpy.c.Type("uint32_t*"))
-vertexEdgesArgument = peachpy.c.Parameter("vertexEdges", peachpy.c.Type("uint32_t*"))
-neighborsArgument = peachpy.c.Parameter("neighbors", peachpy.c.Type("uint32_t*"))
+vertexCountArgument = Argument(size_t)
+componentMapArgument = Argument(ptr(uint32_t))
+vertexEdgesArgument = Argument(ptr(uint32_t))
+neighborsArgument = Argument(ptr(uint32_t))
 
-arguments = (vertexCountArgument, componentMapArgument, vertexEdgesArgument, neighborsArgument)
+with Function("ConnectedComponents_SV_Branchy_PeachPy",
+        (vertexCountArgument, componentMapArgument, vertexEdgesArgument, neighborsArgument),
+        abi=ABI.GnuEABI) as sv_branchy:
 
-with Function(assembler, "ConnectedComponents_SV_Branchy", arguments, "CortexA15"):
-    # Load arguments into registers
-    (vertexCount, componentMap, vertexEdges, neighbors) = LOAD.PARAMETERS()
+    (vertexCount, componentMap, vertexEdges, neighbors) = LOAD.ARGUMENTS()
 
     changed = GeneralPurposeRegister()
     MOV( changed, 0 )
@@ -173,7 +143,7 @@ with Function(assembler, "ConnectedComponents_SV_Branchy", arguments, "CortexA15
     currentComponentPointer = GeneralPurposeRegister()
     MOV( currentComponentPointer, componentMap )
 
-    with Block("per_vertex_loop") as per_vertex_loop:
+    with Loop() as per_vertex_loop:
         neighborsPointer = GeneralPurposeRegister()
         MOV( neighborsPointer, neighborsEnd )
 
@@ -183,7 +153,7 @@ with Function(assembler, "ConnectedComponents_SV_Branchy", arguments, "CortexA15
         currentComponent = GeneralPurposeRegister()
         LDR( currentComponent, [currentComponentPointer], 4 )
 
-        per_edge_loop = Block("per_edge_loop")
+        per_edge_loop = Loop()
         CMP( neighborsPointer, neighborsEnd )
         BEQ( per_edge_loop.end )
         
@@ -213,9 +183,11 @@ with Function(assembler, "ConnectedComponents_SV_Branchy", arguments, "CortexA15
     MOV( r0, changed )
     RETURN()
 
-with Function(assembler, "ConnectedComponents_SV_Branchless", arguments, "CortexA15"):
-    # Load arguments into registers
-    (vertexCount, componentMap, vertexEdges, neighbors) = LOAD.PARAMETERS()
+with Function("ConnectedComponents_SV_Branchless_PeachPy",
+        (vertexCountArgument, componentMapArgument, vertexEdgesArgument, neighborsArgument),
+        abi=ABI.GnuEABI) as sv_branchless:
+
+    (vertexCount, componentMap, vertexEdges, neighbors) = LOAD.ARGUMENTS()
 
     changed = GeneralPurposeRegister()
     MOV( changed, 0 )
@@ -227,7 +199,7 @@ with Function(assembler, "ConnectedComponents_SV_Branchless", arguments, "Cortex
     currentComponentPointer = GeneralPurposeRegister()
     MOV( currentComponentPointer, componentMap )
 
-    with Block("per_vertex_loop") as per_vertex_loop:
+    with Loop() as per_vertex_loop:
         neighborsPointer = GeneralPurposeRegister()
         MOV( neighborsPointer, neighborsEnd )
 
@@ -240,7 +212,7 @@ with Function(assembler, "ConnectedComponents_SV_Branchless", arguments, "Cortex
         currentComponent = GeneralPurposeRegister()
         MOV( currentComponent, newComponent )
 
-        per_edge_loop = Block("per_edge_loop")
+        per_edge_loop = Loop()
         CMP( neighborsPointer, neighborsEnd )
         BEQ( per_edge_loop.end )
 
@@ -288,7 +260,10 @@ epilog = r"""
 
 with open("graph_arm.s", "w") as bfs_file:
     bfs_file.write(epilog)
-    bfs_file.write(str(assembler))
+    bfs_file.write(bfs_branchy.assembly)
+    bfs_file.write(bfs_branchless.assembly)
+    bfs_file.write(sv_branchy.assembly)
+    bfs_file.write(sv_branchless.assembly)
 
 #~ uint32_t BFS_TopDown_Branchy(uint32_t* vertexEdges, uint32_t* neighbors, const uint32_t* inputQueue, uint32_t inputVerteces, uint32_t* outputQueue, uint32_t* levels, uint32_t currentLevel) {
     #~ uint32_t* outputQueueStart = outputQueue;
