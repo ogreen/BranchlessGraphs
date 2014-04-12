@@ -1,8 +1,8 @@
 rm(list = ls())
 library(ggplot2)
 
-for (alg in c("sv")){
-	for (arch in c("arn","hsw")) {
+for (alg in c("sv","bfs")){
+	for (arch in c("arn","hsw","bobcat", "bonnell","pld","slv")) {
 	  for (graph in c("astro-ph","audikw1","auto","coAuthorsDBLP","coPapersDBLP","cond-mat-2003", 
 	                  "cond-mat-2005","ecology1", "ldoor", "power","preferentialAttachment")){
 		perfdata = read.table(paste(arch, "-",alg,"/", graph, ".log", sep=""), sep="\t")
