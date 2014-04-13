@@ -90,8 +90,6 @@ void readGraphDIMACS(char* filePath, uint32_t** prmoff, uint32_t** prmind, uint3
 	*prmoff=off;
 }
 
-
-
 int main (const int argc, char *argv[]) {
 	if (argc != 2) {
 		fprintf(stderr, "Usage: bfs <graph-name>\n");
@@ -124,6 +122,7 @@ int main (const int argc, char *argv[]) {
 
 		Benchmark_BFS_TopDown("BFS/TD", "Branch-based", BFS_TopDown_Branchy_PeachPy, nv, off, ind, edgesTraversed);
 		Benchmark_BFS_TopDown("BFS/TD", "Branch-avoiding", BFS_TopDown_Branchless_PeachPy, nv, off, ind, edgesTraversed);
+		Benchmark_BFS_TopDown("BFS/TD", "Branch-lessless", BFS_TopDown_Branchlessless_PeachPy, nv, off, ind, edgesTraversed);
 		#ifdef __SSE4_1__
 		Benchmark_BFS_TopDown("BFS/TD", "Branch-avoiding (SSE 4.1)", BFS_TopDown_Branchless_SSE4_1, nv, off, ind, edgesTraversed);
 		#endif
