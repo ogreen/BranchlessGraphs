@@ -11,6 +11,17 @@ assign.if.undef <- function (var.name, value.if.new, env=parent.frame (), ...)
 stopif <- function (cond) stopifnot (!cond)
 
 #=====================================================================
+# Display a sampling of data frame rows
+
+get.sample <- function (DF, n=10, silent=TRUE) {
+  stopifnot (is.data.frame (DF))
+  S <- sample (rownames (DF), n)
+  DF.sample <- DF[S,]
+  if (!silent) { print (DF.sample) }
+  return (DF.sample)
+}
+
+#=====================================================================
 # Rename a single column of a data frame
 
 rename.col <- function (DF, old, new) {

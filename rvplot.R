@@ -47,13 +47,19 @@ load.perfdata.all <- function (Algs=NA, Archs=NA, Graphs=NA) {
       }
     }
   }
+
+  # Convert fields to factors
+  Data$Algorithm <- factor (Data$Algorithm)
+  Data$Arch <- factor (Data$Arch)
+  Data$Graph <- factor (Data$Graph)
+
   return (Data)
 }
 
 #======================================================================
 # Load and transform data
 #======================================================================
-Algs <- "bfs"
+Algs <- "sv"
 Archs <- "arn"
 Graphs <- NA
 
@@ -64,25 +70,74 @@ Data <- load.perfdata.all (Algs, Archs, Graphs)
 Totals <- ddply (Data, .(Comp, Algorithm, Arch, Graph), summarise
                  , Time.total=sum (Time)
                  , Iters.total=max (Iteration)
+                 , Mispredictions.total=sum (as.numeric (Mispredictions))
+                 , Branches.total=sum (as.numeric (Branches))
+                 , Instructions.total=sum (as.numeric (Instructions))
                  )
-Data <- merge (Data, Totals, by=c ("Comp", "Algorithm", "Arch", "Graph"))
+Data <- merge (Data, Totals, by=c ("Comp", "Algorithm", "Arch", "Graph"), sort=FALSE)
 
-# Baseline is branch-based
-Branchy.time <- rename.col (subset (Total.time, Algorithm == "Branch-based"), old="Time.total", new="Time.0")
-Data <- merge (Data, Branchy.time, by=c ("Comp", "Arch", "Graph"))
-Branchy.iters <- rename.col (subset (Total.iters, Algorithm == "Branch-based"), old="Iters.total", new="Iters.0")
-Data <- merge (Data, Branchy.iters, by=c ("Comp", "Arch", "Graph"))
+# Extract summary data (total time & iterations) for the branch-based ("branchy") version
+Branchy <- subset (Totals, Algorithm == "Branch-based")
+Branchy[, "Algorithm"] <- NULL # redundant; remove
+Branchy <- rename.col (Branchy, old="Time.total", new="Time.branchy")
+Branchy <- rename.col (Branchy, old="Iters.total", new="Iters.branchy")
 
-# Add column with the cumulative time over iterations for each algorithm
+# Also extract summary branchless data
+Branchless <- subset (Totals, Algorithm == "Branch-avoiding")
+Branchless[, "Algorithm"] <- NULL # redundant; remove
+Branchless <- rename.col (Branchless, old="Time.total", new="Time.branchless")
+Branchless <- rename.col (Branchless, old="Iters.total", new="Iters.branchless")
+
+# Create a merged branchy vs. baseline summary
+Summary <- merge (Branchy, Branchless, by=c ("Comp", "Arch", "Graph"), sort=FALSE)
+Summary <- transform (Summary, Speedup=Time.branchy / Time.branchless)
+
+# Add branchy data as the "baseline"
+Data <- merge (Data, Summary, by=c ("Comp", "Arch", "Graph"), sort=FALSE)
+
+# Add cumulative attributes
 Data <- ddply (Data, .(Comp, Algorithm, Arch, Graph), transform, Time.cumul=cumsum (Time))
+Data <- ddply (Data, .(Comp, Algorithm, Arch, Graph), transform, Mispredictions.cumul=cumsum (as.numeric (Mispredictions)))
+Data <- ddply (Data, .(Comp, Algorithm, Arch, Graph), transform, Branches.cumul=cumsum (as.numeric (Branches)))
+Data <- ddply (Data, .(Comp, Algorithm, Arch, Graph), transform, Instructions.cumul=cumsum (as.numeric (Instructions)))
 
 #======================================================================
 # Plot
 #======================================================================
 
-Q <- qplot (Iteration/Iters.0, Time.cumul/Time.0, data=Data, geom=c ("point", "line"), colour=Algorithm) + facet_wrap (~ Graph)
+# Copy of data for plotting purposes
+Data.plot <- Data
 
-setDevHD (l=15)
+# Choose x-variable
+Data.plot <- transform (Data.plot, X=Iteration / Iters.branchy)
+x.label <- "Iterations (normalized by branch-based algorithm)"
+x.scale.func <- scale_x_continuous (name=x.label)
+
+# Choose y-variable
+Data.plot <- transform (Data.plot, Y=Time.cumul / Time.branchy)
+y.label <- "Cumulative time, relative to branch-based algorithm"
+y.step <- gen.stepsize.auto (Data.plot$Y)$base
+Y.breaks <- gen_ticks_linear (Data.plot$Y, y.step)
+y.scale.func <- scale_y_continuous (name="", breaks=Y.breaks)
+
+# Apply any subplot reordering
+Order.by.Speedup <- rev (order (Summary$Speedup))
+Data.plot$Graph <- with (Data.plot, factor (Graph, levels=levels (Graph)[Order.by.Speedup]))
+
+# Generate plot
+Q <- ggplot (Data.plot, aes (x=X, y=Y))
+Q <- Q + geom_point (aes (colour=Algorithm))
+Q <- Q + geom_line (aes (colour=Algorithm))
+Q <- Q + x.scale.func
+Q <- Q + y.scale.func
+Q <- Q + geom_hline (aes (yintercept=1), linetype="dashed")
+Q <- Q + facet_wrap (~ Graph)
+Q <- Q + ggtitle (y.label)
+Q <- Q + theme (legend.position="bottom")
+Q <- set.hpcgarage.colours (Q)
+
+#setDevPage.portrait ()
+setDevSlide ()
 print (Q)
 
 # eof
