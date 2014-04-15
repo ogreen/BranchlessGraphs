@@ -111,14 +111,13 @@ Data.plot <- Data
 # Choose x-variable
 Data.plot <- transform (Data.plot, X=Iteration / Iters.branchy)
 x.label <- "Iterations (normalized by branch-based algorithm)"
-x.scale.func <- scale_x_continuous (name=x.label)
 
 # Choose y-variable
 Data.plot <- transform (Data.plot, Y=Time.cumul / Time.branchy)
 y.label <- "Cumulative time, relative to branch-based algorithm"
 y.step <- gen.stepsize.auto (Data.plot$Y)$base
 Y.breaks <- gen_ticks_linear (Data.plot$Y, y.step)
-y.scale.func <- scale_y_continuous (name="", breaks=Y.breaks)
+y.scale.func <- scale_y_continuous (breaks=Y.breaks)
 
 # Apply any subplot reordering
 Order.by.Speedup <- rev (order (Summary$Speedup))
@@ -128,8 +127,8 @@ Data.plot$Graph <- with (Data.plot, factor (Graph, levels=levels (Graph)[Order.b
 Q <- ggplot (Data.plot, aes (x=X, y=Y))
 Q <- Q + geom_point (aes (colour=Algorithm))
 Q <- Q + geom_line (aes (colour=Algorithm))
-Q <- Q + x.scale.func
-Q <- Q + y.scale.func
+Q <- Q + xlab (x.label)
+Q <- Q + y.scale.func + ylab ("")
 Q <- Q + geom_hline (aes (yintercept=1), linetype="dashed")
 Q <- Q + facet_wrap (~ Graph)
 Q <- Q + ggtitle (y.label)
