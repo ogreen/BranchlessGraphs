@@ -11,6 +11,15 @@ assign.if.undef <- function (var.name, value.if.new, env=parent.frame (), ...)
 stopif <- function (cond) stopifnot (!cond)
 
 #=====================================================================
+# Rename a single column of a data frame
+
+rename.col <- function (DF, old, new) {
+  stopifnot (is.data.frame (DF))
+  names (DF)[names (DF) == old] <- new
+  return (DF)
+}
+
+#=====================================================================
 # Remap factor values and fix the order
 
 re.factor <- function (F, from, to) factor (mapvalues (F, from, to), levels=to)
