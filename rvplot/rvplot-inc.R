@@ -62,40 +62,33 @@ load.xform.many <- function (Algs, Archs, Graphs) {
 
   cat (sprintf ("Transforming...\n"))
 
-  # Compute some totals for each (computation, algorithm, architecture, graph) combination
-  Totals <- ddply (Data, .(Comp, Alg, Arch, Graph), summarise
-                   , Time.tot=sum (Time)
-                   , Iters.tot=max (Iters)+1  # Iters starts at 0, so add 1
-                   , Mispreds.tot=sum (as.numeric (Mispreds))
-                   , Brs.tot=sum (as.numeric (Brs))
-                   , Insts.tot=sum (as.numeric (Insts))
-                   )
-  Data <- merge (Data, Totals, by=c ("Comp", "Alg", "Arch", "Graph"), sort=FALSE)
+  # Compute some useful aggregates for each (computation, algorithm, architecture, graph) combination
+  Aggs <- ddply (Data, .(Comp, Alg, Arch, Graph), summarise
+                 , Time.min=min (Time)
+                 , Time.tot=sum (Time)
+                 , Iters.tot=max (Iters)+1  # Iters starts at 0, so add 1
+                 , Mispreds.tot=sum (as.numeric (Mispreds))
+                 , Brs.tot=sum (as.numeric (Brs))
+                 , Insts.tot=sum (as.numeric (Insts))
+                 )
+  Data <- merge (Data, Aggs, by=c ("Comp", "Alg", "Arch", "Graph"), sort=FALSE)
 
   # Extract summary data (total time & iterations) for the branch-based ("bry") version
-  Branchy <- subset (Totals, Alg == "Branch-based")
+  Branchy <- subset (Aggs, Alg == "Branch-based")
   Branchy[, "Alg"] <- NULL # redundant; remove
-  Branchy <- rename.col (Branchy, old="Time.tot", new="Time.bry")
-  Branchy <- rename.col (Branchy, old="Iters.tot", new="Iters.bry")
-  Branchy <- rename.col (Branchy, old="Mispreds.tot", new="Mispreds.bry")
-  Branchy <- rename.col (Branchy, old="Brs.tot", new="Brs.bry")
-  Branchy <- rename.col (Branchy, old="Insts.tot", new="Insts.bry")
 
   # Also extract summary branchless data
-  Branchless <- subset (Totals, Alg == "Branch-avoiding")
+  Branchless <- subset (Aggs, Alg == "Branch-avoiding")
   Branchless[, "Alg"] <- NULL # redundant; remove
-  Branchless <- rename.col (Branchless, old="Time.tot", new="Time.brl")
-  Branchless <- rename.col (Branchless, old="Iters.tot", new="Iters.brl")
-  Branchless <- rename.col (Branchless, old="Mispreds.tot", new="Mispreds.brl")
-  Branchless <- rename.col (Branchless, old="Brs.tot", new="Brs.brl")
-  Branchless <- rename.col (Branchless, old="Insts.tot", new="Insts.brl")
 
   # Create a merged branchy vs. baseline summary
-  Summary <- merge (Branchy, Branchless, by=c ("Comp", "Arch", "Graph"), sort=FALSE)
-  Summary <- transform (Summary, Speedup=Time.bry / Time.brl)
-  Summary <- transform (Summary, Mispreds.ratio=Mispreds.bry / Mispreds.brl)
-  Summary <- transform (Summary, Brs.ratio=Brs.bry / Brs.brl)
-  Summary <- transform (Summary, Insts.ratio=Insts.bry / Insts.brl)
+  Summary <- merge (Branchy, Branchless, by=c ("Comp", "Arch", "Graph")
+                    , suffixes=c (".bry", ".brl")
+                    , sort=FALSE)
+  Summary <- transform (Summary, Speedup=Time.tot.bry / Time.tot.brl)
+  Summary <- transform (Summary, Mispreds.ratio=Mispreds.tot.bry / Mispreds.tot.brl)
+  Summary <- transform (Summary, Brs.ratio=Brs.tot.bry / Brs.tot.brl)
+  Summary <- transform (Summary, Insts.ratio=Insts.tot.bry / Insts.tot.brl)
 
   # Add branchy data as the "baseline"
   Data <- merge (Data, Summary, by=c ("Comp", "Arch", "Graph"), sort=FALSE)
@@ -106,7 +99,7 @@ load.xform.many <- function (Algs, Archs, Graphs) {
   Data <- ddply (Data, .(Comp, Alg, Arch, Graph), transform, Brs.cumul=cumsum (as.numeric (Brs)))
   Data <- ddply (Data, .(Comp, Alg, Arch, Graph), transform, Insts.cumul=cumsum (as.numeric (Insts)))
 
-  return (list (Data=Data, Totals=Totals, Branchy=Branchy, Branchless=Branchless, Summary=Summary))
+  return (list (Data=Data, Aggs=Aggs, Branchy=Branchy, Branchless=Branchless, Summary=Summary))
 }
 
 #======================================================================
