@@ -86,7 +86,6 @@ setDevSlide <- function (l=DEF.SIZE.SLIDE) {
 }
 
 setDevSlide.pdf <- function (file, l=DEF.SIZE.SLIDE) {
-  dev.off.safe ()
   pdf (file, width=l, height=l/8*6) # Use these dimensions for slides
 }
 
