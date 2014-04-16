@@ -11,7 +11,6 @@ source ("rvplot-inc.R")
 #======================================================================
 
 assign.if.undef ("ALG", "sv")
-assign.if.undef ("ARCH", "bobcat")
 assign.if.undef ("METRIC", "Time")
 assign.if.undef ("SAVE.PDF", FALSE)
 
@@ -22,7 +21,7 @@ stopifnot (METRIC %in% c ("Time", "Mispredictions", "Branches", "Instructions"))
 # Load and transform data
 #======================================================================
 
-Data.set <- load.xform.many (ALG, ARCH, GRAPHS)
+Data.set <- load.xform.many (ALG, ARCHS, GRAPHS)
 Data <- Data.set[["Data"]]
 Summary <- Data.set[["Summary"]]
 

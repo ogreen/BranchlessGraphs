@@ -36,6 +36,7 @@ load.perfdata.many <- function (Algs=NA, Archs=NA, Graphs=NA) {
   for (alg in Algs) {
     for (arch in Archs) {
       for (graph in Graphs) {
+        cat (sprintf ("Loading: (%s, %s, %s) ...\n", alg, arch, graph))
         Data.1 <- load.perfdata (alg, arch, graph)
         Data.1$Arch <- arch
         Data.1$Graph <- graph
@@ -58,6 +59,8 @@ load.perfdata.many <- function (Algs=NA, Archs=NA, Graphs=NA) {
 load.xform.many <- function (Algs, Archs, Graphs) {
   # Raw data
   Data <- load.perfdata.many (Algs, Archs, Graphs)
+
+  cat (sprintf ("Transforming...\n"))
 
   # Compute some totals for each (computation, algorithm, architecture, graph) combination
   Totals <- ddply (Data, .(Comp, Alg, Arch, Graph), summarise
@@ -103,7 +106,7 @@ load.xform.many <- function (Algs, Archs, Graphs) {
   Data <- ddply (Data, .(Comp, Alg, Arch, Graph), transform, Brs.cumul=cumsum (as.numeric (Brs)))
   Data <- ddply (Data, .(Comp, Alg, Arch, Graph), transform, Insts.cumul=cumsum (as.numeric (Insts)))
 
-  return (list (Data=Data, Branchy=Branchy, Branchless=Branchless, Summary=Summary))
+  return (list (Data=Data, Totals=Totals, Branchy=Branchy, Branchless=Branchless, Summary=Summary))
 }
 
 #======================================================================

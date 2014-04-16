@@ -21,7 +21,7 @@ SCREEN.SIZE <-
   if (HOST.NAME == "insomnia") {
     30
   } else if (HOST.NAME == "strada") {
-    27
+    24
   } else if (HOST.NAME == "daffy3" | HOST.NAME == "daffy4") {
     11
   } else {
@@ -105,7 +105,6 @@ setDevPage.landscape <- function (l=6.5) {
 }
 
 setDevHD.pdf <- function (file, l=8) {
-  dev.off.safe ()
   pdf (file, width=l, height=l/16*9)
 }
   
