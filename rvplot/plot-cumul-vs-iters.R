@@ -12,7 +12,6 @@ source ("rvplot-inc.R")
 
 assign.if.undef ("ALG", "sv")
 assign.if.undef ("ARCH", "bobcat")
-assign.if.undef ("GRAPHS", NA)
 assign.if.undef ("METRIC", "Time")
 assign.if.undef ("SAVE.PDF", FALSE)
 
