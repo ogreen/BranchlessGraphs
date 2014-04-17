@@ -10,27 +10,28 @@ source ("rvplot-inc.R")
 # Script parameters
 #======================================================================
 
-assign.if.undef ("COMPUTATION", "sv")
-assign.if.undef ("ARCHITECTURES", NA)
+assign.if.undef ("COMP", "sv")
+assign.if.undef ("ARCHS", NA)
 assign.if.undef ("METRIC", "Time")
 assign.if.undef ("CUMULATIVE", FALSE)
-assign.if.undef ("SCALE", "xy")
+assign.if.undef ("AXES", "xy")
 assign.if.undef ("SHOW.POINTS", TRUE)
 assign.if.undef ("SHOW.LINES", TRUE)
 assign.if.undef ("SAVE.PDF", FALSE)
 
 # Check parameters
-if (all (is.na (ARCHITECTURES))) { # by default, plot all architectures
-  ARCHITECTURES <- ARCHS
+stopifnot (COMP %in% COMPS.ALL)
+if (all (is.na (ARCHS))) { # by default, plot all architectures
+  ARCHS <- ARCHS.ALL
 }
 stopifnot (METRIC %in% c ("Time", "Mispredictions", "Branches", "Instructions"))
-stopifnot (SCALE %in% c ("xy", "logx", "logy", "loglog"))
+stopifnot (AXES %in% c ("xy", "logx", "logy", "loglog"))
 
 #======================================================================
 # Load and transform data
 #======================================================================
 
-Data.set <- load.xform.many (COMPUTATION, ARCHITECTURES, GRAPHS)
+Data.set <- load.xform.many (COMP, ARCHS, GRAPHS.ALL)
 Data <- Data.set[["Data"]]
 Summary <- Data.set[["Summary"]]
 
@@ -40,26 +41,26 @@ Summary <- Data.set[["Summary"]]
 
 cat (sprintf ("Plotting...\n"))
 
-if (COMPUTATION == "sv") {
+if (COMP == "sv") {
   alg.display.tag <- "Shiloach-Vishkin Connected Components"
 } else {
   alg.display.tag <- "Top-down Breadth-First Search"
 }
 
-if (length (ARCHITECTURES) == length (ARCHS)) {
+if (length (ARCHS) == length (ARCHS.ALL)) {
   arch.file.tag <- "All"
   arch.display.tag <- " [All platforms]"
 } else {
-  arch.file.tag <- paste (ARCHITECTURES, collapse="-")
-  if (length (ARCHITECTURES) == 1) {
-    arch.display.tag <- sprintf (" [%s]", ARCHITECTURES)
+  arch.file.tag <- paste (ARCHS, collapse="-")
+  if (length (ARCHS) == 1) {
+    arch.display.tag <- sprintf (" [%s]", ARCHS)
   } else {
     arch.display.tag <- ""
   }
 }
 
-X.SCALE <- if (SCALE %in% c ("xy", "logy")) "linear" else "log2"
-Y.SCALE <- if (SCALE %in% c ("xy", "logx")) "linear" else "log2"
+X.AXIS <- if (AXES %in% c ("xy", "logy")) "linear" else "log2"
+Y.AXIS <- if (AXES %in% c ("xy", "logx")) "linear" else "log2"
   
 # Copy of data for plotting purposes
 Data.plot <- Data
@@ -68,7 +69,7 @@ Data.plot <- Data
 Data.plot <- transform (Data.plot, X=(Iters + 1) / Iters.tot.bry)
 x.label <- "Iterations"
 x.label.sub <- "(normalized by branch-based algorithm)"
-x.scale <- gen.axis.scale.auto (Data.plot$X, "x", scale=X.SCALE)
+x.scale <- gen.axis.scale.auto (Data.plot$X, "x", scale=X.AXIS)
 
 # Choose y-variable
 if (METRIC == "Time") {
@@ -91,7 +92,7 @@ y.label <- sprintf ("%s: %s%s%s"
                     , METRIC
                     , arch.display.tag)
 y.label.sub <- "(relative to branch-based algorithm)"
-y.scale <- gen.axis.scale.auto (Data.plot$Y, "y", scale=Y.SCALE)
+y.scale <- gen.axis.scale.auto (Data.plot$Y, "y", scale=Y.AXIS)
 
 # Apply subplot reordering
 Order.by.Speedup <- rev (order (Summary$Speedup))
@@ -111,7 +112,7 @@ Q <- Q + ylab ("")
 Q <- add.title.optsub (Q, ggtitle, y.label, sub=y.label.sub)
 Q <- Q + theme (plot.title=element_text (hjust=-.025)) # left-align title
 
-if (length (ARCHITECTURES) == 1) {
+if (length (ARCHS) == 1) {
   Q <- Q + facet_wrap (~ Graph)
 } else {
   Q <- Q + facet_grid (Arch ~ Graph)
@@ -133,7 +134,7 @@ print (Q)
 outfilename <- sprintf ("figs/%s%s-vs-iters--%s--%s.pdf"
                         , if (CUMULATIVE) "cumul-" else ""
                         , METRIC
-                        , COMPUTATION
+                        , COMP
                         , arch.file.tag
                         )
 if (!SAVE.PDF) {
