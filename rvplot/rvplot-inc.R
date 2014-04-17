@@ -74,8 +74,11 @@ load.xform.many <- function (Algs, Archs, Graphs) {
                  , Time.min=min (Time)
                  , Time.tot=sum (Time)
                  , Iters.tot=max (Iters)+1  # Iters starts at 0, so add 1
+                 , Mispreds.min=min (Mispreds)
                  , Mispreds.tot=sum (as.numeric (Mispreds))
+                 , Brs.min=min (Brs)
                  , Brs.tot=sum (as.numeric (Brs))
+                 , Insts.min=min (Insts)
                  , Insts.tot=sum (as.numeric (Insts))
                  , Vs.tot=sum (as.numeric (Vs))
                  , Es.tot=sum (as.numeric (Es))
@@ -115,20 +118,28 @@ load.xform.many <- function (Algs, Archs, Graphs) {
 # Miscellaneous ggplot helper functions
 
 # Generate an auto-scaled axis (linear or log2)
-gen.axis.scale.auto <- function (Values, axis, scale="linear") {
+gen.axis.scale.auto <- function (Values, axis, scale="linear", free=FALSE) {
   stopifnot (scale %in% c ("linear", "log2"))
 
   if (scale == "linear") {
-    step <- gen.stepsize.auto (Values)$scaled
-    Breaks <- gen_ticks_linear (Values, step)
     scale.func <- if (axis == "x") scale_x_continuous else scale_y_continuous
-    return (scale.func (breaks=Breaks, limits=range (Breaks)))
+    if (!free) {
+      step <- gen.stepsize.auto (Values)$scaled
+      Breaks <- gen_ticks_linear (Values, step)
+      return (scale.func (breaks=Breaks, limits=range (Breaks)))
+    } else {
+      return (scale.func ())
+    }
   }
   if (scale == "log2") {
-    Breaks <- gen_ticks_log2 (Values)
-    Labels <- genlabels.log2 (Breaks)
     scale.func <- if (axis == "x") scale_x_log2 else scale_y_log2
-    return (scale.func (breaks=Breaks, limits=range (Breaks), labels=Labels))
+    if (!free) {
+      Breaks <- gen_ticks_log2 (Values)
+      Labels <- genlabels.log2 (Breaks)
+      return (scale.func (breaks=Breaks, limits=range (Breaks), labels=Labels))
+    } else {
+      return (scale.func ())
+    }
   }
   
   return (NA)
