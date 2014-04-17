@@ -6,7 +6,7 @@ library (directlabels)
 #library (quadprog)
 #library (alphahull)
 
-TERM.WIDTH <- as.numeric (system ("tput cols", intern=TRUE))
+TERM.WIDTH <- as.numeric (system ("tput cols", intern=TRUE)) - 1 # "-1" guard
 options (width=TERM.WIDTH)
 
 OS.NAME <- system2 ("uname", stdout=TRUE)
