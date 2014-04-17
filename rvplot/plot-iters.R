@@ -10,7 +10,7 @@ source ("rvplot-inc.R")
 # Script parameters
 #======================================================================
 
-assign.if.undef ("ALGORITHM", "bfs")
+assign.if.undef ("COMPUTATION", "sv")
 assign.if.undef ("ARCHITECTURES", NA)
 assign.if.undef ("METRIC", "Time")
 assign.if.undef ("CUMULATIVE", FALSE)
@@ -30,7 +30,7 @@ stopifnot (SCALE %in% c ("xy", "logx", "logy", "loglog"))
 # Load and transform data
 #======================================================================
 
-Data.set <- load.xform.many (ALGORITHM, ARCHITECTURES, GRAPHS)
+Data.set <- load.xform.many (COMPUTATION, ARCHITECTURES, GRAPHS)
 Data <- Data.set[["Data"]]
 Summary <- Data.set[["Summary"]]
 
@@ -40,7 +40,7 @@ Summary <- Data.set[["Summary"]]
 
 cat (sprintf ("Plotting...\n"))
 
-if (ALGORITHM == "sv") {
+if (COMPUTATION == "sv") {
   alg.display.tag <- "Shiloach-Vishkin Connected Components"
 } else {
   alg.display.tag <- "Top-down Breadth-First Search"
@@ -133,7 +133,7 @@ print (Q)
 outfilename <- sprintf ("figs/%s%s-vs-iters--%s--%s.pdf"
                         , if (CUMULATIVE) "cumul-" else ""
                         , METRIC
-                        , ALGORITHM
+                        , COMPUTATION
                         , arch.file.tag
                         )
 if (!SAVE.PDF) {

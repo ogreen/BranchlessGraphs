@@ -4,7 +4,7 @@ source ("util-inc.R")
 #======================================================================
 # "Space" of possible results
 #======================================================================
-ALGS <- c ("sv", "bfs")
+COMPS <- c ("sv", "bfs")
 ARCHS <- c ("arn","hsw","bobcat", "bonnell","pld","slv")
 GRAPHS <- c("astro-ph", "audikw1", "auto", "coAuthorsDBLP", "coPapersDBLP", "cond-mat-2003", "cond-mat-2005", "ecology1", "ldoor", "power", "preferentialAttachment")
 
@@ -13,12 +13,12 @@ GRAPHS <- c("astro-ph", "audikw1", "auto", "coAuthorsDBLP", "coPapersDBLP", "con
 #======================================================================
 
 # Reads one results file
-load.perfdata <- function (alg, arch, graph) {
-  stopifnot (alg %in% ALGS)
+load.perfdata <- function (comp, arch, graph) {
+  stopifnot (comp %in% COMPS)
   stopifnot (arch %in% ARCHS)
   stopifnot (graph %in% GRAPHS)
   
-  perfdata <- read.table (paste ("../", arch, "-", alg, "/", graph, ".log", sep=""), sep="\t")
+  perfdata <- read.table (paste ("../", arch, "-", comp, "/", graph, ".log", sep=""), sep="\t")
   names (perfdata) <- c ("Comp", "Alg", "Iters", "Time", "Mispreds", "Brs", "Insts", "Vs", "Es")
   perfdata$Comp <- with (perfdata, factor (Comp, levels=unique (Comp)))
   perfdata$Alg <- with (perfdata, factor (Alg, levels=unique (Alg)))
@@ -27,17 +27,17 @@ load.perfdata <- function (alg, arch, graph) {
 }
 
 # Reads a given subset of results file
-load.perfdata.many <- function (Algs=NA, Archs=NA, Graphs=NA) {
-  if (all (is.na (Algs))) { Algs <- ALGS; }
+load.perfdata.many <- function (Comps=NA, Archs=NA, Graphs=NA) {
+  if (all (is.na (Comps))) { Comps <- COMPS; }
   if (all (is.na (Archs))) { Archs <- ARCHS; }
   if (all (is.na (Graphs))) { Graphs <- GRAPHS; }
 
   Data <- NULL
-  for (alg in Algs) {
+  for (comp in Comps) {
     for (arch in Archs) {
       for (graph in Graphs) {
-        cat (sprintf ("Loading: (%s, %s, %s) ...\n", alg, arch, graph))
-        Data.1 <- load.perfdata (alg, arch, graph)
+        cat (sprintf ("Loading: (%s, %s, %s) ...\n", comp, arch, graph))
+        Data.1 <- load.perfdata (comp, arch, graph)
         Data.1$Arch <- arch
         Data.1$Graph <- graph
         Data <- rbind (Data, Data.1)
@@ -70,6 +70,8 @@ load.xform.many <- function (Algs, Archs, Graphs) {
                  , Mispreds.tot=sum (as.numeric (Mispreds))
                  , Brs.tot=sum (as.numeric (Brs))
                  , Insts.tot=sum (as.numeric (Insts))
+                 , Vs=median (Vs)
+                 , Es=median (Es)
                  )
   Data <- merge (Data, Aggs, by=c ("Comp", "Alg", "Arch", "Graph"), sort=FALSE)
 
