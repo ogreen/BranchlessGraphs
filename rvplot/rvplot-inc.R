@@ -61,6 +61,12 @@ load.xform.many <- function (Algs, Archs, Graphs) {
   # Raw data
   Data <- load.perfdata.many (Algs, Archs, Graphs)
 
+  # Compute per-edge metrics
+  Data <- transform (Data, Time.E=Time / Es)
+  Data <- transform (Data, Mispreds.E=Mispreds / Es)
+  Data <- transform (Data, Brs.E=Brs / Es)
+  Data <- transform (Data, Insts.E=Insts / Es)
+
   cat (sprintf ("Transforming...\n"))
 
   # Compute some useful aggregates for each (computation, algorithm, architecture, graph) combination
