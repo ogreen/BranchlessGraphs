@@ -76,7 +76,6 @@ setDevSquare <- function (l=DEF.SIZE.SQUARE) {
 }
 
 setDevSquare.pdf <- function (file, l=6) {
-  dev.off.safe ()
   pdf (file, width=l, height=l)
 }
 

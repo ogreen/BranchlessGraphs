@@ -4,9 +4,10 @@ source ("util-inc.R")
 #======================================================================
 # "Space" of possible results
 #======================================================================
-COMPS <- c ("sv", "bfs")
-ARCHS <- c ("arn","hsw","bobcat", "bonnell","pld","slv")
-GRAPHS <- c("astro-ph", "audikw1", "auto", "coAuthorsDBLP", "coPapersDBLP", "cond-mat-2003", "cond-mat-2005", "ecology1", "ldoor", "power", "preferentialAttachment")
+COMPS.ALL <- c ("sv", "bfs")
+ARCHS.ALL <- c ("arn","hsw","bobcat", "bonnell","pld","slv")
+#GRAPHS.ALL <- c("astro-ph", "audikw1", "auto", "coAuthorsDBLP", "coPapersDBLP", "cond-mat-2003", "cond-mat-2005", "ecology1", "ldoor", "power", "preferentialAttachment")
+GRAPHS.ALL <- c("audikw1", "auto", "coAuthorsDBLP", "cond-mat-2005", "ldoor", "power")
 
 #======================================================================
 # Utility functions to read results data
@@ -14,9 +15,9 @@ GRAPHS <- c("astro-ph", "audikw1", "auto", "coAuthorsDBLP", "coPapersDBLP", "con
 
 # Reads one results file
 load.perfdata <- function (comp, arch, graph) {
-  stopifnot (comp %in% COMPS)
-  stopifnot (arch %in% ARCHS)
-  stopifnot (graph %in% GRAPHS)
+  stopifnot (comp %in% COMPS.ALL)
+  stopifnot (arch %in% ARCHS.ALL)
+  stopifnot (graph %in% GRAPHS.ALL)
   
   perfdata <- read.table (paste ("../", arch, "-", comp, "/", graph, ".log", sep=""), sep="\t")
   names (perfdata) <- c ("Comp", "Alg", "Iters", "Time", "Mispreds", "Brs", "Insts", "Vs", "Es")
@@ -28,9 +29,9 @@ load.perfdata <- function (comp, arch, graph) {
 
 # Reads a given subset of results file
 load.perfdata.many <- function (Comps=NA, Archs=NA, Graphs=NA) {
-  if (all (is.na (Comps))) { Comps <- COMPS; }
-  if (all (is.na (Archs))) { Archs <- ARCHS; }
-  if (all (is.na (Graphs))) { Graphs <- GRAPHS; }
+  if (all (is.na (Comps))) { Comps <- COMPS.ALL; }
+  if (all (is.na (Archs))) { Archs <- ARCHS.ALL; }
+  if (all (is.na (Graphs))) { Graphs <- GRAPHS.ALL; }
 
   Data <- NULL
   for (comp in Comps) {
@@ -70,8 +71,8 @@ load.xform.many <- function (Algs, Archs, Graphs) {
                  , Mispreds.tot=sum (as.numeric (Mispreds))
                  , Brs.tot=sum (as.numeric (Brs))
                  , Insts.tot=sum (as.numeric (Insts))
-                 , Vs=median (Vs)
-                 , Es=median (Es)
+                 , Vs.tot=sum (as.numeric (Vs))
+                 , Es.tot=sum (as.numeric (Es))
                  )
   Data <- merge (Data, Aggs, by=c ("Comp", "Alg", "Arch", "Graph"), sort=FALSE)
 
