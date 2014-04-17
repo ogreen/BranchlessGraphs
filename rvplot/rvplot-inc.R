@@ -5,9 +5,9 @@ source ("util-inc.R")
 # "Space" of possible results
 #======================================================================
 COMPS.ALL <- c ("sv", "bfs")
-ARCHS.ALL <- c ("arn","hsw","bobcat", "bonnell","pld","slv")
+ARCHS.ALL <- c ("arn","hsw","bobcat", "bonnell", "pld", "slv")
 #GRAPHS.ALL <- c("astro-ph", "audikw1", "auto", "coAuthorsDBLP", "coPapersDBLP", "cond-mat-2003", "cond-mat-2005", "ecology1", "ldoor", "power", "preferentialAttachment")
-GRAPHS.ALL <- c("audikw1", "auto", "coAuthorsDBLP", "cond-mat-2005", "ldoor", "power")
+GRAPHS.ALL <- c("audikw1", "auto", "coAuthorsDBLP", "cond-mat-2005", "ldoor")
 
 #======================================================================
 # Utility functions to read results data
@@ -122,13 +122,13 @@ gen.axis.scale.auto <- function (Values, axis, scale="linear") {
     step <- gen.stepsize.auto (Values)$scaled
     Breaks <- gen_ticks_linear (Values, step)
     scale.func <- if (axis == "x") scale_x_continuous else scale_y_continuous
-    return (scale.func (breaks=Breaks))
+    return (scale.func (breaks=Breaks, limits=range (Breaks)))
   }
   if (scale == "log2") {
     Breaks <- gen_ticks_log2 (Values)
     Labels <- genlabels.log2 (Breaks)
     scale.func <- if (axis == "x") scale_x_log2 else scale_y_log2
-    return (scale.func (breaks=Breaks, labels=Labels))
+    return (scale.func (breaks=Breaks, limits=range (Breaks), labels=Labels))
   }
   
   return (NA)

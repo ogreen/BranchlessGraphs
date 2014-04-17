@@ -13,6 +13,7 @@ source ("rvplot-inc.R")
 assign.if.undef ("COMP", "sv")
 assign.if.undef ("ARCHS", NA)
 assign.if.undef ("METRIC", "Time")
+assign.if.undef ("PER.EDGE", FALSE)
 assign.if.undef ("CUMULATIVE", FALSE)
 assign.if.undef ("AXES", "xy")
 assign.if.undef ("SHOW.POINTS", TRUE)
@@ -66,9 +67,11 @@ Y.AXIS <- if (AXES %in% c ("xy", "logx")) "linear" else "log2"
 Data.plot <- Data
 
 # Choose x-variable
-Data.plot <- transform (Data.plot, X=(Iters + 1) / Iters.tot.bry)
+#Data.plot <- transform (Data.plot, X=(Iters + 1) / Iters.tot.bry)
+Data.plot <- transform (Data.plot, X=(Iters + 1))
 x.label <- "Iterations"
-x.label.sub <- "(normalized by branch-based algorithm)"
+#x.label.sub <- "(normalized by branch-based algorithm)"
+x.label.sub <- ""
 x.scale <- gen.axis.scale.auto (Data.plot$X, "x", scale=X.AXIS)
 
 # Choose y-variable
@@ -86,12 +89,13 @@ if (METRIC == "Time") {
   Data.plot <- transform (Data.plot, Y.norm=if (CUMULATIVE) Insts.tot.bry else Insts.min.bry)
 }
 Data.plot <- transform (Data.plot, Y=Y.base / Y.norm)
-y.label <- sprintf ("%s: %s%s%s"
+y.label <- sprintf ("%s: %s%s%s%s"
                     , alg.display.tag
                     , if (CUMULATIVE) "Cumulative " else ""
                     , METRIC
+                    , if (!CUMULATIVE) " per edge traversal" else ""
                     , arch.display.tag)
-y.label.sub <- "(relative to branch-based algorithm)"
+y.label.sub <- if (!CUMULATIVE) "(relative to branch-based algorithm)" else ""
 y.scale <- gen.axis.scale.auto (Data.plot$Y, "y", scale=Y.AXIS)
 
 # Apply subplot reordering
@@ -104,10 +108,10 @@ Q <- Q + geom_point (aes (colour=Alg, shape=Alg))
 Q <- Q + geom_line (aes (colour=Alg, linetype=Alg))
 Q <- Q + geom_hline (aes (yintercept=1), linetype="dashed", alpha=0.5)
 
-Q <- Q + x.scale
+#Q <- Q + x.scale
 Q <- add.title.optsub (Q, xlab, x.label, x.label.sub)
 
-Q <- Q + y.scale
+#Q <- Q + y.scale
 Q <- Q + ylab ("")
 Q <- add.title.optsub (Q, ggtitle, y.label, sub=y.label.sub)
 Q <- Q + theme (plot.title=element_text (hjust=-.025)) # left-align title
@@ -115,7 +119,7 @@ Q <- Q + theme (plot.title=element_text (hjust=-.025)) # left-align title
 if (length (ARCHS) == 1) {
   Q <- Q + facet_wrap (~ Graph)
 } else {
-  Q <- Q + facet_grid (Arch ~ Graph)
+  Q <- Q + facet_grid (Arch ~ Graph, scales="free")
 }
 
 Q <- Q + theme (legend.position="bottom")
