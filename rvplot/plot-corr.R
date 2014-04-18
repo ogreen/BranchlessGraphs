@@ -65,6 +65,7 @@ Q <- ggpairs (D, columns=c ("T", "I", "B", "M"), colour="Arch"
               )
 
 # HACK: to fix colour palette
+# See also: http://stackoverflow.com/questions/22237783/user-defined-colour-palette-in-r-and-ggpairs
 for (i in seq (1, 4)) {
   for (j in seq (1, 4)) {
     P <- getPlot (Q, i, j)

@@ -189,6 +189,46 @@ gen.stepsize.auto <- function (X, numint=10) {
   return (list (base=s.best, scaled=scale.s (X, s.best)))
 }
     
+# Generate an auto-scaled axis (linear or log2)
+gen.axis.scale.auto <- function (Values, axis, scale="linear", free=FALSE) {
+  stopifnot (scale %in% c ("linear", "log2"))
+
+  if (scale == "linear") {
+    scale.func <- if (axis == "x") scale_x_continuous else scale_y_continuous
+    if (!free) {
+      step <- gen.stepsize.auto (Values)$scaled
+      Breaks <- gen_ticks_linear (Values, step)
+      return (scale.func (breaks=Breaks, limits=range (Breaks)))
+    } else {
+      return (scale.func ())
+    }
+  }
+  if (scale == "log2") {
+    scale.func <- if (axis == "x") scale_x_log2 else scale_y_log2
+    if (!free) {
+      Breaks <- gen_ticks_log2 (Values)
+      Labels <- genlabels.log2 (Breaks)
+      return (scale.func (breaks=Breaks, limits=range (Breaks), labels=Labels))
+    } else {
+      return (scale.func ())
+    }
+  }
+  
+  return (NA)
+}
+
+# Add title with optional subtitle.
+# Set 'func' to function to invoke, e.g., ggtitle, xlab, ...
+# Adapted from: http://www.antoni.fr/blog/?p=39
+add.title.optsub <- function (Q, func, main, sub=NA) {
+  if (is.na (sub)) {
+    Q <- Q + func (eval (parse (text=paste ("expression(atop(\"", main, "\",", "))", sep=""))))
+  } else {
+    Q <- Q + func (eval (parse (text=paste ("expression(atop(\"", main, "\",", " atop(\"", sub, "\",\"\")))", sep=""))))
+  }
+  return (Q)
+}
+
 #======================================================================
 # Applies the HPC Garage colour scheme
 
