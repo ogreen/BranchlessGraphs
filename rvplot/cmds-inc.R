@@ -29,8 +29,9 @@ SCREEN.SIZE <-
   }
 
 DEF.SIZE.SLIDE <- ceiling ((1 / 2) * SCREEN.SIZE)
-DEF.SIZE.HD <- ceiling ((18 / 24) * SCREEN.SIZE)
+DEF.SIZE.HD <- ceiling ((16 / 24) * SCREEN.SIZE)
 DEF.SIZE.SQUARE <- SCREEN.SIZE / 3
+DEF.SIZE.PAGE <- SCREEN.SIZE / 3
 
 #======================================================================
 
@@ -93,20 +94,28 @@ setDevHD <- function (l=DEF.SIZE.HD) {
   dev.new (width=l, height=l/16*9)  # Use these for HD format (for papers or HD slides)
 }
 
-setDevPage.portrait <- function (l=6.5) {
-  dev.off.safe ()
-  dev.new (width=l, height=l/6.5*9)
-}
-
-setDevPage.landscape <- function (l=6.5) {
-  dev.off.safe ()
-  dev.new (width=l/6.5*9, height=l)
-}
-
 setDevHD.pdf <- function (file, l=8) {
   pdf (file, width=l, height=l/16*9)
 }
   
+setDevPage.portrait <- function (l=DEF.SIZE.PAGE) {
+  dev.off.safe ()
+  dev.new (width=l, height=l/6.5*9)
+}
+
+setDevPage.portrait.pdf <- function (file, l=DEF.SIZE.PAGE) {
+  pdf (file, width=l, height=l/6.5*9)
+}
+
+setDevPage.landscape <- function (l=DEF.SIZE.PAGE) {
+  dev.off.safe ()
+  dev.new (width=l/6.5*9, height=l)
+}
+
+setDevPage.landscape.pdf <- function (l=DEF.SIZE.PAGE) {
+  pdf (file, width=l/6.5*9, height=l)
+}
+
 
 #======================================================================
 
