@@ -57,8 +57,12 @@ cat (sprintf ("Plotting...\n"))
 
 if (COMP == "sv") {
   alg.display.tag <- "Shiloach-Vishkin Connected Components"
+  iter.tag <- "iteration"
+  Iter.tag <- "Iteration"
 } else {
   alg.display.tag <- "Top-down Breadth-First Search"
+  iter.tag <- "level"
+  Iter.tag <- "Level"
 }
 
 if (length (ARCHS) == length (ARCHS.ALL)) {
@@ -82,7 +86,7 @@ Annotations.plot <- Annotations
 
 # Choose x-variable
 Data.plot <- transform (Data.plot, X=Iters + 1)
-x.label <- "Iterations"
+x.label <- Iter.tag
 x.label.sub <- ""
 x.scale <- gen.axis.scale.auto (Data.plot$X, "x", scale=X.AXIS, free=FREE.SCALES)
 
@@ -136,8 +140,8 @@ if (CUMULATIVE) {
 } else {
   # Value per iteration, normalized by minimum value per iteration in branchy case
   Data.plot <- transform (Data.plot, Y=Y.iter / Y.min.bry)
-  suffix.tag <- " per iteration"
-  norm.tag <- "(relative to minimum in any iteration of branch-based algorithm)"
+  suffix.tag <- sprintf (" per %s", iter.tag)
+  norm.tag <- sprintf ("(relative to minimum in any %s of branch-based algorithm)", iter.tag)
 }
 y.label <- sprintf ("%s: %s%s%s%s"
                     , alg.display.tag
@@ -149,8 +153,8 @@ y.label.sub <- norm.tag
 y.scale <- gen.axis.scale.auto (Data.plot$Y, "y", scale=Y.AXIS, free=FREE.SCALES)
 
 # Apply subplot reordering
-Order.by.Speedup <- rev (order (Summary$Speedup))
-Data.plot$Graph <- with (Data.plot, factor (Graph, levels=levels (Graph)[Order.by.Speedup]))
+#Order.by.Speedup <- rev (order (Summary$Speedup))
+#Data.plot$Graph <- with (Data.plot, factor (Graph, levels=levels (Graph)[Order.by.Speedup]))
 
 # Generate plot
 Q <- ggplot (Data.plot, aes (x=X, y=Y))
