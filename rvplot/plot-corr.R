@@ -40,14 +40,20 @@ Cols <- c ("Comp", "Arch", "Graph", "Alg", "Iters"
            , "Vs", "Es")
 if (is.x) {
   Cols <- c (Cols
-           , "Loads", "Stores"
-           , "Stalls.rs", "Stalls.sb", "Stalls.rob")
+             , "Cycles", "Loads", "Stores"
+#           , "Stalls.rs", "Stalls.sb", "Stalls.rob")
+             )
 }
 D <- transform (subset (Data, Comp == comp.str & Alg == ALG)[, Cols])
-D <- transform (D, T=Time/Es*(if (is.x) 1 else 1e9), I=Insts/Es, B=Brs/Es, M=Mispreds/Es)
+if (is.x) {
+  D <- transform (D, T=Cycles/Es)
+} else {
+  D <- transform (D, T=Time/Es*ifelse (Arch %in% ARCHS.X, 1, 1e9))
+}
+D <- transform (D, I=Insts/Es, B=Brs/Es, M=Mispreds/Es)
 if (is.x) {
   D <- transform (D, L=Loads/Es, S=Stores/Es)
-  D <- transform (D, St.rs=Stalls.rs/Es, St.sb=Stalls.sb/Es, St.rob=Stalls.rob/Es)
+#  D <- transform (D, St.rs=Stalls.rs/Es, St.sb=Stalls.sb/Es, St.rob=Stalls.rob/Es)
 }
 
 # Correlations
@@ -58,9 +64,9 @@ if (is.x) {
                 , TM=cor (T, M)
                 , TL=cor (T, L)
                 , TS=cor (T, S)
-                , TSt.rs=cor (T, St.rs)
-                , TSt.sb=cor (T, St.sb)
-                , TSt.rob=cor (T, St.rob)
+#                , TSt.rs=cor (T, St.rs)
+#                , TSt.sb=cor (T, St.sb)
+#                , TSt.rob=cor (T, St.rob)
                 )
 } else {
   Rho <- ddply (D, .(Comp, Arch, Alg), summarise
@@ -80,7 +86,7 @@ cat (sprintf ("Plotting...\n"))
 
 Corr.cols <- c ("T", "I", "B", "M")
 if (is.x) {
-  Corr.cols <- c (Corr.cols, "L", "S", "St.rs")
+  Corr.cols <- c (Corr.cols, "L", "S") #, "St.rs")
 }
 
 setDevSquare ()
