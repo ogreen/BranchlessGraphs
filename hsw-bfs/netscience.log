@@ -1,6 +1,7 @@
-BFS/TD	Branch-based	0	0.0000001970	32	213	1059	1	2
-BFS/TD	Branch-based	1	0.0000001040	16	65	300	2	5
-BFS/TD	Branch-based	2	0.0000000530	6	55	259	1	1
-BFS/TD	Branch-avoiding	0	0.0000000660	8	55	278	1	2
-BFS/TD	Branch-avoiding	1	0.0000000720	8	60	324	2	5
-BFS/TD	Branch-avoiding	2	0.0000000550	6	54	266	1	1
+Algorithm	Implementation	Iteration	Time	Cycles	Instructions	Loads.Retired	Stores.Retired	RESOURCE_STALLS.RS	RESOURCE_STALLS.SB	RESOURCE_STALLS.ROB	Branches	Mispredictions	Vertices	Edges
+BFS/TD	Branch-based	0	225	261	71	20	10	0	0	0	15	1	1	2
+BFS/TD	Branch-based	1	106	290	99	29	8	0	0	0	23	2	2	5
+BFS/TD	Branch-based	2	43	146	58	18	6	0	0	0	13	3	1	1
+BFS/TD	Branch-avoiding	0	77	202	77	21	11	0	0	0	13	1	1	2
+BFS/TD	Branch-avoiding	1	71	176	123	30	17	0	0	0	18	2	2	5
+BFS/TD	Branch-avoiding	2	47	142	65	19	9	4	0	0	12	3	1	1
