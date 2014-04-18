@@ -2,6 +2,8 @@
 # This script plots per-iteration metrics, relative to the
 # branch-based algorithm for all input graphs given a single algorithm
 # and architecture.
+#
+# For a sample plot, see: figs/HD--Time-vs-iters--sv--All.pdf
 # ======================================================================
 
 source ("rvplot-inc.R")
@@ -10,18 +12,18 @@ source ("rvplot-inc.R")
 # Script parameters
 #======================================================================
 
-assign.if.undef ("COMP", "sv")
-assign.if.undef ("ARCHS", NA)
-assign.if.undef ("METRIC", "Time")
-assign.if.undef ("FREE.SCALES", TRUE)
-assign.if.undef ("PER.EDGE", FALSE)
-assign.if.undef ("CUMULATIVE", FALSE)
-assign.if.undef ("AXES", "xy")
+assign.if.undef ("COMP", "sv") # "sv" or "bfs"
+assign.if.undef ("ARCHS", NA) # specific platforms, or NA for all
+assign.if.undef ("METRIC", "Time") # "Time", "Mispredictions", "Branches", or "Instructions"
+assign.if.undef ("FREE.SCALES", TRUE) # FALSE for fixed axis values, TRUE for flexible ones
+assign.if.undef ("PER.EDGE", FALSE) # Normalize per edge traversed
+assign.if.undef ("CUMULATIVE", FALSE) # Use cumulative plots
+assign.if.undef ("AXES", "xy") # linear or log axes: "xy", "logx", "logy", or "loglog"
 assign.if.undef ("SHOW.POINTS", TRUE)
 assign.if.undef ("SHOW.LINES", TRUE)
-assign.if.undef ("SHOW.SPEEDUP", TRUE)
-assign.if.undef ("HD", TRUE)
-assign.if.undef ("SAVE.PDF", FALSE)
+assign.if.undef ("SHOW.SPEEDUP", TRUE) # Enable speedup annotation in each subplot
+assign.if.undef ("HD", TRUE) # 16 x 9 instead of 4 x 3
+assign.if.undef ("SAVE.PDF", FALSE) # Write to PDF
 
 # Check parameters
 stopifnot (COMP %in% COMPS.ALL)
