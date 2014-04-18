@@ -58,10 +58,21 @@ if (FALSE) {
 }
 
 setDevSquare ()
+# Doesn't work: ggplot <- function (...) set.hpcgarage.colours (ggplot2::ggplot(...))
 Q <- ggpairs (D, columns=c ("T", "I", "B", "M"), colour="Arch"
               , upper=list (continuous="points", combo="dot")
               , lower=list (continuous="cor")
               )
+
+# HACK: to fix colour palette
+for (i in seq (1, 4)) {
+  for (j in seq (1, 4)) {
+    P <- getPlot (Q, i, j)
+    P.new <- set.hpcgarage.colours (P)
+    Q <- putPlot (Q, P.new, i, j)
+  }
+}
+
 print (Q)
 
 outfilename <- sprintf ("figs/corr--%s--%s.pdf", COMP, ALG)
