@@ -214,7 +214,8 @@ if (!SAVE.PDF) {
   } else {
     setDevSlide.pdf (outfilename, l=15)
   }
-  ggsave (outfilename)
+  print (Q)
+  dev.off ()
 }
 
 # eof
