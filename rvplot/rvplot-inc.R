@@ -9,24 +9,31 @@ ARCHS.ALL <- c ("arn","hsw","bobcat", "bonnell", "pld", "slv")
 #GRAPHS.ALL <- c("astro-ph", "audikw1", "auto", "coAuthorsDBLP", "coPapersDBLP", "cond-mat-2003", "cond-mat-2005", "ecology1", "ldoor", "power", "preferentialAttachment")
 GRAPHS.ALL <- c("audikw1", "auto", "coAuthorsDBLP", "cond-mat-2005", "ldoor")
 
+ARCHS.X <- c ("hsw", "pld") # Architectures with extended counters
+HEADERS <- c ("Comp", "Alg", "Iters", "Time", "Mispreds", "Brs", "Insts", "Vs", "Es")
+HEADERS.X <- c ("Comp", "Alg", "Iters", "Time", "Cycles", "Insts", "Loads", "Stores", "Stalls.rs", "Stalls.sb", "Stalls.rob", "Brs", "Mispreds", "Vs", "Es")
+
+stopifnot (all (HEADERS %in% HEADERS.X))
+
 #======================================================================
 # Utility functions to read results data
 #======================================================================
 
 # Reads one results file
-load.perfdata <- function (comp, arch, graph) {
+load.perfdata <- function (comp, arch, graph, disable.x=FALSE) {
   stopifnot (comp %in% COMPS.ALL)
   stopifnot (arch %in% ARCHS.ALL)
   stopifnot (graph %in% GRAPHS.ALL)
 
-  has.header <- (arch == "hsw")
+  is.x <- arch %in% ARCHS.X
+  has.header <- is.x
   
   perfdata <- read.table (paste ("../", arch, "-", comp, "/", graph, ".log", sep=""), sep="\t", header=has.header)
-  if (arch == "hsw") {
-    names (perfdata) <- c ("Comp", "Alg", "Iters", "Time", "Cycles", "Insts", "Loads", "Stores", "Stalls.rs", "Stalls.sb", "Stalls.rob", "Brs", "Mispreds", "Vs", "Es")
-  } else {
-    names (perfdata) <- c ("Comp", "Alg", "Iters", "Time", "Mispreds", "Brs", "Insts", "Vs", "Es")
+  names (perfdata) <- if (is.x) HEADERS.X else HEADERS
+  if (is.x & disable.x) {
+    perfdata <- perfdata[, HEADERS] # Extract only the compatible subset
   }
+
   perfdata$Comp <- with (perfdata, factor (Comp, levels=unique (Comp)))
   perfdata$Alg <- with (perfdata, factor (Alg, levels=unique (Alg)))
   
@@ -39,12 +46,14 @@ load.perfdata.many <- function (Comps=NA, Archs=NA, Graphs=NA) {
   if (all (is.na (Archs))) { Archs <- ARCHS.ALL; }
   if (all (is.na (Graphs))) { Graphs <- GRAPHS.ALL; }
 
+  is.x <- all (Archs %in% ARCHS.X) # Only allow extended data frame if available on all platforms
+
   Data <- NULL
   for (comp in Comps) {
     for (arch in Archs) {
       for (graph in Graphs) {
         cat (sprintf ("Loading: (%s, %s, %s) ...\n", comp, arch, graph))
-        Data.1 <- load.perfdata (comp, arch, graph)
+        Data.1 <- load.perfdata (comp, arch, graph, disable.x=!is.x)
         Data.1$Arch <- arch
         Data.1$Graph <- graph
         Data <- rbind (Data, Data.1)
@@ -75,6 +84,8 @@ load.xform.many <- function (Algs, Archs, Graphs) {
 
   cat (sprintf ("Transforming...\n"))
 
+  all.is.x <- all (Archs %in% ARCHS.X)
+
   # Compute some useful aggregates for each (computation, algorithm, architecture, graph) combination
   Aggs <- ddply (Data, .(Comp, Alg, Arch, Graph), summarise
                  , Time.min=min (as.numeric (Time))
@@ -85,15 +96,18 @@ load.xform.many <- function (Algs, Archs, Graphs) {
                  , Brs.min=min (Brs)
                  , Brs.tot=sum (as.numeric (Brs))
                  , Insts.min=min (Insts)
-                 , Insts.tot=sum (as.numeric (Insts))
-                 , Loads.min=min (Loads), Loads.tot=sum (as.numeric (Loads))
-                 , Stores.min=min (Stores), Stores.tot=sum (as.numeric (Stores))
-                 , Stalls.rs.min=min (Stalls.rs), Stalls.rs.tot=sum (as.numeric (Stalls.rs))
-                 , Stalls.sb.min=min (Stalls.sb), Stalls.sb.tot=sum (as.numeric (Stalls.sb))
-                 , Stalls.rob.min=min (Stalls.rob), Stalls.rob.tot=sum (as.numeric (Stalls.rob))
-                 , Vs.tot=sum (as.numeric (Vs))
-                 , Es.tot=sum (as.numeric (Es))
-                 )
+                 , Insts.tot=sum (as.numeric (Insts)))
+  if (all.is.x) {
+    Aggs <- ddply (Aggs, .(Comp, Alg, Arch, Graph), summarise
+                   , Loads.min=min (Loads), Loads.tot=sum (as.numeric (Loads))
+                   , Stores.min=min (Stores), Stores.tot=sum (as.numeric (Stores))
+                   , Stalls.rs.min=min (Stalls.rs), Stalls.rs.tot=sum (as.numeric (Stalls.rs))
+                   , Stalls.sb.min=min (Stalls.sb), Stalls.sb.tot=sum (as.numeric (Stalls.sb))
+                   , Stalls.rob.min=min (Stalls.rob), Stalls.rob.tot=sum (as.numeric (Stalls.rob))
+                   , Vs.tot=sum (as.numeric (Vs))
+                   , Es.tot=sum (as.numeric (Es))
+                   )
+  }
   Data <- merge (Data, Aggs, by=c ("Comp", "Alg", "Arch", "Graph"), sort=FALSE)
 
   # Extract summary data (total time & iterations) for the branch-based ("bry") version
