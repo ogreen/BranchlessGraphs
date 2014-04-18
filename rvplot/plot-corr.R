@@ -1,7 +1,6 @@
 #======================================================================
-# This script plots per-iteration metrics, relative to the
-# branch-based algorithm for all input graphs given a single algorithm
-# and architecture.
+# This script creates a plot that summarizes the correlations among
+# Time, Mispredictions, Branches, and Instructions.
 # ======================================================================
 
 source ("rvplot-inc.R")
@@ -20,11 +19,11 @@ assign.if.undef ("SAVE.PDF", FALSE)
 stopifnot (COMP %in% c ("sv", "bfs"))
 stopifnot (ALG %in% c ("Branch-based", "Branch-avoiding"))
 
-comp.str <- if (COMP == "sv") "SV" else "BFS/TD"
-
 #======================================================================
 # Load and transform data
 #======================================================================
+
+comp.str <- if (COMP == "sv") "SV" else "BFS/TD"
 
 Data.set <- load.xform.many (COMP, ARCHS, GRAPHS)
 Data <- Data.set[["Data"]]
@@ -52,7 +51,7 @@ cat (sprintf ("Plotting...\n"))
 
 # Make correlation matrix plots
 if (FALSE) {
-  # Things I tried that didn't look informative
+  # [rv] Things I tried that didn't look informative
   ggpairs (subset (D, Comp == "SV" & Arch=="hsw" & Alg == "Branch-based")[, c ("T", "I", "B", "M")])
   ggpairs (subset (D, Comp == "SV" & Alg == "Branch-based"), columns=c ("T", "I", "B", "M"), colour="Graph", shape="Arch")
   ggpairs (subset (D, Comp == "SV" & Alg == "Branch-based")[, c ("T", "I", "B", "M")], colour=Arch)
