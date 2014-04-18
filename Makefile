@@ -1,6 +1,15 @@
 .PHONY:	all clean bench
 all: bfs sv
 
+DEFINES = 
+ifeq ($(INTEL_HASWELL_COUNTERS),1)
+	DEFINES += -DHAVE_INTEL_HASWELL_COUNTERS
+elifeq ($(INTEL_IVYBRIDGE_COUNTERS),1)
+	DEFINES += -DHAVE_INTEL_IVYBRIDGE_COUNTERS
+elifeq ($(INTEL_SILVERMONT_COUNTERS),1)
+	DEFINES += -DHAVE_INTEL_SILVERMONT_COUNTERS
+endif
+
 ifeq ($(ARCH),arm)
 graph.o: graph_arm.py
 	python $<
@@ -12,9 +21,9 @@ graph.o: graph_x86_64.py
 endif
 
 bfs: main.c timer.c bfs.c bfsBU.c graph.o Makefile
-	$(CC) -g -O3 -std=gnu99 $(CFLAGS) -Wno-unused-result -DBENCHMARK_BFS -o $@ main.c timer.c bfs.c bfsBU.c graph.o $(LDFLAGS) -lrt
+	$(CC) -g -O3 -std=gnu99 $(CFLAGS) $(DEFINES) -Wno-unused-result -DBENCHMARK_BFS -o $@ main.c timer.c bfs.c bfsBU.c graph.o $(LDFLAGS) -lrt
 sv: main.c timer.c sv.c graph.o Makefile
-	$(CC) -g -O3 -std=gnu99 $(CFLAGS) -Wno-unused-result -DBENCHMARK_SV -o $@ main.c timer.c sv.c graph.o $(LDFLAGS) -lrt
+	$(CC) -g -O3 -std=gnu99 $(CFLAGS) $(DEFINES) -Wno-unused-result -DBENCHMARK_SV -o $@ main.c timer.c sv.c graph.o $(LDFLAGS) -lrt
 
 
 bench-bfs: bfs
