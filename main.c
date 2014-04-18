@@ -209,6 +209,13 @@ int main (const int argc, char *argv[]) {
         { "Loads.Retired", PERF_TYPE_RAW, 0x4004 }, // 04H 40H MEM_UOPS_RETIRED.ALL_LOADS All Loads  This event counts the number of load ops retired 
         { "Stores.Retired", PERF_TYPE_RAW, 0x8004 }, // 04H 80H MEM_UOP_RETIRED.ALL_STORES All Stores  This event counts the number of store ops retired
     #endif
+    #if defined(HAVE_AMD_FAMILY15_COUNTERS)
+        { "Stall.SB", PERF_TYPE_RAW, 0x0223 }, // The number of cycles that the store buffer is full.
+        { "Stall.LB", PERF_TYPE_RAW, 0x0123 }, // The number of cycles that the load buffer is full.
+        { "Loads.Dispatched", PERF_TYPE_RAW, 0x0129 },
+        { "Stores.Dispatched", PERF_TYPE_RAW, 0x0229 },
+        { "Stall.LDQ", PERF_TYPE_RAW, 0x01D8 }, // Dispatch Stall for LDQ Full
+    #endif
         { "Branches", PERF_TYPE_HARDWARE, PERF_COUNT_HW_BRANCH_INSTRUCTIONS},
         { "Mispredictions", PERF_TYPE_HARDWARE, PERF_COUNT_HW_BRANCH_MISSES}
     };

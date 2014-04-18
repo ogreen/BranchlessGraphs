@@ -1,6 +1,7 @@
-BFS/TD	Branch-based	0	0.0000003180	31	213	1059	1	2
-BFS/TD	Branch-based	1	0.0000001690	18	65	300	2	5
-BFS/TD	Branch-based	2	0.0000001010	8	55	259	1	1
-BFS/TD	Branch-avoiding	0	0.0000001390	13	55	278	1	2
-BFS/TD	Branch-avoiding	1	0.0000001520	16	60	324	2	5
-BFS/TD	Branch-avoiding	2	0.0000001260	11	54	266	1	1
+Algorithm	Implementation	Iteration	Time	Cycles	Instructions	Stall.SB	Stall.LB	Loads.Dispatched	Stores.Dispatched	Stall.LDQ	Branches	Mispredictions	Vertices	Edges
+BFS/TD	Branch-based	0	262	367	71	0	0	45	21	0	15	3	1	2
+BFS/TD	Branch-based	1	142	454	99	0	0	45	17	0	23	5	2	5
+BFS/TD	Branch-based	2	106	181	58	0	0	44	18	0	13	3	1	1
+BFS/TD	Branch-avoiding	0	155	244	77	0	0	38	22	0	13	3	1	2
+BFS/TD	Branch-avoiding	1	141	297	123	0	0	43	25	0	18	2	2	5
+BFS/TD	Branch-avoiding	2	125	207	65	0	0	38	21	0	12	3	1	1
