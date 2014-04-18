@@ -192,12 +192,29 @@ int main (const int argc, char *argv[]) {
         { "Time", PERF_TYPE_TIME },
         { "Cycles", PERF_TYPE_HARDWARE, PERF_COUNT_HW_CPU_CYCLES},
         { "Instructions", PERF_TYPE_HARDWARE, PERF_COUNT_HW_INSTRUCTIONS},
-    #ifdef HAVE_INTEL_HASWELL_COUNTERS
+    #if defined(HAVE_INTEL_HASWELL_COUNTERS) || defined(HAVE_INTEL_IVYBRIDGE_COUNTERS)
         { "Loads.Retired", PERF_TYPE_RAW, 0x81D0 }, // D0H 01H MEM_UOPS_RETIRED.LOADS
         { "Stores.Retired", PERF_TYPE_RAW, 0x82D0 }, // D0H 01H MEM_UOPS_RETIRED.STORES
-        { "RESOURCE_STALLS.RS", PERF_TYPE_RAW, 0x04A2 }, // A2H 04H RESOURCE_STALLS.RS Cycles stalled due to no eligible RS entry available. 
-        { "RESOURCE_STALLS.SB", PERF_TYPE_RAW, 0x08A2 }, // A2H 08H RESOURCE_STALLS.SB Cycles stalled due to no store buffers available (not including draining form sync).
-        { "RESOURCE_STALLS.ROB", PERF_TYPE_RAW, 0x10A2 }, // A2H 10H RESOURCE_STALLS.ROB
+        { "Stall.RS", PERF_TYPE_RAW, 0x04A2 }, // A2H 04H RESOURCE_STALLS.RS Cycles stalled due to no eligible RS entry available. 
+        { "Stall.SB", PERF_TYPE_RAW, 0x08A2 }, // A2H 08H RESOURCE_STALLS.SB Cycles stalled due to no store buffers available (not including draining form sync).
+        { "Stall.ROB", PERF_TYPE_RAW, 0x10A2 }, // A2H 10H RESOURCE_STALLS.ROB
+    #endif
+    #if defined(HAVE_INTEL_SILVERMONT_COUNTERS)
+        { "Stall.ROB", PERF_TYPE_RAW, 0x01CA }, // CAH 01H NO_ALLOC_CYCLES.ROB_FULL Counts the number of cycles when no uops are allocated and the ROB is full (less than 2 entries available)
+        { "Stall.RAT", PERF_TYPE_RAW, 0x20CA }, // CAH 01H NO_ALLOC_CYCLES.RAT_STALL Counts the number of cycles when no uops are allocated and a RATstall is asserted. 
+        { "Stall.MEC", PERF_TYPE_RAW, 0x01CB }, // CBH 01H RS_FULL_STALL.MEC MEC RS full This event countsthe number of cycles the allocation pipe line stalled due to the RS for the MEC cluster is full
+        { "Stall.AnyRS", PERF_TYPE_RAW, 0x1FCB }, // CBH 1FH RS_FULL_STALL.ALL Any RS full This event countsthe number of cycles that the allocation pipe line stalled due to any one of the RS is full
+        { "Loads.RehabQ", PERF_TYPE_RAW, 0x4003 }, // 03H 40H REHABQ.ANY_LD Any reissued load uops This event counts the number of loaduops reissued from Rehabq
+        { "Stores.RehabQ", PERF_TYPE_RAW, 0x8003 }, // 03H 80H REHABQ.ANY_ST Any reissued store uops This event counts the number of store uops reissued from Rehabq
+        { "Loads.Retired", PERF_TYPE_RAW, 0x4004 }, // 04H 40H MEM_UOPS_RETIRED.ALL_LOADS All Loads  This event counts the number of load ops retired 
+        { "Stores.Retired", PERF_TYPE_RAW, 0x8004 }, // 04H 80H MEM_UOP_RETIRED.ALL_STORES All Stores  This event counts the number of store ops retired
+    #endif
+    #if defined(HAVE_AMD_FAMILY15_COUNTERS)
+        { "Stall.SB", PERF_TYPE_RAW, 0x0223 }, // The number of cycles that the store buffer is full.
+        { "Stall.LB", PERF_TYPE_RAW, 0x0123 }, // The number of cycles that the load buffer is full.
+        { "Loads.Dispatched", PERF_TYPE_RAW, 0x0129 },
+        { "Stores.Dispatched", PERF_TYPE_RAW, 0x0229 },
+        { "Stall.LDQ", PERF_TYPE_RAW, 0x01D8 }, // Dispatch Stall for LDQ Full
     #endif
         { "Branches", PERF_TYPE_HARDWARE, PERF_COUNT_HW_BRANCH_INSTRUCTIONS},
         { "Mispredictions", PERF_TYPE_HARDWARE, PERF_COUNT_HW_BRANCH_MISSES}
