@@ -9,7 +9,7 @@ ARCHS.ALL <- c ("arn","hsw","bobcat", "bonnell", "pld", "slv")
 #GRAPHS.ALL <- c("astro-ph", "audikw1", "auto", "coAuthorsDBLP", "coPapersDBLP", "cond-mat-2003", "cond-mat-2005", "ecology1", "ldoor", "power", "preferentialAttachment")
 GRAPHS.ALL <- c("audikw1", "auto", "coAuthorsDBLP", "cond-mat-2005", "ldoor")
 
-ARCHS.X <- c ("hsw", "pld") # Architectures with extended counters
+ARCHS.X <- c ("hsw", "ivb", "slv", "pld") # Architectures with extended counters
 HEADERS <- c ("Comp", "Alg", "Iters", "Time", "Mispreds", "Brs", "Insts", "Vs", "Es")
 HEADERS.X <- c ("Comp", "Alg", "Iters", "Time", "Cycles", "Insts", "Loads", "Stores", "Stalls.rs", "Stalls.sb", "Stalls.rob", "Brs", "Mispreds", "Vs", "Es")
 
