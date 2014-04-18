@@ -18,9 +18,15 @@ load.perfdata <- function (comp, arch, graph) {
   stopifnot (comp %in% COMPS.ALL)
   stopifnot (arch %in% ARCHS.ALL)
   stopifnot (graph %in% GRAPHS.ALL)
+
+  has.header <- (arch == "hsw")
   
-  perfdata <- read.table (paste ("../", arch, "-", comp, "/", graph, ".log", sep=""), sep="\t")
-  names (perfdata) <- c ("Comp", "Alg", "Iters", "Time", "Mispreds", "Brs", "Insts", "Vs", "Es")
+  perfdata <- read.table (paste ("../", arch, "-", comp, "/", graph, ".log", sep=""), sep="\t", header=has.header)
+  if (arch == "hsw") {
+    names (perfdata) <- c ("Comp", "Alg", "Iters", "Time", "Cycles", "Insts", "Loads", "Stores", "Stalls.rs", "Stalls.sb", "Stalls.rob", "Brs", "Mispreds", "Vs", "Es")
+  } else {
+    names (perfdata) <- c ("Comp", "Alg", "Iters", "Time", "Mispreds", "Brs", "Insts", "Vs", "Es")
+  }
   perfdata$Comp <- with (perfdata, factor (Comp, levels=unique (Comp)))
   perfdata$Alg <- with (perfdata, factor (Alg, levels=unique (Alg)))
   
@@ -71,8 +77,8 @@ load.xform.many <- function (Algs, Archs, Graphs) {
 
   # Compute some useful aggregates for each (computation, algorithm, architecture, graph) combination
   Aggs <- ddply (Data, .(Comp, Alg, Arch, Graph), summarise
-                 , Time.min=min (Time)
-                 , Time.tot=sum (Time)
+                 , Time.min=min (as.numeric (Time))
+                 , Time.tot=sum (as.numeric (Time))
                  , Iters.tot=max (Iters)+1  # Iters starts at 0, so add 1
                  , Mispreds.min=min (Mispreds)
                  , Mispreds.tot=sum (as.numeric (Mispreds))
@@ -80,6 +86,11 @@ load.xform.many <- function (Algs, Archs, Graphs) {
                  , Brs.tot=sum (as.numeric (Brs))
                  , Insts.min=min (Insts)
                  , Insts.tot=sum (as.numeric (Insts))
+                 , Loads.min=min (Loads), Loads.tot=sum (as.numeric (Loads))
+                 , Stores.min=min (Stores), Stores.tot=sum (as.numeric (Stores))
+                 , Stalls.rs.min=min (Stalls.rs), Stalls.rs.tot=sum (as.numeric (Stalls.rs))
+                 , Stalls.sb.min=min (Stalls.sb), Stalls.sb.tot=sum (as.numeric (Stalls.sb))
+                 , Stalls.rob.min=min (Stalls.rob), Stalls.rob.tot=sum (as.numeric (Stalls.rob))
                  , Vs.tot=sum (as.numeric (Vs))
                  , Es.tot=sum (as.numeric (Es))
                  )

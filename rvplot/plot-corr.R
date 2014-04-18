@@ -1,6 +1,9 @@
 #======================================================================
 # This script creates a plot that summarizes the correlations among
 # Time, Mispredictions, Branches, and Instructions.
+#
+# Example:
+# rm (list=ls ()) ; COMP <- "bfs" ; ALG <- "Branch-based" ; ARCHS <- "hsw" ; source ("plot-corr.R")
 # ======================================================================
 
 source ("rvplot-inc.R")
@@ -30,15 +33,26 @@ Data <- Data.set[["Data"]]
 
 cat (sprintf ("Analyzing...\n"))
 
-Cols <- c ("Comp", "Arch", "Graph", "Alg", "Iters", "Time", "Mispreds", "Brs", "Insts", "Vs", "Es")
+Cols <- c ("Comp", "Arch", "Graph", "Alg", "Iters"
+           , "Time", "Mispreds", "Brs", "Insts"
+           , "Loads", "Stores"
+           , "Stalls.rs", "Stalls.sb", "Stalls.rob"
+           , "Vs", "Es")
 D <- transform (subset (Data, Comp == comp.str & Alg == ALG)[, Cols])
-D <- transform (D, T=Time/Es*1e9, I=Insts/Es, B=Brs/Es, M=Mispreds/Es)
+D <- transform (D, T=Time/Es*(if (ARCHS == "hsw") 1 else 1e9), I=Insts/Es, B=Brs/Es, M=Mispreds/Es)
+D <- transform (D, L=Loads/Es, S=Stores/Es)
+D <- transform (D, St.rs=Stalls.rs/Es, St.sb=Stalls.sb/Es, St.rob=Stalls.rob/Es)
 
 # Correlations
 Rho <- ddply (D, .(Comp, Arch, Alg), summarise
               , TI=cor (T, I)
               , TB=cor (T, B)
               , TM=cor (T, M)
+              , TL=cor (T, L)
+              , TS=cor (T, S)
+              , TSt.rs=cor (T, St.rs)
+              , TSt.sb=cor (T, St.sb)
+              , TSt.rob=cor (T, St.rob)
               )
 
 #======================================================================
@@ -59,7 +73,7 @@ if (FALSE) {
 
 setDevSquare ()
 # Doesn't work: ggplot <- function (...) set.hpcgarage.colours (ggplot2::ggplot(...))
-Q <- ggpairs (D, columns=c ("T", "I", "B", "M"), colour="Arch"
+Q <- ggpairs (D, columns=c ("T", "I", "B", "M", "L", "S", "St.rs"), colour="Arch"
               , upper=list (continuous="points", combo="dot")
               , lower=list (continuous="cor")
               )
