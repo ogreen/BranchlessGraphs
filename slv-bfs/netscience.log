@@ -1,6 +1,7 @@
-BFS/TD	Branch-based	0	0.0000004100	51	210	1050	1	2
-BFS/TD	Branch-based	1	0.0000002600	32	65	298	2	5
-BFS/TD	Branch-based	2	0.0000001700	19	55	257	1	1
-BFS/TD	Branch-avoiding	0	0.0000002000	19	55	276	1	2
-BFS/TD	Branch-avoiding	1	0.0000002300	25	60	322	2	5
-BFS/TD	Branch-avoiding	2	0.0000001600	20	54	264	1	1
+Algorithm	Implementation	Iteration	Time	Cycles	Instructions	Stall.ROB	Stall.RAT	Stall.MEC	Stall.AnyRS	Loads.RehabQ	Stores.RehabQ	Loads.Retired	Stores.Retired	Branches	Mispredictions	Vertices	Edges
+BFS/TD	Branch-based	0	460	493	71	0	19	19	19	7	1	20	10	15	4	1	2
+BFS/TD	Branch-based	1	200	546	99	0	19	19	21	14	1	29	8	23	5	2	5
+BFS/TD	Branch-based	2	130	419	58	9	46	45	47	10	1	18	6	13	3	1	1
+BFS/TD	Branch-avoiding	0	260	458	77	0	19	24	39	6	1	21	11	13	4	1	2
+BFS/TD	Branch-avoiding	1	160	468	123	1	47	44	49	12	1	30	17	18	3	2	5
+BFS/TD	Branch-avoiding	2	110	403	65	0	41	19	30	8	0	19	9	12	4	1	1
