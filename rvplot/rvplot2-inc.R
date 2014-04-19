@@ -15,8 +15,8 @@ ARCHS.ALL.MAP <- c ("arn"="Cortex-A15", "hsw"="Haswell", "ivb"="Ivy Bridge", "bo
 ARCHS.ALL <- names (ARCHS.ALL.MAP)
 
 # List of graph input problems
-#GRAPHS.ALL <- c("astro-ph", "audikw1", "auto", "coAuthorsDBLP", "coPapersDBLP", "cond-mat-2003", "cond-mat-2005", "ecology1", "ldoor", "power", "preferentialAttachment")
-GRAPHS.ALL <- c("audikw1", "auto", "coAuthorsDBLP", "cond-mat-2005", "ldoor")
+GRAPHS.ALL <- c("astro-ph", "audikw1", "auto", "coAuthorsDBLP", "coPapersDBLP", "cond-mat-2003", "cond-mat-2005", "ecology1", "ldoor", "power", "preferentialAttachment")
+GRAPHS.CONCISE <- c("audikw1", "auto", "coAuthorsDBLP", "cond-mat-2005", "ldoor") # Reported in SC'14 submission
 
 # Default header, for data files that don't have one
 HEADERS.DEFAULT <- c ("Algorithm", "Implementation", "Iteration", "Time", "Mispredictions", "Branches", "Instructions", "Vertices", "Edges")
@@ -48,6 +48,9 @@ load.perfdata.one <- function (alg, arch, graph, fatal=FALSE) {
 
   # Correct a header typo, e.g., in "hsw" data
   Data <- rename.col (Data, old="Itetarion", new="Iteration")
+
+  # Add the input graph as a field
+  Data$Graph <- graph
 
   return (Data)
 }
