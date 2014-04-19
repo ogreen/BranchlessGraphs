@@ -6,9 +6,23 @@ assign.if.undef <- function (var.name, value.if.new, env=parent.frame (), ...)
   if (!(var.name %in% ls (envir=env))) assign (var.name, value.if.new, envir=env, ...)
 
 #=====================================================================
-# Halt if the condition is true
+# Error handling
 
+# Halt if the condition is true
 stopif <- function (cond) stopifnot (!cond)
+
+# If 'cond' is true, prints 'msg' to the console and then either stops
+# the program ('fatal=TRUE') or displays a warning.
+check.cond <- function (cond, msg, fatal=FALSE) {
+  if (!cond) {
+    if (fatal) {
+      stop (msg)
+    } else {
+      warning (msg)
+    }
+  }
+  return (cond)
+}
 
 #=====================================================================
 # Display a sampling of data frame rows
@@ -22,8 +36,9 @@ get.sample <- function (DF, n=10, silent=TRUE) {
 }
 
 #=====================================================================
-# Rename a single column of a data frame
+# Renaming in data frames
 
+# Rename a single column of a data frame
 rename.col <- function (DF, old, new) {
   stopifnot (is.data.frame (DF))
   names (DF)[names (DF) == old] <- new
