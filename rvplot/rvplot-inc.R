@@ -59,9 +59,16 @@ load.perfdata <- function (comp, arch, graph, disable.x=FALSE) {
                                      , "Stall.AnyRS"="Stalls.anyrs"
                                      , "Loads.RehabQ"="Loads.rehabq"
                                      , "Stores.RehabQ"="Stores.rehabq"
+                                     , "Itetarion"="Iters"
                                      ))
   }
   if (is.x) {
+    if (!all (HEADERS.X %in% colnames (perfdata))) {
+      cat ("*** ERROR ***\n")
+      cat ("HEADERS.X == ", HEADERS.X, "\n")
+      cat ("colnames (perfdata) == ", colnames (perfdata))
+      cat ("*** END ERROR ***\n")
+    }
     perfdata <- perfdata[, if (disable.x) HEADERS else HEADERS.X]
   }
 
@@ -132,7 +139,10 @@ load.xform.many <- function (Algs, Archs, Graphs) {
                  , Brs.min=min (Brs)
                  , Brs.tot=sum (as.numeric (Brs))
                  , Insts.min=min (Insts)
-                 , Insts.tot=sum (as.numeric (Insts)))
+                 , Insts.tot=sum (as.numeric (Insts))
+                 , Vs.tot=sum (as.numeric (Vs))
+                 , Es.tot=sum (as.numeric (Es))
+                 )
   if (all.is.x) {
     Aggs <- ddply (Data, .(Comp, Alg, Arch, Graph), summarise
                    , Time.min=min (Time)
@@ -151,8 +161,6 @@ load.xform.many <- function (Algs, Archs, Graphs) {
 #                   , Stalls.rs.min=min (Stalls.rs), Stalls.rs.tot=sum (as.numeric (Stalls.rs))
 #                   , Stalls.sb.min=min (Stalls.sb), Stalls.sb.tot=sum (as.numeric (Stalls.sb))
 #                   , Stalls.rob.min=min (Stalls.rob), Stalls.rob.tot=sum (as.numeric (Stalls.rob))
-                   , Vs.tot=sum (as.numeric (Vs))
-                   , Es.tot=sum (as.numeric (Es))
                    )
   }
   Data <- merge (Data, Aggs, by=c ("Comp", "Alg", "Arch", "Graph"), sort=FALSE)
@@ -178,7 +186,7 @@ load.xform.many <- function (Algs, Archs, Graphs) {
   Data <- merge (Data, Summary, by=c ("Comp", "Arch", "Graph"), sort=FALSE)
 
   # Add cumulative attributes
-  Data <- ddply (Data, .(Comp, Alg, Arch, Graph), transform, Time.cumul=cumsum (Time))
+  Data <- ddply (Data, .(Comp, Alg, Arch, Graph), transform, Time.cumul=cumsum (as.numeric (Time)))
   Data <- ddply (Data, .(Comp, Alg, Arch, Graph), transform, Mispreds.cumul=cumsum (as.numeric (Mispreds)))
   Data <- ddply (Data, .(Comp, Alg, Arch, Graph), transform, Brs.cumul=cumsum (as.numeric (Brs)))
   Data <- ddply (Data, .(Comp, Alg, Arch, Graph), transform, Insts.cumul=cumsum (as.numeric (Insts)))
