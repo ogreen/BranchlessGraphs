@@ -58,6 +58,7 @@ if (COMP == "sv") {
 Q <- qplot (Alg.tag, M/V.hat, data=All, geom="bar", stat="identity"
             , fill=Alg.tag, shape=Graph, facets=Arch ~ Graph)
 Q <- Q + geom_hline (yintercept=1, colour="black", linetype="dashed") # add y=1 reference line
+Q <- Q + geom_hline (yintercept=3, colour="black", linetype="dashed") # add y=3 reference line
 Q <- Q + xlab ("")
 Q <- Q + ylab ("")
 Q <- add.title.optsub (Q, ggtitle
