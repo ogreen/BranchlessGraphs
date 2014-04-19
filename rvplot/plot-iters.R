@@ -30,7 +30,7 @@ stopifnot (COMP %in% COMPS.ALL)
 if (all (is.na (ARCHS))) { # by default, plot all architectures
   ARCHS <- ARCHS.ALL
 }
-stopifnot (METRIC %in% c ("Time", "Mispredictions", "Branches", "Instructions"))
+stopifnot (METRIC %in% c ("Time", "Mispredictions", "Branches", "Instructions", "Loads", "Stores"))
 stopifnot (AXES %in% c ("xy", "logx", "logy", "loglog"))
 
 #======================================================================
@@ -41,10 +41,18 @@ Data.set <- load.xform.many (COMP, ARCHS, GRAPHS.ALL)
 Data <- Data.set[["Data"]]
 Summary <- Data.set[["Summary"]]
 
-Annotations <- Summary[, c ("Comp", "Arch", "Graph"
-                            , "Speedup", "Mispreds.ratio", "Brs.ratio", "Insts.ratio"
-                            , "Iters.tot.bry", "Iters.tot.brl"
-                            )]
+# is.x is TRUE if we can expect load/store data
+is.x <- all (levels (Data$Arch) %in% ARCHS.X)
+
+stopifnot (!(METRIC %in% c ("Loads", "Stores")) | (is.x))
+
+Cols <- c ("Comp", "Arch", "Graph"
+           , "Speedup", "Mispreds.ratio", "Brs.ratio", "Insts.ratio"
+           , "Iters.tot.bry", "Iters.tot.brl")
+if (is.x) {
+  Cols <- c (Cols, "Loads.tot.bry", "Loads.tot.brl", "Stores.tot.bry", "Stores.tot.brl", "Loads.ratio", "Stores.ratio")
+}
+Annotations <- Summary[, Cols]
 Annotations <- transform (Annotations, Iters.max=pmax (Iters.tot.bry, Iters.tot.brl))
 Annotations$Iters.tot.bry <- NULL
 Annotations$Iters.tot.brl <- NULL
@@ -123,6 +131,22 @@ if (METRIC == "Time") {
                           , Y.tot.bry=Insts.tot.bry
                           , Y.min.bry=Insts.min.bry)
   Annotations.plot <- transform (Annotations.plot, S=Insts.ratio)
+} else if (METRIC == "Loads") {
+  Data.plot <- transform (Data.plot
+                          , Y.iter=Loads
+                          , Y.cumul=Loads.cumul
+                          , Y.edge=Loads.E
+                          , Y.tot.bry=Loads.tot.bry
+                          , Y.min.bry=Loads.min.bry)
+  Annotations.plot <- transform (Annotations.plot, S=Loads.ratio)
+} else if (METRIC == "Stores") {
+  Data.plot <- transform (Data.plot
+                          , Y.iter=Stores
+                          , Y.cumul=Stores.cumul
+                          , Y.edge=Stores.E
+                          , Y.tot.bry=Stores.tot.bry
+                          , Y.min.bry=Stores.min.bry)
+  Annotations.plot <- transform (Annotations.plot, S=Stores.ratio)
 }
 
 prefix.tag <- ""

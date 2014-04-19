@@ -116,6 +116,8 @@ load.perfdata.many <- function (Comps=NA, Archs=NA, Graphs=NA) {
 # Load and transform data
 
 load.xform.many <- function (Algs, Archs, Graphs) {
+  all.is.x <- all (Archs %in% ARCHS.X)
+
   # Raw data
   Data <- load.perfdata.many (Algs, Archs, Graphs)
 
@@ -124,10 +126,12 @@ load.xform.many <- function (Algs, Archs, Graphs) {
   Data <- transform (Data, Mispreds.E=Mispreds / Es)
   Data <- transform (Data, Brs.E=Brs / Es)
   Data <- transform (Data, Insts.E=Insts / Es)
+  if (all.is.x) {
+    Data <- transform (Data, Loads.E=Loads / Es)
+    Data <- transform (Data, Stores.E=Stores / Es)
+  }
 
   cat (sprintf ("Transforming...\n"))
-
-  all.is.x <- all (Archs %in% ARCHS.X)
 
   # Compute some useful aggregates for each (computation, algorithm, architecture, graph) combination
   Aggs <- ddply (Data, .(Comp, Alg, Arch, Graph), summarise
@@ -181,6 +185,10 @@ load.xform.many <- function (Algs, Archs, Graphs) {
   Summary <- transform (Summary, Mispreds.ratio=Mispreds.tot.bry / Mispreds.tot.brl)
   Summary <- transform (Summary, Brs.ratio=Brs.tot.bry / Brs.tot.brl)
   Summary <- transform (Summary, Insts.ratio=Insts.tot.bry / Insts.tot.brl)
+  if (all.is.x) {
+    Summary <- transform (Summary, Loads.ratio=Loads.tot.bry / Loads.tot.brl)
+    Summary <- transform (Summary, Stores.ratio=Stores.tot.bry / Stores.tot.brl)
+  }
 
   # Add branchy data as the "baseline"
   Data <- merge (Data, Summary, by=c ("Comp", "Arch", "Graph"), sort=FALSE)
@@ -190,6 +198,10 @@ load.xform.many <- function (Algs, Archs, Graphs) {
   Data <- ddply (Data, .(Comp, Alg, Arch, Graph), transform, Mispreds.cumul=cumsum (as.numeric (Mispreds)))
   Data <- ddply (Data, .(Comp, Alg, Arch, Graph), transform, Brs.cumul=cumsum (as.numeric (Brs)))
   Data <- ddply (Data, .(Comp, Alg, Arch, Graph), transform, Insts.cumul=cumsum (as.numeric (Insts)))
+  if (all.is.x) {
+    Data <- ddply (Data, .(Comp, Alg, Arch, Graph), transform, Loads.cumul=cumsum (as.numeric (Loads)))
+    Data <- ddply (Data, .(Comp, Alg, Arch, Graph), transform, Stores.cumul=cumsum (as.numeric (Stores)))
+  }
 
   return (list (Data=Data, Aggs=Aggs, Branchy=Branchy, Branchless=Branchless, Summary=Summary))
 }
