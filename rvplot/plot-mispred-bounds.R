@@ -43,6 +43,8 @@ All <- rbind (Branchy, Branchless)
 All <- transform (All, Alg.tag=gsub ("Branch-", "Branch-\n", Alg))
 All$Alg.tag <- with (All, factor (Alg.tag, levels=rev (levels (Alg.tag))))
 
+All$Arch <- with (All, mapvalues (Arch, from=ARCHS.ALL, to=ARCHS.NAMES))
+
 #======================================================================
 # Plot(s)
 #======================================================================

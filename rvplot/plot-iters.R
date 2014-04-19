@@ -92,6 +92,9 @@ Y.AXIS <- if (AXES %in% c ("xy", "logx")) "linear" else "log2"
 Data.plot <- Data
 Annotations.plot <- Annotations
 
+Data.plot$Arch <- with (Data.plot, mapvalues (Arch, from=ARCHS.ALL, to=ARCHS.NAMES))
+Annotations.plot$Arch <- with (Annotations.plot, mapvalues (Arch, from=ARCHS.ALL, to=ARCHS.NAMES))
+
 # Choose x-variable
 Data.plot <- transform (Data.plot, X=Iters + 1)
 x.label <- Iter.tag

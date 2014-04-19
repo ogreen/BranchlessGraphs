@@ -92,6 +92,8 @@ if (is.x) {
                 )
 }
 
+D$Arch <- with (D, mapvalues (Arch, from=ARCHS.ALL, to=ARCHS.NAMES))
+
 #======================================================================
 # Make correlation matrix plot(s)
 #======================================================================
@@ -134,7 +136,7 @@ if (!SAVE.PDF) {
   cat (sprintf ("--> Not saving.\n"))
 } else {
   cat (sprintf ("--> Printing...\n"))
-  setDevSquare.pdf (outfilename, l=10)
+  setDevSquare.pdf (outfilename, l=12)
   print (Q)
   dev.off ()
 }
