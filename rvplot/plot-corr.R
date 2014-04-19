@@ -16,11 +16,27 @@ assign.if.undef ("COMP", "sv")
 assign.if.undef ("ALG", "Branch-based")
 assign.if.undef ("ARCHS", NA)
 assign.if.undef ("GRAPHS", NA)
+assign.if.undef ("LOAD.STORE", FALSE)
 assign.if.undef ("SAVE.PDF", FALSE)
 
 # Check parameters
 stopifnot (COMP %in% c ("sv", "bfs"))
 stopifnot (ALG %in% c ("Branch-based", "Branch-avoiding"))
+
+if (LOAD.STORE) {
+  if (all (is.na (ARCHS))) {
+    ARCHS <- ARCHS.X
+  } else {
+    Common <- intersect (ARCHS, ARCHS.X)
+    if (length (Common) < length (ARCHS)) {
+      cat ("*** WARNING ***\n")
+      cat ("  LOAD.STORE plots requested, but only a subset of ARCHS is available.\n")
+      cat ("  ARCHS: ", ARCHS, "\n")
+      cat ("  but load/store only available on: ", Common, "\n")
+    }
+    ARCHS <- Common
+  }
+}
 
 #======================================================================
 # Load and transform data
@@ -108,7 +124,11 @@ for (i in seq (1, length (Corr.cols))) {
 
 print (Q)
 
-outfilename <- sprintf ("figs/corr--%s--%s.pdf", COMP, ALG)
+outfilename <- sprintf ("figs/corr--%s--%s%s.pdf"
+                        , COMP
+                        , ALG
+                        , if (LOAD.STORE) "--LoadStore" else ""
+                        )
 cat (sprintf ("Output file: %s\n", outfilename))
 if (!SAVE.PDF) {
   cat (sprintf ("--> Not saving.\n"))
