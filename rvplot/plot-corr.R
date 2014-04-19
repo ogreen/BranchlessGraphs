@@ -33,55 +33,73 @@ Data <- Data.set[["Data"]]
 
 cat (sprintf ("Analyzing...\n"))
 
+is.x <- all (levels (Data$Arch) %in% ARCHS.X)
+
 Cols <- c ("Comp", "Arch", "Graph", "Alg", "Iters"
            , "Time", "Mispreds", "Brs", "Insts"
-           , "Loads", "Stores"
-           , "Stalls.rs", "Stalls.sb", "Stalls.rob"
            , "Vs", "Es")
+if (is.x) {
+  Cols <- c (Cols
+             , "Cycles", "Loads", "Stores"
+#           , "Stalls.rs", "Stalls.sb", "Stalls.rob")
+             )
+}
 D <- transform (subset (Data, Comp == comp.str & Alg == ALG)[, Cols])
-D <- transform (D, T=Time/Es*(if (ARCHS == "hsw") 1 else 1e9), I=Insts/Es, B=Brs/Es, M=Mispreds/Es)
-D <- transform (D, L=Loads/Es, S=Stores/Es)
-D <- transform (D, St.rs=Stalls.rs/Es, St.sb=Stalls.sb/Es, St.rob=Stalls.rob/Es)
+if (is.x) {
+  D <- transform (D, T=Cycles/Es)
+} else {
+  D <- transform (D, T=Time/Es*ifelse (Arch %in% ARCHS.X, 1, 1e9))
+}
+D <- transform (D, I=Insts/Es, B=Brs/Es, M=Mispreds/Es)
+if (is.x) {
+  D <- transform (D, L=Loads/Es, S=Stores/Es)
+#  D <- transform (D, St.rs=Stalls.rs/Es, St.sb=Stalls.sb/Es, St.rob=Stalls.rob/Es)
+}
 
 # Correlations
-Rho <- ddply (D, .(Comp, Arch, Alg), summarise
-              , TI=cor (T, I)
-              , TB=cor (T, B)
-              , TM=cor (T, M)
-              , TL=cor (T, L)
-              , TS=cor (T, S)
-              , TSt.rs=cor (T, St.rs)
-              , TSt.sb=cor (T, St.sb)
-              , TSt.rob=cor (T, St.rob)
-              )
+if (is.x) {
+  Rho <- ddply (D, .(Comp, Arch, Alg), summarise
+                , TI=cor (T, I)
+                , TB=cor (T, B)
+                , TM=cor (T, M)
+                , TL=cor (T, L)
+                , TS=cor (T, S)
+#                , TSt.rs=cor (T, St.rs)
+#                , TSt.sb=cor (T, St.sb)
+#                , TSt.rob=cor (T, St.rob)
+                )
+} else {
+  Rho <- ddply (D, .(Comp, Arch, Alg), summarise
+                , TI=cor (T, I)
+                , TB=cor (T, B)
+                , TM=cor (T, M)
+                )
+}
 
 #======================================================================
-# Plot(s)
+# Make correlation matrix plot(s)
 #======================================================================
 
 library (GGally)
 
 cat (sprintf ("Plotting...\n"))
 
-# Make correlation matrix plots
-if (FALSE) {
-  # [rv] Things I tried that didn't look informative
-  ggpairs (subset (D, Comp == "SV" & Arch=="hsw" & Alg == "Branch-based")[, c ("T", "I", "B", "M")])
-  ggpairs (subset (D, Comp == "SV" & Alg == "Branch-based"), columns=c ("T", "I", "B", "M"), colour="Graph", shape="Arch")
-  ggpairs (subset (D, Comp == "SV" & Alg == "Branch-based")[, c ("T", "I", "B", "M")], colour=Arch)
+Corr.cols <- c ("T", "I", "B", "M")
+if (is.x) {
+  Corr.cols <- c (Corr.cols, "L", "S") #, "St.rs")
 }
 
 setDevSquare ()
 # Doesn't work: ggplot <- function (...) set.hpcgarage.colours (ggplot2::ggplot(...))
-Q <- ggpairs (D, columns=c ("T", "I", "B", "M", "L", "S", "St.rs"), colour="Arch"
+Q <- ggpairs (D, columns=Corr.cols, colour="Arch"
               , upper=list (continuous="points", combo="dot")
               , lower=list (continuous="cor")
               )
 
 # HACK: to fix colour palette
 # See also: http://stackoverflow.com/questions/22237783/user-defined-colour-palette-in-r-and-ggpairs
-for (i in seq (1, 4)) {
-  for (j in seq (1, 4)) {
+for (i in seq (1, length (Corr.cols))) {
+  for (j in seq (1, length (Corr.cols))) {
     P <- getPlot (Q, i, j)
     P.new <- set.hpcgarage.colours (P)
     Q <- putPlot (Q, P.new, i, j)
