@@ -46,6 +46,30 @@ rename.col <- function (DF, old, new) {
 }
 
 #=====================================================================
+# Scan a list of data frames, 'DF.list', and return the largest set of
+# column names common to all frames.
+#
+# Note: If 'DF.list' is not a list but a data frame, then this
+# function returns the column names; otherwise, it returns NA.
+
+get.common.colnames <- function (Df.list) {
+  Common <- NA
+  if (is.list (Df.list)) {
+    for (D in Df.list) {
+      stopifnot (is.data.frame (D))
+      if (all (is.na (Common))) { # first one
+        Common <- colnames (D)
+      } else {
+        Common <- intersect (Common, colnames (D))
+      }
+    } # D
+  } else if (is.data.frame (Df.list)) {
+    Common <- colnames (Df.list)
+  }
+  return (Common)
+}
+
+#=====================================================================
 # Remap factor values and fix the order
 
 re.factor <- function (F, from, to) factor (mapvalues (F, from, to), levels=to)

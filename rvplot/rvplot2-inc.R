@@ -46,11 +46,23 @@ load.perfdata.one <- function (alg, arch, graph, fatal=FALSE) {
     colnames (Data) <- HEADERS.DEFAULT
   }
 
-  # Correct a header typo, e.g., in "hsw" data
+  # HACK: Correct a header typo, e.g., in "hsw" data
   Data <- rename.col (Data, old="Itetarion", new="Iteration")
+
+  # HACK: In some files, 'Time' is seconds; in others, 'Time' is
+  # nanoseconds. Convert all to seconds.
+  if ("Cycles" %in% colnames (Data)) {
+    Data$Time <- Data$Time * 1e-9
+  }
 
   # Add the input graph as a field
   Data$Graph <- graph
+
+  # Reorder fields so that (Algorithm, Implementation, Graph) appear first
+  Cols <- colnames (Data)
+  Cols.first <- c ("Algorithm", "Implementation", "Graph", "Iteration", "Vertices", "Edges", "Time")
+  Cols.remaining <- setdiff (Cols, Cols.first)
+  Data <- Data[, c (Cols.first, Cols.remaining)]
 
   return (Data)
 }
