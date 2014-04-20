@@ -30,7 +30,7 @@ SCREEN.SIZE <-
 
 DEF.SIZE.SLIDE <- ceiling ((1 / 2) * SCREEN.SIZE)
 DEF.SIZE.HD <- ceiling ((16 / 24) * SCREEN.SIZE)
-DEF.SIZE.SQUARE <- SCREEN.SIZE / 3
+DEF.SIZE.SQUARE <- SCREEN.SIZE * 2 / 5
 DEF.SIZE.PAGE <- SCREEN.SIZE / 3
 
 #======================================================================
@@ -235,22 +235,22 @@ add.title.optsub <- function (Q, func, main, sub=NA) {
 # Ocean Five palette:
 #    hex rgb: #664b3b (brown), #3f9fb1 (aqua), #c03040 (red), #df693e (orange), #e7ce3f (yellow), #a69e9e (grey)
 PAL.HPCGARAGE = c (
-  "#c03040" # red
-  , "#3f9fb1" # aqua
-  , "#664b3b" # brown
-  , "#a69e9e" # grey
-  , "#df693e" # orange
-  , "#e7ce3f" # yellow
-  , "#000000" # black
+  "red"="#c03040" # red
+  , "blue"="#3f9fb1" # aqua
+  , "brown"="#664b3b" # brown
+  , "grey"="#a69e9e" # grey
+  , "orange"="#df693e" # orange
+  , "yellow"="#e7ce3f" # yellow
+  , "black"="#000000" # black
   )
 
 set.hpcgarage.colours <- function (Q, ...) {
-  Q <- Q + scale_colour_manual (values=PAL.HPCGARAGE, ...)
+  Q <- Q + scale_colour_manual (values=as.vector (PAL.HPCGARAGE), ...)
   return (Q)
 }
 
 set.hpcgarage.fill <- function (Q, ...) {
-  Q <- Q + scale_fill_manual (values=PAL.HPCGARAGE, ...)
+  Q <- Q + scale_fill_manual (values=as.vector (PAL.HPCGARAGE), ...)
   return (Q)
 }
 
