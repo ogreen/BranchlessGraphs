@@ -27,11 +27,16 @@ Agg.vars <- setdiff (colnames (D), Index.vars)
 D.per.inst <- D.tot
 D.per.inst[, Agg.vars] <- colwise (function (X) X / D.tot$Instructions)(D.per.inst[, Agg.vars])
 
-# Fit CPI to loads, stores, and branches per instruction
+# Fit CPI to loads, stores, branches per instruction
 L <- with (D.per.inst, lm (Cycles ~ Loads.Retired + Stores.Retired + Branches + Mispredictions))
+print (summary (L))
 
 setDevSquare ()
 Cor.vars <- c ("Cycles", "Loads.Retired", "Stores.Retired", "Branches", "Mispredictions")
 print (ggpairs (D.per.inst, Cor.vars, upper=list (continuous="points", combo="dot"), lower=list (continuous="cor")))
+
+# Loads and branches are highly correlated; drop one
+L.2 <- with (D.per.inst, lm (Cycles ~ Loads.Retired + Stores.Retired + Mispredictions))
+print (summary (L.2))
 
 # eof
