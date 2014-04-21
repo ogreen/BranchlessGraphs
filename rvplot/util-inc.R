@@ -6,6 +6,43 @@ assign.if.undef <- function (var.name, value.if.new, env=parent.frame (), ...)
   if (!(var.name %in% ls (envir=env))) assign (var.name, value.if.new, envir=env, ...)
 
 #=====================================================================
+# User prompts
+
+prompt.select.string <- function (Options, keyword="options"
+                                  , caption=NULL
+                                  , is.empty.ok=FALSE
+                                  , Silent.options=NULL)
+{
+  opt <- NULL
+  while (is.null (opt)) {
+    cat (sprintf ("\nSelect one of the following %s: %s", keyword, paste (Options, collapse=", ")))
+    if (!is.null (caption)) { cat (sprintf ("\n  (%s)", caption)) }
+    user.text <- readline ("\n>>> ")
+    cat (sprintf ("*** '%s' *** [%s]\n", user.text, paste (Options, collapse=", ")))
+    if ((user.text %in% Options) | (user.text %in% Silent.options)) {
+      opt <- user.text
+      if (!(user.text %in% Silent.options)) {
+        cat (sprintf ("--> You chose: '%s'\n", opt))
+      }
+      break
+    }
+    if (user.text == "") { # user pressed enter
+      if (is.empty.ok) {
+        opt <- user.text
+        break
+      }
+      next # blank response not ok, so keep asking
+    }
+    cat (sprintf ("*** Sorry, '%s' is not recognized. ***\n", user.text))
+  }
+  return (opt)
+}
+
+pause.for.enter <- function () {
+  return (readline ("\n=== Press <Enter> to continue ===\n"))
+}
+
+#=====================================================================
 # Error handling
 
 # Halt if the condition is true
@@ -67,6 +104,51 @@ get.common.colnames <- function (Df.list) {
     Common <- colnames (Df.list)
   }
   return (Common)
+}
+
+#=====================================================================
+# Scan a list of data frames, 'DF.list', and return the union of all
+# column names.
+#
+# Note: If 'DF.list' is not a list but a data frame, then this
+# function returns the column names; otherwise, it returns NA.
+
+get.all.colnames <- function (Df.list) {
+  All <- NA
+  if (is.list (Df.list)) {
+    for (D in Df.list) {
+      stopifnot (is.data.frame (D))
+      if (all (is.na (All))) { # first one
+        All <- colnames (D)
+      } else {
+        All <- unique (c (All, colnames (D)))
+      }
+    } # D
+  } else if (is.data.frame (Df.list)) {
+    All <- colnames (Df.list)
+  }
+  return (All)
+}
+
+#=====================================================================
+# Scan a list of data frames and collect all values of a given column,
+# when it exists.
+
+get.all.colvals <- function (Df.list, col) {
+  All <- NULL
+  if (is.list (Df.list)) {
+    for (D in Df.list) {
+      stopifnot (is.data.frame (D))
+      if (col %in% colnames (D)) {
+        All <- rbind (All, D[col])
+      }
+    }
+  } else if (is.data.frame (Df.list)) {
+    if (col %in% colnames (D)) {
+      All <- rbind (All, D[col])
+    }
+  }
+  return (All)
 }
 
 #=====================================================================

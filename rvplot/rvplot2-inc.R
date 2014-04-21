@@ -8,7 +8,8 @@ source ("util-inc.R")
 DATA.ROOT <- ".."
 
 # List of algorithms
-ALGS.ALL <- c ("sv", "bfs")
+ALGS.ALL.MAP <- c ("sv"="SV", "bfs"="BFS/TD")
+ALGS.ALL <- names (ALGS.ALL.MAP)
 
 # List of available architectures
 ARCHS.ALL.MAP <- c ("arn"="Cortex-A15", "hsw"="Haswell", "ivb"="Ivy Bridge", "bobcat"="Bobcat", "bonnell"="Bonnell", "pld"="Piledriver", "slv"="Silvermont")
