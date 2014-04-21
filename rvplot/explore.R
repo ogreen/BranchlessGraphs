@@ -88,42 +88,16 @@ Data.fit <- D.tot.per.inst # Data to fit
 response.var <- "Cycles"
 Predictors <- setdiff (Cor.vars, c (response.var, "Branches"))
 
-fit.formula <- as.formula (paste (c (response.var, paste (Predictors, collapse=" + ")), collapse=" ~ 0 + "))
-cat ("==> Fitting formula: ") ; print (fit.formula) ; cat ("\n")
-Fit.lm <- lm (fit.formula, data=Data.fit)
+Fit.lm <- lm.by.colnames (Data.fit, response.var, Predictors, constant.term=FALSE)
 print (summary (Fit.lm))
 
-# Extract fit coefficients for later use. If an intercept is
-# available, extract it as a separate variable (or NULL if not available).
-if ("(Intercept)" %in% names (Fit.lm$coef)) {
-  fit.intercept <- Fit.lm$coef[["(Intercept)"]]
-} else {
-  fit.intercept <- NULL
-}
-Fit.coefs <- Fit.lm$coef[setdiff (names (Fit.lm$coef), "(Intercept)")]
-
 # Inspect the model's prediction, given the original predictors
-if (is.null (fit.intercept)) {
-  Prediction <- NULL
-} else {
-  Prediction <- data.frame (B0=rep (fit.intercept, nrow (Data.fit)))
-  Prediction <- rename.col (Prediction, old="B0", new="(Intercept)")
-}
-for (c in names (Fit.coefs)) {
-  # Compute new column
-  X.c <- Fit.coefs[[c]] * Data.fit[[c]]
-  if (is.null (Prediction)) { # Initialize
-    Prediction <- rename.col (data.frame (X.c), old="X.c", new=c)
-  } else { # Add column
-    Prediction[c] <- Fit.coefs[[c]] * Data.fit[[c]]
-  }
-}
-Prediction[, response.var] <- apply (Prediction, 1, sum)
+Prediction <- predict.df (Fit.lm, Data.fit, response.var)
 
-# Add 
+# Add true measurement
 response.true <- sprintf ("%s.true", response.var)
 Prediction[, response.true] <- Data.fit[, response.var]
-head (Prediction)
+print (head (Prediction))
 
 # Plot breakdown
 Prediction <- cbind (Data.fit[, Index.vars], Prediction)
