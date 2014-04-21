@@ -1,0 +1,38 @@
+#======================================================================
+[rv 51ee226]
+
+This first analysis considers just (HSW, SV, Branchy), and focuses on
+*total* operations, i.e., summed over all iterations for each problem.
+
+Some observations:
+
+- Loads and branches are highly correlated, which makes sense since
+  every branch is preceded by a load. As such, a fit should eliminate
+  one of these (e.g., branches).
+
+- Loads and stores are anti-correlated. (Why?)
+
+- Cycles and mispredictions are most strongly correlated. (Why?)
+
+- Cycles and RS stalls are not correlated. (Why not?)
+
+- Linear regression with an intercept produces a large, negative
+  intercept -- so not useful / hard to interpret. Should probably
+  stick with nnls-derived models.
+
+- Linear regression without an intercept produces a better fit than
+  above, but with a small negative "stores" coefficient -- so also -
+  hard to interpret. Nevertheless, it gives a nice result that
+  attributes most of the execution time variability to branch
+  mispredictions, as we'd hope.
+
+
+Questions / issues:
+
+- If cycles and mispredictions are strongly correlated, but RS
+  stalls are not, what may we conclude?
+
+- We are not including cache misses in our counters. We may need to
+  include them, so that we can justify excluding them. :)
+
+# eof
