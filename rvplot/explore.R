@@ -32,7 +32,6 @@ Common.vars <- get.common.colnames (Data)
 #
 # - If cycles and mispredictions are strongly correlated, but RS
 #   stalls are not, what may we conclude?
-# - Need to try an 'nnls' (nonnegative least squares) fit instead
 # - We are not including cache misses in our counters. We may need to
 # - include them, so that we can justify excluding them. :)
 
@@ -79,7 +78,7 @@ setDevSlide ()
 print (Q)
 
 # Visualize correlations
-Cor.vars <- c ("Cycles", "Loads.Retired", "Stores.Retired", "Branches", "Mispredictions", "Stall.RS")
+Cor.vars <- c ("Cycles", "Loads.Retired", "Stores.Retired", "Branches", "Mispredictions", "Stall.RS", "Stall.SB", "Stall.ROB")
 setDevSquare ()
 print (ggpairs (D.tot.per.inst, Cor.vars, upper=list (continuous="points", combo="dot"), lower=list (continuous="cor")))
 
