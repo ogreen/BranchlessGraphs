@@ -133,13 +133,14 @@ Prediction <- cbind (Data.fit[, Index.vars], Prediction)
 Prediction.FV <- split.df.by.colnames (Prediction, c (Index.vars, response.var, response.true))
 Prediction.flat <- flatten.keyvals.df (Prediction.FV$A, Prediction.FV$B)
 
-Y.values <- with (Prediction, c (Cycles, Cycles.true, Prediction.flat$Value))
+Y.true <- Prediction[[response.true]]
+Y.values <- with (Prediction, c (Prediction[[response.var]], Y.true, Prediction.flat$Value))
 
 Q.breakdown <- qplot (Graph, Value, data=Prediction.flat, geom="bar", stat="identity", fill=Key)
 Q.breakdown <- Q.breakdown + theme (legend.position="bottom")
 Q.breakdown <- Q.breakdown + xlab ("") + ylab ("") # Erase default labels
 Q.breakdown <- set.hpcgarage.fill (Q.breakdown, name="Predicted values")
-Q.breakdown <- Q.breakdown + geom_point (aes (x=Graph, y=Cycles), colour="black", fill=NA, data=Data.fit, shape=18, size=4) # Add measured values
+Q.breakdown <- Q.breakdown + geom_point (aes (x=Graph, y=Y.true), colour="black", fill=NA, data=Data.fit, shape=18, size=4) # Add measured values
 Q.breakdown <- Q.breakdown + theme(axis.text.x=element_text(angle=35, hjust = 1))
 Q.breakdown <- add.title.optsub (Q.breakdown, ggtitle, main=sprintf ("Predicted %s per instruction [%s / %s / %s]", response.var, ARCH, ALG, CODE))
 Q.breakdown <- Q.breakdown + gen.axis.scale.auto (Y.values, "y")

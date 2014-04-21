@@ -1,5 +1,5 @@
 #======================================================================
-[rv 51ee226]
+commit 51ee226a3eb2656a8fc4b156d2bac0ea7cbfddbd
 
 This first analysis considers just (HSW, SV, Branchy), and focuses on
 *total* operations, i.e., summed over all iterations for each problem.
@@ -34,5 +34,13 @@ Questions / issues:
 
 - We are not including cache misses in our counters. We may need to
   include them, so that we can justify excluding them. :)
+
+#======================================================================
+commit 9f6e51b5fb4dabe7516cf7d830f38b92465b6f61
+
+This second analysis considers just (ARN, SV, Branchy). Main
+observation is that the predictive power of a linear regression model
+here appears lower. Unfortunately, there is no counter data other than
+'branches'.
 
 # eof
