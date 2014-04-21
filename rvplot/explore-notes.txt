@@ -43,4 +43,12 @@ observation is that the predictive power of a linear regression model
 here appears lower. Unfortunately, there is no counter data other than
 'branches'.
 
+#======================================================================
+commit e310998bd8e1e53c84907594bb41f5003d8d6ec5
+
+IVB is similar to HSW, but with a larger number of cycles per
+instruction attributed to loads (~ 0.5 in IVB vs. ~ 0.35 in HSW).
+
+
+#======================================================================
 # eof
