@@ -19,7 +19,7 @@ HUGE.SCREEN <- (HOST.NAME == "insomnia")
 # In inches along the diagonal
 SCREEN.SIZE <-
   if (HOST.NAME == "insomnia") {
-    30
+    27
   } else if (HOST.NAME == "strada") {
     24
   } else if (HOST.NAME == "daffy3" | HOST.NAME == "daffy4") {

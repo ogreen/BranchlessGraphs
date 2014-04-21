@@ -7,35 +7,6 @@ library (GGally)
 Data <- load.perfdata.many ()
 Common.vars <- get.common.colnames (Data)
 
-flatten.df <- function (Df, Fixed.cols, Var.cols=NULL) {
-  stopifnot (is.data.frame (Df))
-
-  # If Var.cols not specified, fill in default
-  if (is.null (Var.cols)) {
-    Var.cols <- setdiff (names (Df), Fixed.cols)
-  }
-  
-  New.df <- NULL
-  Fixed.df <- Df[, Fixed.cols]
-  for (Var in Var.cols) {
-    Value <- Df[[Var]]
-    New.df <- rbind (New.df, cbind (Fixed.df, Var, Value))
-  }
-  return (New.df)
-}
-
-merge.df.list <- function (Df.list, on.cols=NULL) {
-  if (is.data.frame (Df.list)) return (Df.list)
-  stopifnot (is.list (Df.list))
-
-  Common.cols <- if (is.null (on.cols)) get.common.cols (Df.list) else on.cols
-  Merged.df <- NULL
-  for (df.name in names (Df.list)) {
-    Merged.df <- rbind (Merged.df, Df.list[[df.name]][, Common.cols])
-  }
-  return (Merged.df)
-}
-
 #======================================================================
 # This first analysis considers just (HSW, SV, Branchy), and focuses
 # on *total* operations, i.e., summed over all iterations for each
@@ -89,12 +60,13 @@ D.tot.per.inst <- D.tot
 D.tot.per.inst[, Agg.vars] <- colwise (function (X) X / D.tot$Instructions)(D.tot.per.inst[, Agg.vars])
 
 # Visualize fraction of instructions devoted to loads, stores, and branches
-F.per.inst <- flatten.df (Df=D.tot.per.inst, Fixed.cols=Index.vars, Var.cols=setdiff (colnames (D.tot.per.inst), Index.vars))
+FV <- split.df.by.colnames (D.tot.per.inst, Index.vars)
+F.per.inst <- flatten.keyvals.df (FV$A, FV$B)
 Plot.vars <- c ("Loads.Retired", "Stores.Retired", "Branches", "Mispredictions")
-Instructions.only <- subset (F.per.inst, Var %in% Plot.vars)
-Instructions.only$Var <- with (Instructions.only, factor (Var, levels=Plot.vars))
-Q <- ggplot (Instructions.only, aes (x=Var, y=Value))
-Q <- Q + geom_point (aes (colour=Var, shape=Var), size=4)
+Instructions.only <- subset (F.per.inst, Key %in% Plot.vars)
+Instructions.only$Key <- with (Instructions.only, factor (Key, levels=Plot.vars))
+Q <- ggplot (Instructions.only, aes (x=Key, y=Value))
+Q <- Q + geom_point (aes (colour=Key, shape=Key), size=4)
 Q <- Q + theme (legend.position="bottom")
 Q <- Q + facet_grid (. ~ Graph)
 Q <- Q + theme (axis.text.x=element_blank (), axis.ticks=element_blank ())
@@ -155,9 +127,10 @@ head (Prediction)
 
 # Plot breakdown
 Prediction <- cbind (Data.fit[, Index.vars], Prediction)
-Prediction.flat <- flatten.df (Prediction, Fixed.cols=c (Index.vars, response.var, response.true))
+Prediction.FV <- split.df.by.colnames (Prediction, c (Index.vars, response.var, response.true))
+Prediction.flat <- flatten.keyvals.df (Prediction.FV$A, Prediction.FV$B)
 
-Q.breakdown <- qplot (Graph, Value, data=Prediction.flat, geom="bar", stat="identity", fill=Var)
+Q.breakdown <- qplot (Graph, Value, data=Prediction.flat, geom="bar", stat="identity", fill=Key)
 Q.breakdown <- Q.breakdown + theme (legend.position="bottom")
 Q.breakdown <- Q.breakdown + xlab ("") + ylab ("") # Erase default labels
 Q.breakdown <- set.hpcgarage.fill (Q.breakdown, name="Predicted values")

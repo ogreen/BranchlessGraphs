@@ -70,6 +70,79 @@ get.common.colnames <- function (Df.list) {
 }
 
 #=====================================================================
+# Consider a data frame D whose columns are given by the vector of
+# names N. Given a subset I of column names, this function splits D
+# into two new data frames, A and B, such that A = D[, I] and B = D[,
+# N \ I].
+
+split.df.by.colnames <- function (D, I) {
+  # Preconditions
+  stopifnot (is.data.frame (D))
+  if (is.null (I)) { return (D) }
+  stopifnot (is.character (I) | is.integer (I))
+
+  N <- colnames (D)
+  A <- D[, I]
+  B <- D[, setdiff (N, I)]
+  return (list (A=A, B=B))
+}
+
+#=====================================================================
+# "Flatten" certain columns of a data frame into key-value pairs,
+# retaining an optional subset of other columns.
+#
+# More precisely, Let F be a data frame with m rows and any number of
+# columns, and let V be another data frame with m rows and n
+# columns. Let k[i] be the name ("key") of column V[:,i]. Then, the
+# this function returns the following as a data frame:
+#
+#   F[1,:] k[1] V[1,1]    # begin V[:,1]
+#   F[2,:] k[1] V[2,1]
+#   ...
+#   F[m,:] k[1] V[m,1]    # end V[:,1]
+#   F[1,:] k[1] V[1,2]    # begin V[:,2]
+#   F[2,:] k[1] V[2,2]
+#   ...
+#   F[m,:] k[1] V[m,2]    # end V[:,2]
+#   ...
+#   F[1,:] k[n] V[1,n]    # begin V[:,n]
+#   F[2,:] k[n] V[2,n]
+#   ...
+#   F[m,:] k[n] V[m,n]    # end V[:,n]
+
+flatten.keyvals.df <- function (Fixed=NULL, Values) {
+  stopifnot (is.data.frame (Fixed))
+  stopifnot (is.data.frame (Values))
+
+  # If Key.cols not specified, fill in default
+  Key.cols <- colnames (Values)
+  
+  New <- NULL
+  for (Key in Key.cols) {
+    Value <- Values[[Key]]
+    New <- rbind (New, cbind (Fixed, Key, Value))
+  }
+  return (New)
+}
+
+#=====================================================================
+# Merges a list of data frames on a given set of columns. If the
+# column set is NULL, then detect the greatest common subset of
+# columns and merge those.
+
+merge.df.list <- function (Df.list, on.cols=NULL) {
+  if (is.data.frame (Df.list)) return (Df.list)
+  stopifnot (is.list (Df.list))
+
+  Common.cols <- if (is.null (on.cols)) get.common.cols (Df.list) else on.cols
+  Merged.df <- NULL
+  for (df.name in names (Df.list)) {
+    Merged.df <- rbind (Merged.df, Df.list[[df.name]][, Common.cols])
+  }
+  return (Merged.df)
+}
+
+#=====================================================================
 # Remap factor values and fix the order
 
 re.factor <- function (F, from, to) factor (mapvalues (F, from, to), levels=to)
