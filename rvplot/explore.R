@@ -164,6 +164,7 @@ Q.breakdown <- set.hpcgarage.fill (Q.breakdown, name="Predicted values")
 Q.breakdown <- Q.breakdown + geom_point (aes (x=Graph, y=Cycles), colour="black", fill=NA, data=Data.fit, shape=18, size=4) # Add measured values
 Q.breakdown <- Q.breakdown + theme(axis.text.x=element_text(angle=35, hjust = 1))
 Q.breakdown <- add.title.optsub (Q.breakdown, ggtitle, main=sprintf ("Predicted %s per instruction [%s / %s / %s]", response.var, ARCH, ALG, CODE))
+Q.breakdown <- Q.breakdown + gen.axis.scale.auto (Prediction.flat$Value, "y")
 setDevHD ()
 print (Q.breakdown)
 
