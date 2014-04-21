@@ -2,6 +2,7 @@
 # Using this file to record commands used in some preliminary data analysis.
 
 source ("rvplot2-inc.R")
+source ("nnlm-inc.R")
 library (GGally)
 
 Data <- load.perfdata.many ()
@@ -92,7 +93,7 @@ Fit.lm <- lm.by.colnames (Data.fit, response.var, Predictors, constant.term=FALS
 print (summary (Fit.lm))
 
 # Inspect the model's prediction, given the original predictors
-Prediction <- predict.df (Fit.lm, Data.fit, response.var)
+Prediction <- predict.df.lm (Fit.lm, Data.fit, response.var)
 
 # Add true measurement
 response.true <- sprintf ("%s.true", response.var)
@@ -104,6 +105,8 @@ Prediction <- cbind (Data.fit[, Index.vars], Prediction)
 Prediction.FV <- split.df.by.colnames (Prediction, c (Index.vars, response.var, response.true))
 Prediction.flat <- flatten.keyvals.df (Prediction.FV$A, Prediction.FV$B)
 
+Y.values <- with (Prediction, c (Cycles, Cycles.true, Prediction.flat$Value))
+
 Q.breakdown <- qplot (Graph, Value, data=Prediction.flat, geom="bar", stat="identity", fill=Key)
 Q.breakdown <- Q.breakdown + theme (legend.position="bottom")
 Q.breakdown <- Q.breakdown + xlab ("") + ylab ("") # Erase default labels
@@ -111,8 +114,38 @@ Q.breakdown <- set.hpcgarage.fill (Q.breakdown, name="Predicted values")
 Q.breakdown <- Q.breakdown + geom_point (aes (x=Graph, y=Cycles), colour="black", fill=NA, data=Data.fit, shape=18, size=4) # Add measured values
 Q.breakdown <- Q.breakdown + theme(axis.text.x=element_text(angle=35, hjust = 1))
 Q.breakdown <- add.title.optsub (Q.breakdown, ggtitle, main=sprintf ("Predicted %s per instruction [%s / %s / %s]", response.var, ARCH, ALG, CODE))
-Q.breakdown <- Q.breakdown + gen.axis.scale.auto (Prediction.flat$Value, "y")
+Q.breakdown <- Q.breakdown + gen.axis.scale.auto (Y.values, "y")
 setDevHD ()
 print (Q.breakdown)
+
+# Try alternative fit, forcing nonnegative coefficients
+Fit.nnlm <- lm.by.colnames (Data.fit, response.var, Predictors, constant.term=FALSE, nonneg=TRUE)
+print (summary (Fit.nnlm))
+
+# Inspect the model's prediction, given the original predictors
+Prediction.nnlm <- predict.df.lm (Fit.nnlm, Data.fit, response.var)
+
+# Add true measurement
+response.true <- sprintf ("%s.true", response.var)
+Prediction.nnlm[, response.true] <- Data.fit[, response.var]
+print (head (Prediction.nnlm))
+
+# Plot breakdown
+Prediction.nnlm <- cbind (Data.fit[, Index.vars], Prediction.nnlm)
+Prediction.nnlm.FV <- split.df.by.colnames (Prediction.nnlm, c (Index.vars, response.var, response.true))
+Prediction.nnlm.flat <- flatten.keyvals.df (Prediction.nnlm.FV$A, Prediction.nnlm.FV$B)
+
+Y.nnlm.values <- with (Prediction.nnlm, c (Cycles, Cycles.true, Prediction.nnlm.flat$Value))
+
+Q.breakdown.nnlm <- qplot (Graph, Value, data=Prediction.nnlm.flat, geom="bar", stat="identity", fill=Key)
+Q.breakdown.nnlm <- Q.breakdown.nnlm + theme (legend.position="bottom")
+Q.breakdown.nnlm <- Q.breakdown.nnlm + xlab ("") + ylab ("") # Erase default labels
+Q.breakdown.nnlm <- set.hpcgarage.fill (Q.breakdown.nnlm, name="Predicted values")
+Q.breakdown.nnlm <- Q.breakdown.nnlm + geom_point (aes (x=Graph, y=Cycles), colour="black", fill=NA, data=Data.fit, shape=18, size=4) # Add measured values
+Q.breakdown.nnlm <- Q.breakdown.nnlm + theme(axis.text.x=element_text(angle=35, hjust = 1))
+Q.breakdown.nnlm <- add.title.optsub (Q.breakdown.nnlm, ggtitle, main=sprintf ("Predicted %s per instruction [%s / %s / %s]", response.var, ARCH, ALG, CODE))
+Q.breakdown.nnlm <- Q.breakdown.nnlm + gen.axis.scale.auto (Y.nnlm.values, "y")
+setDevHD ()
+print (Q.breakdown.nnlm)
 
 # eof
