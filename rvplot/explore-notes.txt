@@ -49,6 +49,18 @@ commit e310998bd8e1e53c84907594bb41f5003d8d6ec5
 IVB is similar to HSW, but with a larger number of cycles per
 instruction attributed to loads (~ 0.5 in IVB vs. ~ 0.35 in HSW).
 
+#======================================================================
+commit fdaae686c8671ea01080e90b6fc875febd54082b
+
+BOBCAT, BONNELL don't have counters, so the fits are bad.
+
+PLD has a good fit but most of the cycles go to loads. Note that the
+counter here is dispatched loads, rather than retired loads.
+
+For SLV, removing: Stall.RAT, Stall.MAT, and Loads.RehabQ. Breakdown
+is the most interesting, with all features being a bottleneck for some
+input problem. Eliminating all Stall.* counters, *.RehabQ, and
+Branches leads to a somewhat poor fit.
 
 #======================================================================
 # eof
