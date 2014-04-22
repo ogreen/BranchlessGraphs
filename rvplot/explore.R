@@ -83,10 +83,14 @@ Is.all.zero <- colwise (function (X) all (X == 0)) (D.tot.per.inst[, Init.vars])
 Valid.vars <- names (Is.all.zero)[unlist (!Is.all.zero)]
 
 # Compute numerical correlations
-cat ("Plotting pairwise correlations ...\n")
+cat ("\nPlot pairwise correlations? (Doing so may take a while.)\n")
+do.cor <- prompt.select.string (c ("yes", "no"), is.empty.ok=FALSE)
 Cor.vars <- Valid.vars
-setDevSquare ()
-print (ggpairs (D.tot.per.inst, Cor.vars, upper=list (continuous="points", combo="dot"), lower=list (continuous="cor")))
+if (do.cor == "yes") {
+  setDevSquare ()
+  Q.cor <- ggpairs (D.tot.per.inst, Cor.vars, upper=list (continuous="points", combo="dot"), lower=list (continuous="cor"))
+  print (Q.cor)
+}
 
 # Prompt user to select a subset of variables to further consider modeling
 cat ("\n=== Correlations ===\n")
