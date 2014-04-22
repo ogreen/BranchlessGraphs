@@ -8,9 +8,24 @@ assign.if.undef <- function (var.name, value.if.new, env=parent.frame (), ...)
 #=====================================================================
 # User prompts
 
+# If the string s is in the set of strings S, returns the
+# corresponding element(s) of S. Otherwise, returns the empty string.
+get.stringset.elem <- function (S, s, ignore.case=FALSE) {
+  if (is.null (S)) { return ("") } # S is empty or invalid
+  if (all (is.na (S))) { return ("") } # S is empty of invalid
+  if (ignore.case) {
+    Matches <- tolower (S) %in% tolower (s)
+  } else {
+    Matches <- S %in% s
+  }
+  if (!any (Matches)) { return ("") }
+  return (if (length (S[Matches]) > 1) S[Matches][1] else S[Matches])
+}
+
 prompt.select.string <- function (Options, keyword="options"
                                   , caption=NULL
                                   , is.empty.ok=FALSE
+                                  , ignore.case=TRUE
                                   , Silent.options=NULL)
 {
   opt <- NULL
@@ -19,27 +34,61 @@ prompt.select.string <- function (Options, keyword="options"
     if (!is.null (caption)) { cat (sprintf ("\n  (%s)", caption)) }
     user.text <- readline ("\n>>> ")
     cat (sprintf ("*** '%s' *** [%s]\n", user.text, paste (Options, collapse=", ")))
-    if ((user.text %in% Options) | (user.text %in% Silent.options)) {
-      opt <- user.text
-      if (!(user.text %in% Silent.options)) {
+
+    # Break "quietly" on silent option, returning value of silent option
+    silent.text <- get.stringset.elem (Silent.options, user.text, ignore.case=ignore.case)
+    if (silent.text != "") { opt <- silent.text ; break }
+
+    # Break with chosen option
+    opt.text <- get.stringset.elem (Options, user.text, ignore.case=ignore.case)
+    if (!is.null (opt.text)) {
+      if (opt.text != "") {
+        opt <- opt.text
         cat (sprintf ("--> You chose: '%s'\n", opt))
+        break
       }
-      break
     }
-    if (user.text == "") { # user pressed enter
+
+    # Did user just press enter by itself?
+    if (user.text == "") {
       if (is.empty.ok) {
         opt <- user.text
         break
       }
       next # blank response not ok, so keep asking
     }
+
+    # Don't know what the user wants (and maybe neither does s/he)
     cat (sprintf ("*** Sorry, '%s' is not recognized. ***\n", user.text))
   }
   return (opt)
 }
 
-pause.for.enter <- function () {
-  return (readline ("\n=== Press <Enter> to continue ===\n"))
+prompt.if.undef <- function (var.name, ..., env=parent.frame ()) {
+  if (!(var.name %in% ls (envir=env))) {
+    assign (var.name, prompt.select.string (...), envir=env)
+  }
+}
+
+pause.for.enter <- function (ignore=FALSE) {
+  if (!ignore) {
+    readline ("\n=== Press <Enter> to continue ===\n")
+  }
+}
+
+prompt.loop.remove <- function (Options, exit.keyword="done", ...) {
+  Avail.opts <- Options
+  opt <- NULL
+  while (is.null (opt)) {
+    opt <- prompt.select.string (Avail.opts, ..., Silent.options=exit.keyword)
+    if (!is.null (opt)) {
+      if (opt == exit.keyword) { break }
+      Avail.opts <- setdiff (Avail.opts, opt)
+      cat ("--- '", opt, "' eliminated. ---\n")
+      opt <- NULL
+    }
+  }
+  return (Avail.opts)
 }
 
 #=====================================================================

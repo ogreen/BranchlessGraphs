@@ -19,9 +19,15 @@ All.codes <- unique (get.all.colvals (Data, "Implementation"))
 #======================================================================
 # Prompt user for platform
 
-ARCH <- prompt.select.string (keyword="architectures", ARCHS.ALL)
-ALG <- prompt.select.string (keyword="algorithms", unique (Data[[ARCH]]$Algorithm))
-CODE <- prompt.select.string (keyword="implementations", unique (Data[[ARCH]]$Implementation))
+#ARCH <- prompt.select.string (keyword="architectures", ARCHS.ALL)
+#ALG <- prompt.select.string (keyword="algorithms", unique (Data[[ARCH]]$Algorithm))
+#CODE <- prompt.select.string (keyword="implementations", unique (Data[[ARCH]]$Implementation))
+prompt.if.undef ("ARCH", keyword="architectures", ARCHS.ALL)
+prompt.if.undef ("ALG", keyword="algorithms", unique (Data[[ARCH]]$Algorithm))
+prompt.if.undef ("CODE", keyword="implementations", unique (Data[[ARCH]]$Implementation))
+assign.if.undef ("ANALYSIS.VARS", NULL)
+assign.if.undef ("BATCH", FALSE)
+assign.if.undef ("SAVE.PDF", FALSE)
 
 #======================================================================
 # Analyze
@@ -55,6 +61,7 @@ F.per.inst <- flatten.keyvals.df (FV$A, FV$B)
 Plot.vars <- c (Load.vars, Store.vars, "Branches", "Mispredictions")
 Instructions.only <- subset (F.per.inst, Key %in% Plot.vars)
 Instructions.only$Key <- with (Instructions.only, factor (Key, levels=Plot.vars))
+
 Q <- ggplot (Instructions.only, aes (x=Key, y=Value, colour=Key))
 Q <- Q + geom_boxplot ()
 #Q <- Q + geom_point (aes (colour=Key, shape=Key), size=4)
@@ -65,11 +72,14 @@ Q <- Q + scale_y_continuous (breaks=gen_ticks_linear (Instructions.only$Value, s
 Q <- Q + ylab ("% instructions")
 Q <- set.hpcgarage.fill (Q)
 Q <- set.hpcgarage.colours (Q)
-setDevSlide ()
-print (Q)
+
+if (!BATCH) {
+  setDevSlide ()
+  print (Q)
+}
 
 cat (sprintf ("\nSee also the 'instruction mix' plot (might be in a different window).\n"))
-pause.for.enter ()
+pause.for.enter (BATCH)
 
 # Define an initial list of variables to consider for analysis
 Init.vars <- c (if (has.cycles) Platform.vars else "Time", "Branches", "Mispredictions")
@@ -79,13 +89,15 @@ Is.all.zero <- colwise (function (X) all (X == 0)) (D.per.inst[, Init.vars])
 Valid.vars <- names (Is.all.zero)[unlist (!Is.all.zero)]
 
 # Compute numerical correlations
-cat ("\nPlot pairwise correlations? (Doing so may take a while.)\n")
-do.cor <- prompt.select.string (c ("yes", "no"), is.empty.ok=FALSE)
-Cor.vars <- Valid.vars
-if (do.cor == "yes") {
-  setDevSquare ()
-  Q.cor <- ggpairs (D.per.inst, Cor.vars, upper=list (continuous="points", combo="dot"), lower=list (continuous="cor"))
-  print (Q.cor)
+if (!BATCH) {
+  cat ("\nPlot pairwise correlations? (Doing so may take a while.)\n")
+  do.cor <- prompt.select.string (c ("yes", "no"), is.empty.ok=FALSE)
+  Cor.vars <- Valid.vars
+  if (do.cor == "yes") {
+    setDevSquare ()
+    Q.cor <- ggpairs (D.per.inst, Cor.vars, upper=list (continuous="points", combo="dot"), lower=list (continuous="cor"))
+    print (Q.cor)
+  }
 }
 
 # Prompt user to select a subset of variables to further consider modeling
@@ -93,26 +105,21 @@ cat ("\n=== Correlations ===\n")
 Rho <- cor (D.per.inst[, Cor.vars])
 print (Rho)
 
-cat ("\n*** Inspect the above correlations and refer to the pairwise correlations plot. Decide which variables you'd like to consider.\n")
-
-response.var <- if (has.cycles) "Cycles" else "Time" # Always consider
-Avail.vars <- setdiff (Cor.vars, response.var)
-var.name <- NULL
-while (is.null (var.name)) {
-  var.name <- prompt.select.string (Avail.vars, keyword="variables TO ELIMINATE"
-                                    , is.empty.ok=FALSE, caption="Or, type 'done' when finished."
-                                    , Silent.options="done")
-  if (!is.null (var.name)) {
-    if (var.name == "done") { break } # empty string; done asking
-    Avail.vars <- setdiff (Avail.vars, var.name)
-    cat ("--- '", var.name, "' eliminated. ---\n")
-    var.name <- NULL
-  }
+if (!BATCH) {
+  cat ("\n*** Inspect the above correlations and refer to the pairwise correlations plot. Decide which variables you'd like to consider.\n")
 }
 
-Analysis.vars <- Avail.vars
+response.var <- if (has.cycles) "Cycles" else "Time" # Always consider
+if (is.null (ANALYSIS.VARS)) {
+  Avail.vars <- setdiff (Cor.vars, response.var)
+  Analysis.vars <- prompt.loop.remove (Avail.vars, exit.keyword="done"
+                                       , keyword="variables TO ELIMINATE"
+                                       , is.empty.ok=FALSE, caption="Or, type 'done' when finished.")
+} else {
+  Analysis.vars <- ANALYSIS.VARS
+}
 cat ("\n==> Final set of analysis variables: ", Analysis.vars)
-pause.for.enter ()
+pause.for.enter (BATCH)
 
 # Aggregate by Index.vars
 D.max <- ddply (D, Index.vars, colwise (max))
@@ -151,14 +158,31 @@ Q.breakdown <- Q.breakdown + theme(axis.text.x=element_text(angle=35, hjust = 1)
 Q.breakdown <- add.title.optsub (Q.breakdown, ggtitle, main=sprintf ("Predicted %s per instruction [%s / %s / %s]", response.var, ARCH, ALG, CODE))
 Q.breakdown <- Q.breakdown + gen.axis.scale.auto (Y.values, "y")
 
-# Increase font sizes
-Q.breakdown <- Q.breakdown + theme (axis.text.x=element_text (size=14))
-Q.breakdown <- Q.breakdown + theme (legend.text=element_text (size=18))
-Q.breakdown <- Q.breakdown + theme (axis.text.y=element_text (size=14))
-Q.breakdown <- Q.breakdown + theme (plot.title=element_text (size=24))
+Q.breakdown.display <- Q.breakdown
+Q.breakdown.display <- Q.breakdown.display + theme (axis.text.x=element_text (size=10))
+Q.breakdown.display <- Q.breakdown.display + theme (legend.text=element_text (size=14))
+Q.breakdown.display <- Q.breakdown.display + theme (axis.text.y=element_text (size=10))
+Q.breakdown.display <- Q.breakdown.display + theme (plot.title=element_text (size=20))
+
 setDevHD ()
 print (Q.breakdown)
 
 cat (sprintf ("See model component breakdown plot.\n"))
+
+outfilename <- sprintf ("figs2/explore-iters--cpi--%s--%s--%s.pdf"
+                        , ARCH
+                        , if (ALG == "SV") "sv" else "bfs"
+                        , if (CODE == "Branch-based") "bb" else "bl")
+cat (sprintf ("Output filename: %s [%s]\n", outfilename, if (SAVE.PDF) "saving..." else "*NOT* saving"))
+if (SAVE.PDF) {
+  Q.breakdown.pdf <- Q.breakdown
+  Q.breakdown.pdf <- Q.breakdown.pdf + theme (axis.text.x=element_text (size=10))
+  Q.breakdown.pdf <- Q.breakdown.pdf + theme (legend.text=element_text (size=14))
+  Q.breakdown.pdf <- Q.breakdown.pdf + theme (axis.text.y=element_text (size=10))
+  Q.breakdown.pdf <- Q.breakdown.pdf + theme (plot.title=element_text (size=20))
+  setDevHD.pdf (outfilename, l=18)
+  print (Q.breakdown.pdf)
+  dev.off ()
+}
 
 # eof

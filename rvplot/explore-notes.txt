@@ -63,4 +63,9 @@ input problem. Eliminating all Stall.* counters, *.RehabQ, and
 Branches leads to a somewhat poor fit.
 
 #======================================================================
+commit 91093bce50f2281439751f79c508db5982d68251
+
+Used 'explore-iters.R' to generate some plots in figs2/.
+
+#======================================================================
 # eof

@@ -242,7 +242,8 @@ PAL.HPCGARAGE = c (
   , "orange"="#df693e" # orange
   , "yellow"="#e7ce3f" # yellow
   , "black"="#000000" # black
-  , "offwhite", "#b0b0a0" # light grey / off-white
+  , "offwhite"="#b0b0a0" # light grey / off-white
+  , "white"="white"
   )
 
 set.hpcgarage.colours <- function (Q, ...) {
