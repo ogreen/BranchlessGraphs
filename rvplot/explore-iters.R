@@ -64,7 +64,7 @@ Instructions.only$Key <- with (Instructions.only, factor (Key, levels=Plot.vars)
 
 Q <- ggplot (Instructions.only, aes (x=Key, y=Value, colour=Key))
 Q <- Q + geom_boxplot ()
-#Q <- Q + geom_point (aes (colour=Key, shape=Key), size=4)
+  #Q <- Q + geom_point (aes (colour=Key, shape=Key), size=4)
 Q <- Q + theme (legend.position="bottom")
 Q <- Q + facet_grid (. ~ Graph)
 Q <- Q + theme (axis.text.x=element_blank (), axis.ticks=element_blank ())
@@ -74,12 +74,15 @@ Q <- set.hpcgarage.fill (Q)
 Q <- set.hpcgarage.colours (Q)
 
 if (!BATCH) {
-  setDevSlide ()
-  print (Q)
+  cat ("\nPlot instruction mix?\n")
+  do.imix <- prompt.select.string (c ("yes", "no"), is.empty.ok=FALSE)
+  if (do.imix == "yes") {
+    setDevSlide ()
+    print (Q)
+  }
+  cat (sprintf ("\nSee also the 'instruction mix' plot (might be in a different window).\n"))
+  pause.for.enter ()
 }
-
-cat (sprintf ("\nSee also the 'instruction mix' plot (might be in a different window).\n"))
-pause.for.enter (BATCH)
 
 # Define an initial list of variables to consider for analysis
 Init.vars <- c (if (has.cycles) Platform.vars else "Time", "Branches", "Mispredictions")
