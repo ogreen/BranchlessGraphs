@@ -1,0 +1,164 @@
+#======================================================================
+# Using this file to record commands used in some preliminary data analysis.
+
+source ("rvplot2-inc.R")
+source ("nnlm-inc.R")
+library (GGally)
+
+Data <- load.perfdata.many ()
+Common.vars <- get.common.colnames (Data)
+All.vars <- get.all.colnames (Data)
+
+# Pull out some special variables
+All.load.vars <- All.vars[grep ("^Loads.*", All.vars)]
+All.store.vars <- All.vars[grep ("^Stores.*", All.vars)]
+All.stall.vars <- All.vars[grep ("^Stalls.*", All.vars)]
+
+All.codes <- unique (get.all.colvals (Data, "Implementation"))
+
+#======================================================================
+# Prompt user for platform
+
+ARCH <- prompt.select.string (keyword="architectures", ARCHS.ALL)
+ALG <- prompt.select.string (keyword="algorithms", unique (Data[[ARCH]]$Algorithm))
+CODE <- prompt.select.string (keyword="implementations", unique (Data[[ARCH]]$Implementation))
+
+#======================================================================
+# Analyze
+
+D <- subset (Data[[ARCH]], Algorithm == ALG & Implementation == CODE)
+stopifnot (nrow (D) > 0) # Verify that D is non-empty
+D$Time <- D$Time * 1e9 # Convert to nanoseconds
+
+cat ("\nFirst few rows of the relevant data:\n")
+print (head (D, n=12))
+cat ("...\n\n")
+
+# Compute the set of variables unique to this platform
+Platform.vars <- setdiff (colnames (D), Common.vars)
+Load.vars <- intersect (Platform.vars, All.load.vars)
+Store.vars <- intersect (Platform.vars, All.store.vars)
+Stall.vars <- intersect (Platform.vars, All.stall.vars)
+has.cycles <- ("Cycles" %in% Platform.vars)
+
+# Compute some per-instruction ratios
+D.per.inst <- D
+Index.vars <- c ("Algorithm", "Implementation", "Graph") # aggregation vars
+Agg.vars <- setdiff (colnames (D), Index.vars)
+func.div.by.inst <- function (X, D.inst) return (colwise (function (X) X / D.inst$Instructions) (X))
+D.per.inst[, Agg.vars] <- func.div.by.inst (D.per.inst[, Agg.vars], D.inst=D)
+
+# Visualize fraction of instructions devoted to loads, stores,
+# branches. Annotate with mispredictions.
+FV <- split.df.by.colnames (D.per.inst, Index.vars)
+F.per.inst <- flatten.keyvals.df (FV$A, FV$B)
+Plot.vars <- c (Load.vars, Store.vars, "Branches", "Mispredictions")
+Instructions.only <- subset (F.per.inst, Key %in% Plot.vars)
+Instructions.only$Key <- with (Instructions.only, factor (Key, levels=Plot.vars))
+Q <- ggplot (Instructions.only, aes (x=Key, y=Value, colour=Key))
+Q <- Q + geom_boxplot ()
+#Q <- Q + geom_point (aes (colour=Key, shape=Key), size=4)
+Q <- Q + theme (legend.position="bottom")
+Q <- Q + facet_grid (. ~ Graph)
+Q <- Q + theme (axis.text.x=element_blank (), axis.ticks=element_blank ())
+Q <- Q + scale_y_continuous (breaks=gen_ticks_linear (Instructions.only$Value, step=gen.stepsize.auto (Instructions.only$Value)$scaled), labels=percent)
+Q <- Q + ylab ("% instructions")
+Q <- set.hpcgarage.fill (Q)
+Q <- set.hpcgarage.colours (Q)
+setDevSlide ()
+print (Q)
+
+cat (sprintf ("\nSee also the 'instruction mix' plot (might be in a different window).\n"))
+pause.for.enter ()
+
+# Define an initial list of variables to consider for analysis
+Init.vars <- c (if (has.cycles) Platform.vars else "Time", "Branches", "Mispredictions")
+
+# Don't consider any variable that is *all* zero
+Is.all.zero <- colwise (function (X) all (X == 0)) (D.per.inst[, Init.vars])
+Valid.vars <- names (Is.all.zero)[unlist (!Is.all.zero)]
+
+# Compute numerical correlations
+cat ("\nPlot pairwise correlations? (Doing so may take a while.)\n")
+do.cor <- prompt.select.string (c ("yes", "no"), is.empty.ok=FALSE)
+Cor.vars <- Valid.vars
+if (do.cor == "yes") {
+  setDevSquare ()
+  Q.cor <- ggpairs (D.per.inst, Cor.vars, upper=list (continuous="points", combo="dot"), lower=list (continuous="cor"))
+  print (Q.cor)
+}
+
+# Prompt user to select a subset of variables to further consider modeling
+cat ("\n=== Correlations ===\n")
+Rho <- cor (D.per.inst[, Cor.vars])
+print (Rho)
+
+cat ("\n*** Inspect the above correlations and refer to the pairwise correlations plot. Decide which variables you'd like to consider.\n")
+
+response.var <- if (has.cycles) "Cycles" else "Time" # Always consider
+Avail.vars <- setdiff (Cor.vars, response.var)
+var.name <- NULL
+while (is.null (var.name)) {
+  var.name <- prompt.select.string (Avail.vars, keyword="variables TO ELIMINATE"
+                                    , is.empty.ok=FALSE, caption="Or, type 'done' when finished."
+                                    , Silent.options="done")
+  if (!is.null (var.name)) {
+    if (var.name == "done") { break } # empty string; done asking
+    Avail.vars <- setdiff (Avail.vars, var.name)
+    cat ("--- '", var.name, "' eliminated. ---\n")
+    var.name <- NULL
+  }
+}
+
+Analysis.vars <- Avail.vars
+cat ("\n==> Final set of analysis variables: ", Analysis.vars)
+pause.for.enter ()
+
+# Aggregate by Index.vars
+D.max <- ddply (D, Index.vars, colwise (max))
+D.tot <- ddply (D, Index.vars, colwise (function (X) sum (as.numeric (X))))
+D.tot$Iteration <- D.max$Iteration + 1 # replace with count
+D.tot.per.inst <- D.tot
+D.tot.per.inst[, Agg.vars] <- func.div.by.inst (D.tot.per.inst[, Agg.vars], D.inst=D.tot)
+
+# Try to fit the selected variables
+#Data.fit <- D.per.inst[, c (Index.vars, response.var, Analysis.vars)]
+Data.fit <- D.tot.per.inst[, c (Index.vars, response.var, Analysis.vars)]
+Predictors <- Analysis.vars
+Fit.nnlm <- lm.by.colnames (Data.fit, response.var, Predictors, constant.term=FALSE, nonneg=TRUE)
+print (summary (Fit.nnlm))
+
+# Use the model to predict totals
+Prediction <- predict.df.lm (Fit.nnlm, Data.fit, response.var)
+response.true <- sprintf ("%s.true", response.var)
+Prediction[, response.true] <- Data.fit[, response.var]
+Prediction <- cbind (Data.fit[, Index.vars], Prediction)
+print (head (Prediction))
+
+# Plot breakdown
+Prediction.FV <- split.df.by.colnames (Prediction, c (Index.vars, response.var, response.true))
+Prediction.flat <- flatten.keyvals.df (Prediction.FV$A, Prediction.FV$B)
+
+Y.true <- Prediction[[response.true]]
+Y.values <- with (Prediction, c (Prediction[[response.var]], Y.true, Prediction.flat$Value))
+
+Q.breakdown <- qplot (Graph, Value, data=Prediction.flat, geom="bar", stat="identity", fill=Key)
+Q.breakdown <- Q.breakdown + theme (legend.position="bottom")
+Q.breakdown <- Q.breakdown + xlab ("") + ylab ("") # Erase default labels
+Q.breakdown <- set.hpcgarage.fill (Q.breakdown, name="Predicted values: ")
+Q.breakdown <- Q.breakdown + geom_point (aes (x=Graph, y=Y.true), colour="black", fill=NA, data=Data.fit, shape=18, size=4) # Add measured values
+Q.breakdown <- Q.breakdown + theme(axis.text.x=element_text(angle=35, hjust = 1))
+Q.breakdown <- add.title.optsub (Q.breakdown, ggtitle, main=sprintf ("Predicted %s per instruction [%s / %s / %s]", response.var, ARCH, ALG, CODE))
+Q.breakdown <- Q.breakdown + gen.axis.scale.auto (Y.values, "y")
+
+# Increase font sizes
+Q.breakdown <- Q.breakdown + theme (axis.text.x=element_text (size=14))
+Q.breakdown <- Q.breakdown + theme (legend.text=element_text (size=18))
+Q.breakdown <- Q.breakdown + theme (axis.text.y=element_text (size=14))
+Q.breakdown <- Q.breakdown + theme (plot.title=element_text (size=24))
+setDevHD ()
+print (Q.breakdown)
+
+cat (sprintf ("See model component breakdown plot.\n"))
+
+# eof
