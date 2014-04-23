@@ -38,9 +38,11 @@ stopifnot ((length (CODE) == 1) & (CODE %in% CODES.ALL.MAP))
 
 outfile.suffix <- get.file.suffix (ARCH, ALG, CODE)
 outfilename.corr <- sprintf ("figs2/explore-corr--%s.pdf", outfile.suffix)
+outfilename.vars <- sprintf ("figs2/explore-corr-vars--%s.csv", outfile.suffix)
 
 cat (sprintf ("Output files%s:\n", if (SAVE.PDF) " [saving...]" else if (BATCH) "[*NOT* saving]" else "" ))
 cat (sprintf ("  Correlations: %s\n", outfilename.corr))
+cat (sprintf ("  Analysis variables: %s\n", outfilename.vars))
 
 #======================================================================
 # Preprocess data
@@ -90,14 +92,22 @@ if (!BATCH) {
 
   response.var <- if (Vars$has.cycles) "Cycles" else "Time" # Always consider
   Avail.vars <- setdiff (Valid.vars, response.var)
-  Analysis.vars <- prompt.select.any (Avail.vars, keyword="variables TO ELIMINATE")
-  if (is.null (Analysis.vars)) {
+  Selected.vars <- prompt.select.any (Avail.vars, keyword="variables TO ELIMINATE")
+  if (is.null (Selected.vars)) {
     Analysis.vars <- Avail.vars
+  } else {
+    Analysis.vars <- setdiff (Avail.vars, Selected.vars)
   }
   cat (sprintf ("\n==> Final set of analysis variables: %s\n"
                 , paste (Analysis.vars, collapse=", ")))
 
   # TODO: Add code to save these to a file
+  do.save.vars <- prompt.yes.no (sprintf ("Save to '%s'? ", outfilename.vars))
+  if (do.save.vars) {
+    cat ("\nWriting ...")
+    write (Analysis.vars, file=outfilename.vars, sep="\n")
+    cat (" done!\n\n")
+  }
 }
 
 #======================================================================
