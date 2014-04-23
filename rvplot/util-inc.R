@@ -22,6 +22,20 @@ get.stringset.elem <- function (S, s, ignore.case=FALSE) {
   return (if (length (S[Matches]) > 1) S[Matches][1] else S[Matches])
 }
 
+prompt.yes.no <- function (prompt.text="Type yes or type no >>> ") {
+  result <- NULL
+  while (is.null (result)) {
+    user.text <- tolower (readline (prompt.text))
+    if (any (grepl ("yes|no", user.text, ignore.case=TRUE))) {
+      result <- (user.text == "yes")
+      break
+    }
+    cat (sprintf ("\n*** Did not recognize: '%s' ***\n\n", user.text))
+  }
+  cat ("\n")
+  return (result)
+}
+
 prompt.select.string <- function (Options, keyword="options"
                                   , caption=NULL
                                   , is.empty.ok=FALSE
@@ -30,10 +44,9 @@ prompt.select.string <- function (Options, keyword="options"
 {
   opt <- NULL
   while (is.null (opt)) {
-    cat (sprintf ("\nSelect one of the following %s: %s", keyword, paste (Options, collapse=", ")))
-    if (!is.null (caption)) { cat (sprintf ("\n  (%s)", caption)) }
+    cat (sprintf ("Select one of the following %s:\n  %s\n", keyword, paste (Options, collapse=", ")))
+    if (!is.null (caption)) { cat (sprintf ("\n(%s)\n", caption)) }
     user.text <- readline ("\n>>> ")
-    cat (sprintf ("*** '%s' *** [%s]\n", user.text, paste (Options, collapse=", ")))
 
     # Break "quietly" on silent option, returning value of silent option
     silent.text <- get.stringset.elem (Silent.options, user.text, ignore.case=ignore.case)
@@ -44,7 +57,6 @@ prompt.select.string <- function (Options, keyword="options"
     if (!is.null (opt.text)) {
       if (opt.text != "") {
         opt <- opt.text
-        cat (sprintf ("--> You chose: '%s'\n", opt))
         break
       }
     }
@@ -61,13 +73,8 @@ prompt.select.string <- function (Options, keyword="options"
     # Don't know what the user wants (and maybe neither does s/he)
     cat (sprintf ("*** Sorry, '%s' is not recognized. ***\n", user.text))
   }
+  cat ("\n")
   return (opt)
-}
-
-prompt.if.undef <- function (var.name, ..., env=parent.frame ()) {
-  if (!(var.name %in% ls (envir=env))) {
-    assign (var.name, prompt.select.string (...), envir=env)
-  }
 }
 
 pause.for.enter <- function (ignore=FALSE) {
@@ -76,48 +83,47 @@ pause.for.enter <- function (ignore=FALSE) {
   }
 }
 
-prompt.loop.remove <- function (Options, exit.keyword="done", ...) {
-  Avail.opts <- Options
-  opt <- NULL
-  while (is.null (opt)) {
-    opt <- prompt.select.string (Avail.opts, ..., Silent.options=exit.keyword)
-    if (!is.null (opt)) {
-      if (opt == exit.keyword) { break }
-      Avail.opts <- setdiff (Avail.opts, opt)
-      cat ("--- '", opt, "' eliminated. ---\n")
-      opt <- NULL
-    }
-  }
-  return (Avail.opts)
-}
-
-prompt.select.any <- function (Options, keyword="options", confirm=TRUE) {
+prompt.select.any <- function (Options, keyword="options"
+                               , confirm=TRUE, ignore.case=TRUE)
+{
   Selected <- NULL
   while (TRUE) {
     cat ("Please select one or more of the following", keyword, "\n")
-    cat ("  ", Options, "\n")
+    cat (sprintf ("  %s\n", paste (Options, collapse=", ")))
     cat ("\n(You may use a regular expression.)\n")
-    user.text <- readline (">>> ")
+    user.text <- readline ("\n>>> ")
     if (user.text != "") {
-      Matched <- grepl (user.text, Options)
+      Matched <- grepl (user.text, Options, ignore.case=ignore.case)
       if (any (Matched)) {
         Selected <- Options[Matched]
       }
     }
 
     if (is.null (Selected)) {
-      cat ("--- Nothing selected or no match found. ---\n")
+      cat ("\n--- Nothing selected or no match found. ---\n")
     } else {
-      cat ("--- Selected:", Selected, "---\n")
+      cat (sprintf ("\n--- Selected: '%s' ---\n", paste (Selected, collapse=", ")))
     }
     if (confirm) {
-      cat ("\nAre you sure?")
-      do.confirm <- prompt.select.string (c ("yes", "no"))
-      if (do.confirm != "yes") { next }
+      do.confirm <- prompt.yes.no ("\nAre you sure? ")
+      if (!do.confirm) { next } # User changed his/her mind
     }
     break
   }
+  cat ("\n")
   return (Selected)
+}
+
+prompt.if.undef <- function (var.name, ..., env=parent.frame ()) {
+  if (!(var.name %in% ls (envir=env))) {
+    assign (var.name, prompt.select.string (...), envir=env)
+  }
+}
+
+prompt.any.if.undef <- function (var.name, ..., env=parent.frame ()) {
+  if (!(var.name %in% ls (envir=env))) {
+    assign (var.name, prompt.select.any (...), envir=env)
+  }
 }
 
 #=====================================================================

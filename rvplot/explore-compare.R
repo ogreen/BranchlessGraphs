@@ -19,12 +19,12 @@ All.codes <- unique (get.all.colvals (Data, "Implementation"))
 #======================================================================
 # Prompt user for platform
 
-#ARCH <- prompt.select.string (keyword="architectures", ARCHS.ALL)
-#ALG <- prompt.select.string (keyword="algorithms", unique (Data[[ARCH]]$Algorithm))
-#CODE <- prompt.select.string (keyword="implementations", unique (Data[[ARCH]]$Implementation))
+cat ("\n")
+
 prompt.if.undef ("ARCH", keyword="architectures", ARCHS.ALL)
-prompt.if.undef ("ALG", keyword="algorithms", unique (Data[[ARCH]]$Algorithm))
-prompt.if.undef ("CODE", keyword="implementations", unique (Data[[ARCH]]$Implementation))
+prompt.any.if.undef ("ALGS", keyword="algorithms", unique (Data[[ARCH]]$Algorithm))
+prompt.any.if.undef ("CODES", keyword="implementations", unique (Data[[ARCH]]$Implementation))
+
 assign.if.undef ("ANALYSIS.VARS", NULL)
 assign.if.undef ("BATCH", FALSE)
 assign.if.undef ("SAVE.PDF", FALSE)
@@ -32,9 +32,10 @@ assign.if.undef ("SAVE.PDF", FALSE)
 #======================================================================
 # Analyze
 
-D <- subset (Data[[ARCH]], Algorithm == ALG & Implementation == CODE)
+D <- subset (Data[[ARCH]], Algorithm %in% ALGS & Implementation %in% CODES)
 stopifnot (nrow (D) > 0) # Verify that D is non-empty
 D$Time <- D$Time * 1e9 # Convert to nanoseconds
+D$Implementation <- with (D, factor (Implementation, levels=rev (levels (Implementation))))
 
 cat ("\nFirst few rows of the relevant data:\n")
 print (head (D, n=12))
@@ -48,11 +49,14 @@ Stall.vars <- intersect (Platform.vars, All.stall.vars)
 has.cycles <- ("Cycles" %in% Platform.vars)
 
 # Compute some per-instruction ratios
-D.per.inst <- D
+# Use 'Branch-based' instructions as the normalization factor
 Index.vars <- c ("Algorithm", "Implementation", "Graph", "Iteration") # aggregation vars
+Merge.vars <- setdiff (Index.vars, "Implementation")
+D.inst.norm <- subset (D, Implementation == "Branch-based")[, c (Merge.vars, "Instructions")]
+D.per.inst <- merge (D, D.inst.norm, by=Merge.vars, suffixes=c ("", ".norm"))
 Agg.vars <- setdiff (colnames (D), Index.vars)
-func.div.by.inst <- function (X, D.inst) return (colwise (function (X) X / D.inst$Instructions) (X))
-D.per.inst[, Agg.vars] <- func.div.by.inst (D.per.inst[, Agg.vars], D.inst=D)
+func.div.by.inst <- function (X, D.inst) return (colwise (function (X) X / D.inst$Instructions.norm) (X))
+D.per.inst[, Agg.vars] <- func.div.by.inst (D.per.inst[, Agg.vars], D.inst=D.per.inst)
 
 # Visualize fraction of instructions devoted to loads, stores,
 # branches. Annotate with mispredictions.
@@ -62,26 +66,28 @@ Plot.vars <- c (Load.vars, Store.vars, "Branches", "Mispredictions")
 Instructions.only <- subset (F.per.inst, Key %in% Plot.vars)
 Instructions.only$Key <- with (Instructions.only, factor (Key, levels=Plot.vars))
 
-Q <- ggplot (Instructions.only, aes (x=Key, y=Value, colour=Key))
+Q <- ggplot (Instructions.only, aes (x=Graph, y=Value, colour=Key))
 Q <- Q + geom_boxplot ()
-  #Q <- Q + geom_point (aes (colour=Key, shape=Key), size=4)
 Q <- Q + theme (legend.position="bottom")
-Q <- Q + facet_grid (. ~ Graph)
-Q <- Q + theme (axis.text.x=element_blank (), axis.ticks=element_blank ())
+Q <- Q + facet_grid (Algorithm ~ Implementation)
+Q <- Q + theme (axis.text.x=element_text (angle=30, hjust=1), axis.ticks=element_blank ())
 Q <- Q + scale_y_continuous (breaks=gen_ticks_linear (Instructions.only$Value, step=gen.stepsize.auto (Instructions.only$Value)$scaled), labels=percent)
-Q <- Q + ylab ("% instructions")
+Q <- Q + ylab ("")
+Q <- Q + ggtitle ("Instruction mix, normalized by the Branch-based method")
 Q <- set.hpcgarage.fill (Q)
 Q <- set.hpcgarage.colours (Q)
 
 if (!BATCH) {
   do.imix <- prompt.yes.no ("\nPlot instruction mix? ")
   if (do.imix) {
-    setDevSlide ()
+    setDevHD ()
     print (Q)
   }
   cat (sprintf ("\nSee also the 'instruction mix' plot (might be in a different window).\n"))
   pause.for.enter ()
 }
+
+stopifnot (FALSE)
 
 # Define an initial list of variables to consider for analysis
 Init.vars <- c (if (has.cycles) Platform.vars else "Time", "Branches", "Mispredictions")
@@ -92,8 +98,8 @@ Valid.vars <- names (Is.all.zero)[unlist (!Is.all.zero)]
 
 # Compute numerical correlations
 if (!BATCH) {
+  do.cor <- prompt.yes.no ("\nPlot pairwise correlations? (may be slow) >>>")
   Cor.vars <- Valid.vars
-  do.cor <- prompt.yes.no ("\nPlot pairwise corelations? (may be slow) ")
   if (do.cor) {
     setDevSquare ()
     Q.cor <- ggpairs (D.per.inst, Cor.vars, upper=list (continuous="points", combo="dot"), lower=list (continuous="cor"))
