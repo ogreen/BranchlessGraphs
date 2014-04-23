@@ -112,7 +112,7 @@ if (!BATCH) {
   }
 }
 
-stopifnot (FALSE)
+stopifnot (FALSE) # Code from here to bottom of script may not work
 
 # Define an initial list of variables to consider for analysis
 Init.vars <- c (if (has.cycles) Platform.vars else "Time", "Branches", "Mispredictions")
