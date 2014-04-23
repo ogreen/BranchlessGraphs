@@ -18,12 +18,12 @@ cat ("\n")
 assign.if.undef ("BATCH", FALSE)
 assign.if.undef ("SAVE.PDF", FALSE)
 
-prompt.if.undef ("ARCH", keyword="architectures", ARCHS.ALL.MAP)
-
 if (!BATCH) {
+  prompt.if.undef ("ARCH", keyword="architectures", ARCHS.ALL.MAP)
   prompt.any.if.undef ("ALGS", keyword="algorithms", unique (All.data[[ARCH]]$Algorithm))
   prompt.any.if.undef ("CODES", keyword="implementations", unique (All.data[[ARCH]]$Implementation))
 } else {
+  assign.if.undef ("ARCH", "Haswell")
   assign.if.undef ("ALGS", as.vector (unlist (ALGS.ALL.MAP)))
   assign.if.undef ("CODES", as.vector (unlist (CODES.ALL.MAP)))
 }

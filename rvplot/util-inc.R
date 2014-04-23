@@ -74,6 +74,7 @@ prompt.select.string <- function (Options, keyword="options"
     cat (sprintf ("*** Sorry, '%s' is not recognized. ***\n", user.text))
   }
   cat ("\n")
+  if (!is.null (opt)) { opt <- as.character (opt) }
   return (opt)
 }
 
@@ -111,6 +112,7 @@ prompt.select.any <- function (Options, keyword="options"
     break
   }
   cat ("\n")
+  if (!is.null (Selected)) { Selected <- as.character (Selected) }
   return (Selected)
 }
 
