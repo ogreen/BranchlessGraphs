@@ -91,6 +91,35 @@ prompt.loop.remove <- function (Options, exit.keyword="done", ...) {
   return (Avail.opts)
 }
 
+prompt.select.any <- function (Options, keyword="options", confirm=TRUE) {
+  Selected <- NULL
+  while (TRUE) {
+    cat ("Please select one or more of the following", keyword, "\n")
+    cat ("  ", Options, "\n")
+    cat ("\n(You may use a regular expression.)\n")
+    user.text <- readline (">>> ")
+    if (user.text != "") {
+      Matched <- grepl (user.text, Options)
+      if (any (Matched)) {
+        Selected <- Options[Matched]
+      }
+    }
+
+    if (is.null (Selected)) {
+      cat ("--- Nothing selected or no match found. ---\n")
+    } else {
+      cat ("--- Selected:", Selected, "---\n")
+    }
+    if (confirm) {
+      cat ("\nAre you sure?")
+      do.confirm <- prompt.select.string (c ("yes", "no"))
+      if (do.confirm != "yes") { next }
+    }
+    break
+  }
+  return (Selected)
+}
+
 #=====================================================================
 # Error handling
 

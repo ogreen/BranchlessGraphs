@@ -115,9 +115,10 @@ if (!BATCH) {
 response.var <- if (has.cycles) "Cycles" else "Time" # Always consider
 if (is.null (ANALYSIS.VARS)) {
   Avail.vars <- setdiff (Cor.vars, response.var)
-  Analysis.vars <- prompt.loop.remove (Avail.vars, exit.keyword="done"
-                                       , keyword="variables TO ELIMINATE"
-                                       , is.empty.ok=FALSE, caption="Or, type 'done' when finished.")
+  Analysis.vars <- prompt.select.any (Avail.vars, keyword="variables TO ELIMINATE")
+  if (is.null (Analysis.vars)) {
+    Analysis.vars <- Avail.vars
+  }
 } else {
   Analysis.vars <- ANALYSIS.VARS
 }
