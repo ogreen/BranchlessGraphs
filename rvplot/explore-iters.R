@@ -92,18 +92,17 @@ Valid.vars <- names (Is.all.zero)[unlist (!Is.all.zero)]
 
 # Compute numerical correlations
 if (!BATCH) {
-  Cor.vars <- Valid.vars
   do.cor <- prompt.yes.no ("\nPlot pairwise corelations? (may be slow) ")
   if (do.cor) {
     setDevSquare ()
-    Q.cor <- ggpairs (D.per.inst, Cor.vars, upper=list (continuous="points", combo="dot"), lower=list (continuous="cor"))
+    Q.cor <- ggpairs (D.per.inst, Valid.vars, upper=list (continuous="points", combo="dot"), lower=list (continuous="cor"))
     print (Q.cor)
   }
 }
 
 # Prompt user to select a subset of variables to further consider modeling
 cat ("\n=== Correlations ===\n")
-Rho <- cor (D.per.inst[, Cor.vars])
+Rho <- cor (D.per.inst[, Valid.vars])
 print (Rho)
 
 if (!BATCH) {
@@ -112,7 +111,7 @@ if (!BATCH) {
 
 response.var <- if (has.cycles) "Cycles" else "Time" # Always consider
 if (is.null (ANALYSIS.VARS)) {
-  Avail.vars <- setdiff (Cor.vars, response.var)
+  Avail.vars <- setdiff (Valid.vars, response.var)
   Analysis.vars <- prompt.select.any (Avail.vars, keyword="variables TO ELIMINATE")
   if (is.null (Analysis.vars)) {
     Analysis.vars <- Avail.vars
