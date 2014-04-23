@@ -105,4 +105,16 @@ load.perfdata.many <- function (Algs=NULL, Archs=NULL, Graphs=NULL, fatal=FALSE)
 }
   
 #======================================================================
+# Plotting utilities
+
+# 'base' has units of points
+set.all.font.sizes <- function (Q, base=10) {
+  Q <- Q + theme (axis.text.x=element_text (size=base))
+  Q <- Q + theme (legend.text=element_text (size=1.4*base))
+  Q <- Q + theme (axis.text.y=element_text (size=base))
+  Q <- Q + theme (plot.title=element_text (size=2*base))
+  Q <- Q + theme (strip.text.x = element_text (size=1.2*base))
+  return (Q)
+}
+#======================================================================
 # eof

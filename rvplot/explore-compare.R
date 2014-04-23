@@ -30,6 +30,19 @@ assign.if.undef ("BATCH", FALSE)
 assign.if.undef ("SAVE.PDF", FALSE)
 
 #======================================================================
+ALGS.ALL <- paste (ALGS, collapse="_")
+ALGS.ABBREV <- gsub ("SV", "sv", gsub ("BFS/TD", "bfs", ALGS.ALL))
+CODES.ALL <- paste (CODES, collapse="_")
+CODES.ABBREV <- gsub ("Branch-based", "bb", gsub ("Branch-avoiding", "bl", CODES.ALL))
+outfile.suffix <- sprintf ("%s--%s--%s", ARCH, ALGS.ABBREV, CODES.ABBREV)
+outfilename.imix <- sprintf ("figs2/explore-compare--imix--%s.pdf", outfile.suffix)
+outfilename.cpi <- sprintf ("figs2/explore-compare--cpi--%s.pdf", outfile.suffix)
+
+cat (sprintf ("Output files%s:\n", if (BATCH) { if (SAVE.PDF) " [saving...]" else "[*NOT* saving]" }))
+cat (sprintf ("  Instruction mix: %s\n", outfilename.imix))
+cat (sprintf ("  CPI: %s\n", outfilename.cpi))
+
+#======================================================================
 # Analyze
 
 D <- subset (Data[[ARCH]], Algorithm %in% ALGS & Implementation %in% CODES)
@@ -66,25 +79,37 @@ Plot.vars <- c (Load.vars, Store.vars, "Branches", "Mispredictions")
 Instructions.only <- subset (F.per.inst, Key %in% Plot.vars)
 Instructions.only$Key <- with (Instructions.only, factor (Key, levels=Plot.vars))
 
-Q <- ggplot (Instructions.only, aes (x=Graph, y=Value, colour=Key))
-Q <- Q + geom_boxplot ()
-Q <- Q + theme (legend.position="bottom")
-Q <- Q + facet_grid (Algorithm ~ Implementation)
-Q <- Q + theme (axis.text.x=element_text (angle=30, hjust=1), axis.ticks=element_blank ())
-Q <- Q + scale_y_continuous (breaks=gen_ticks_linear (Instructions.only$Value, step=gen.stepsize.auto (Instructions.only$Value)$scaled), labels=percent)
-Q <- Q + ylab ("")
-Q <- Q + ggtitle ("Instruction mix, normalized by the Branch-based method")
-Q <- set.hpcgarage.fill (Q)
-Q <- set.hpcgarage.colours (Q)
+Q.imix <- ggplot (Instructions.only, aes (x=Graph, y=Value, colour=Key))
+Q.imix <- Q.imix + geom_boxplot ()
+Q.imix <- Q.imix + theme (legend.position="bottom")
+Q.imix <- Q.imix + facet_grid (Algorithm ~ Implementation)
+Q.imix <- Q.imix + theme (axis.text.x=element_text (angle=30, hjust=1), axis.ticks=element_blank ())
+Q.imix <- Q.imix + scale_y_continuous (breaks=gen_ticks_linear (Instructions.only$Value, step=gen.stepsize.auto (Instructions.only$Value)$scaled), labels=percent)
+Q.imix <- Q.imix + xlab ("")
+Q.imix <- Q.imix + ylab ("")
+Q.imix <- add.title.optsub (Q.imix, ggtitle
+                            , "Instruction mix, normalized by the Branch-based method"
+                            , "(Distributions shown are taken over iterations)")
+Q.imix <- set.hpcgarage.fill (Q.imix)
+Q.imix <- set.hpcgarage.colours (Q.imix, name="Instruction type: ")
 
+Q.imix.display <- set.all.font.sizes (Q.imix, base=10)
+Q.imix.pdf <- set.all.font.sizes (Q.imix, base=12)
 if (!BATCH) {
-  do.imix <- prompt.yes.no ("\nPlot instruction mix? ")
+  do.imix <- prompt.yes.no ("\nDisplay instruction mix? ")
   if (do.imix) {
     setDevHD ()
-    print (Q)
+    print (Q.imix.display)
   }
   cat (sprintf ("\nSee also the 'instruction mix' plot (might be in a different window).\n"))
   pause.for.enter ()
+
+  do.imix.pdf <- prompt.yes.no ("\nSave instruction mix to a file? ")
+  if (do.imix.pdf) {
+    setDevHD.pdf (outfilename.imix, l=18)
+    print (Q.imix.pdf)
+    dev.off ()
+  }
 }
 
 stopifnot (FALSE)
@@ -162,33 +187,19 @@ Q.breakdown <- Q.breakdown + theme (legend.position="bottom")
 Q.breakdown <- Q.breakdown + xlab ("") + ylab ("") # Erase default labels
 Q.breakdown <- set.hpcgarage.fill (Q.breakdown, name="Predicted values: ")
 Q.breakdown <- Q.breakdown + geom_point (aes (x=Graph, y=Y.true), colour="black", fill=NA, data=Data.fit, shape=18, size=4) # Add measured values
-Q.breakdown <- Q.breakdown + theme(axis.text.x=element_text(angle=35, hjust = 1))
+Q.breakdown <- Q.breakdown + theme (axis.text.x=element_text(angle=30, hjust = 1))
 Q.breakdown <- add.title.optsub (Q.breakdown, ggtitle, main=sprintf ("Predicted %s per instruction [%s / %s / %s]", response.var, ARCH, ALG, CODE))
 Q.breakdown <- Q.breakdown + gen.axis.scale.auto (Y.values, "y")
 
-Q.breakdown.display <- Q.breakdown
-Q.breakdown.display <- Q.breakdown.display + theme (axis.text.x=element_text (size=10))
-Q.breakdown.display <- Q.breakdown.display + theme (legend.text=element_text (size=14))
-Q.breakdown.display <- Q.breakdown.display + theme (axis.text.y=element_text (size=10))
-Q.breakdown.display <- Q.breakdown.display + theme (plot.title=element_text (size=20))
-
 setDevHD ()
-print (Q.breakdown)
+Q.breakdown.display <- set.all.font.sizes (Q.breakdown, base=10)
+print (Q.breakdown.display)
 
 cat (sprintf ("See model component breakdown plot.\n"))
 
-outfilename <- sprintf ("figs2/explore-iters--cpi--%s--%s--%s.pdf"
-                        , ARCH
-                        , if (ALG == "SV") "sv" else "bfs"
-                        , if (CODE == "Branch-based") "bb" else "bl")
-cat (sprintf ("Output filename: %s [%s]\n", outfilename, if (SAVE.PDF) "saving..." else "*NOT* saving"))
 if (SAVE.PDF) {
-  Q.breakdown.pdf <- Q.breakdown
-  Q.breakdown.pdf <- Q.breakdown.pdf + theme (axis.text.x=element_text (size=10))
-  Q.breakdown.pdf <- Q.breakdown.pdf + theme (legend.text=element_text (size=14))
-  Q.breakdown.pdf <- Q.breakdown.pdf + theme (axis.text.y=element_text (size=10))
-  Q.breakdown.pdf <- Q.breakdown.pdf + theme (plot.title=element_text (size=20))
-  setDevHD.pdf (outfilename, l=18)
+  Q.breakdown.pdf <- set.all.font.sizes (Q.breakdown, base=12)
+  setDevHD.pdf (outfilename.cpi, l=18)
   print (Q.breakdown.pdf)
   dev.off ()
 }
