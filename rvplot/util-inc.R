@@ -311,6 +311,33 @@ merge.df.list <- function (Df.list, on.cols=NULL) {
 }
 
 #=====================================================================
+# rbind that fills in missing columns
+
+rbind.fill <- function (A, B, missing.val=0) {
+  if (is.null (A)) return (B)
+  if (is.null (B)) return (A)
+  
+  stopifnot (is.data.frame (A))
+  stopifnot (is.data.frame (B))
+
+  cols.A <- colnames (A)
+  cols.B <- colnames (B)
+  cols.All <- unique (c (cols.A, cols.B))
+
+  missing.A <- setdiff (cols.All, cols.A)
+  if (length (missing.A) > 0) {
+    A[, missing.A] <- 0
+  }
+  missing.B <- setdiff (cols.All, cols.B)
+  if (length (missing.B) > 0) {
+    B[, missing.B] <- 0
+  }
+
+  C <- rbind (A, B)
+  return (C)
+}
+
+#=====================================================================
 # Remap factor values and fix the order
 
 re.factor <- function (F, from, to) factor (mapvalues (F, from, to), levels=to)

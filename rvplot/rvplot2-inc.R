@@ -278,6 +278,30 @@ normalize.perfdf <- function (Df, Vars, Norm.df, by="Norm.vals") {
 }
 
 #======================================================================
+# Aggregation on perfdf objects
+
+# Apply a function 'reduce' to the numeric columns of Df
+aggregate.perfdf <- function (Df, Vars, reduce) {
+  stopifnot (is.data.frame (Df))
+  stopifnot (is.list (Vars))
+  stopifnot (is.function (reduce))
+
+  f <- function (X) reduce (as.numeric (X))
+  Df.reduce <- ddply (Df, Vars$Select.fit, colwise (f))
+  return (Df.reduce)
+}
+
+# Compute aggregate totals
+total.perfdf <- function (Df, Vars) {
+  Df.tot <- aggregate.perfdf (Df, Vars, reduce=sum)
+
+  # Iterations is an exception: compute max, not sum
+  Df.max <- aggregate.perfdf (Df, Vars, reduce=max)
+  Df.tot$Iteration <- Df.max$Iteration + 1
+  return (Df.tot)
+}
+
+#======================================================================
 # Plotting utilities
 
 # 'base' has units of points
