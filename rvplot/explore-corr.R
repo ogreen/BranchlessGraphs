@@ -1,6 +1,8 @@
 #======================================================================
-# Use this script to plot and compare instruction mixes, given a
-# platform.
+# Use this script to plot correlations, given a specific
+# (architecture, algorithm, implementation), and (optionally)
+# interactively generate a set of variables upon which to generate a
+# model; see 'explore-cpi.R'.
 
 source ("rvplot2-inc.R")
 source ("nnlm-inc.R")
@@ -38,7 +40,7 @@ stopifnot ((length (CODE) == 1) & (CODE %in% CODES.ALL.MAP))
 
 outfile.suffix <- get.file.suffix (ARCH, ALG, CODE)
 outfilename.corr <- sprintf ("figs2/explore-corr--%s.pdf", outfile.suffix)
-outfilename.vars <- sprintf ("figs2/explore-corr-vars--%s.csv", outfile.suffix)
+outfilename.vars <- sprintf ("figs2/explore-corr-vars--%s.txt", outfile.suffix)
 
 cat (sprintf ("Output files%s:\n", if (SAVE.PDF) " [saving...]" else if (BATCH) "[*NOT* saving]" else "" ))
 cat (sprintf ("  Correlations: %s\n", outfilename.corr))
