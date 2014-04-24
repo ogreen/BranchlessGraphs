@@ -128,13 +128,13 @@ Q.cpi <- Q.cpi + xlab ("") + ylab ("") # Erase default labels
 Q.cpi <- Q.cpi + geom_point (aes (x=Graph, y=Y.true), data=Data.predicted
                              , colour="black", fill=NA, shape=18, size=4)
 
-Q.cpi <- Q.cpi + facet_grid (Algorithm ~ Implementation)
+Q.cpi <- Q.cpi + facet_grid (Algorithm ~ Implementation, scales="free_y")
 
 Q.cpi <- Q.cpi + theme(axis.text.x=element_text(angle=35, hjust = 1))
 
 title.str <- sprintf ("Predicted %s per instruction [%s]", response.var, arch)
 Q.cpi <- add.title.optsub (Q.cpi, ggtitle, main=title.str)
-Q.cpi <- Q.cpi + gen.axis.scale.auto (Y.values, "y")
+#Q.cpi <- Q.cpi + gen.axis.scale.auto (Y.values, "y")
 
 Q.cpi.display <- set.all.font.sizes (Q.cpi, base=10)
 Q.cpi.pdf <- set.all.font.sizes (Q.cpi, base=12)
