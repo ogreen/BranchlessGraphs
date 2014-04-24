@@ -139,6 +139,28 @@ get.perfdf.arch <- function (Data, arch, algs, codes, verbose=TRUE) {
   return (Df)
 }
 
+# Gets a subset of the full data set, as a data frame. Unlike
+# 'get.perfdf.arch', this routine may request data across multiple
+# architectures. (It also creates a column named, 'Architecture'.)
+#
+# Since each architecture may have some set of columns distinct from
+# one another, this routine has columns consisting of the union of all
+# columns. If a given platform does not have a particular column, this
+# routine fills it in with 'missing.val'.
+#
+get.perfdf <- function (Data, archs, algs, codes, missing.val=0, verbose=TRUE) {
+  stopifnot (is.list (Data))
+  stopifnot (all (archs %in% as.vector (ARCHS.ALL.MAP)))
+
+  Df <- NULL
+  for (arch in archs) {
+    Df.arch <- get.perfdf.arch (Data, arch, algs, codes, verbose=verbose)
+    Df.arch$Architecture <- arch
+    Df <- rbind.fill (Df, Df.arch, missing.val=missing.val)
+  }
+  return (Df)
+}
+
 #======================================================================
 
 # ARCHS: Long names, e.g., "Haswell", "Ivy Bridge", ...
@@ -197,14 +219,25 @@ get.perfdf.var.info <- function (Df, Data) {
   stopifnot (is.data.frame (Df))
 
   # Pull out lists of special variables
-  Common.vars <- get.common.colnames (Data)
   All.vars <- get.all.colnames (Data)
+  Common.vars <- get.common.colnames (Data)
+
+  has.arch <- ("Architecture" %in% colnames (Df))
+  if (has.arch) {
+    All.vars <- c ("Architecture", All.vars)
+    Common.vars <- c ("Architecture", Common.vars)
+  }
+  
   All.load.vars <- All.vars[grep ("^Loads.*", All.vars)]
   All.store.vars <- All.vars[grep ("^Stores.*", All.vars)]
   All.stall.vars <- All.vars[grep ("^Stalls.*", All.vars)]
   
   Df.vars <- colnames (Df)
-  Select.fit.vars <- c ("Algorithm", "Implementation", "Graph")
+  Select.fit.vars <- c (if (has.arch) "Architecture" else NULL
+                        , "Algorithm"
+                        , "Implementation"
+                        , "Graph"
+                        )
   Index.vars <- c (Select.fit.vars, "Iteration") # aggregation vars
   Data.vars <- setdiff (Df.vars, Index.vars)
   Platform.vars <- setdiff (Df.vars, Common.vars)

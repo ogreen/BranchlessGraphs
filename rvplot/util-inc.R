@@ -213,7 +213,7 @@ get.all.colnames <- function (Df.list) {
   } else if (is.data.frame (Df.list)) {
     All <- colnames (Df.list)
   }
-  return (All)
+  return (as.vector (unlist (All)))
 }
 
 #=====================================================================
@@ -234,7 +234,7 @@ get.all.colvals <- function (Df.list, col) {
       All <- rbind (All, D[col])
     }
   }
-  return (All)
+  return (as.vector (unlist (All)))
 }
 
 #=====================================================================
