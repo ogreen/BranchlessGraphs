@@ -47,111 +47,62 @@ cat (sprintf ("  Misprediction bounds: %s\n", outfilename.mpb))
 # Preprocess data
 
 Df <- get.perfdf (All.data, ARCHS, ALG, CODES)
+Df <- subset (Df, Graph %in% GRAPHS.CONCISE) # Show data for only some graphs
 Vars <- get.perfdf.var.info (Df, All.data)
 
 cat ("Aggregating totals ...\n")
 Df.tot <- total.perfdf (Df, Vars)
 
 cat ("Extracting mispredictions ...\n")
-stopifnot (FALSE)
-
-#======================================================================
-# Build models of the data
-
-cat (sprintf ("Building models ...\n"))
-
-Data.predicted <- NULL
-Predictions <- NULL
-response.var <- if (Vars.arch$has.cycles) "Cycles" else "Time"
-response.true <- sprintf ("%s.true", response.var)
-
-arch <- ARCH
-for (alg in ALGS) {
-  for (code in CODES) {
-    cat (sprintf ("==> %s for %s on %s ...\n", code, alg, arch))
-    
-    # Choose subset of data to fit
-#    Data.fit <- subset (Df.arch.tot.per.inst, Algorithm == alg & Implementation == code)
-    Data.fit <- subset (Df.arch.per.inst, Algorithm == alg & Implementation == code)
-    
-    # Determine predictors
-    vars.key <- get.file.suffix (arch, alg, code)
-    vars.file <- sprintf ("figs2/explore-corr-vars--%s.txt", vars.key)
-    if (!file.exists (vars.file)) {
-      stop (sprintf ("\n*** Missing model file: '%s' ***\n", vars.file))
-    }
-    Predictors <- as.vector (unlist (read.table (vars.file)))
-
-    # Fit! Use nonnegative least squares without a constant term
-    Fit <- lm.by.colnames (Data.fit, response.var, Predictors
-                           , constant.term=FALSE, nonneg=TRUE)
-
-    cat (sprintf ("\n=== Fitted model for: %s code for %s on %s ===\n", code, alg, arch))
-    print (summary (Fit))
-
-    # Use model to predict totals
-    Data.predict <- subset (Df.arch.tot.per.inst, Algorithm == alg & Implementation == code)
-    Prediction <- predict.df.lm (Fit, Data.predict, response.var)
-    Prediction[, response.true] <- Data.predict[, response.var]
-    Prediction <- cbind (Data.predict[, Vars.arch$Index], Prediction)
-
-    cat (sprintf ("\n=== Sample predictions ===\n"))
-    print (head (Prediction))
-
-    Predictions <- rbind.fill (Predictions, Prediction)
-    Data.predicted <- rbind.fill (Data.predicted, Data.predict)
-  } # for each code
-} # for each alg
+Mispreds <- Df.tot[, c ("Architecture", "Algorithm", "Implementation", "Graph", "Mispredictions", "Vertices")]
 
 #======================================================================
 # Plot
 
-Fixed.cols <- c (Vars.arch$Index, response.var, response.true)
-Predictions.FV <- split.df.by.colnames (Predictions, Fixed.cols)
-Predictions.flat <- flatten.keyvals.df (Predictions.FV$A, Predictions.FV$B)
+alg.tag.display <- ALGS.FANCY.MAP[[ALG]]
 
-Y.predicted <- Predictions[[response.var]]
-Y.true <- Predictions[[response.true]]
-Other.values <- Predictions.flat$Value
-Y.values <- with (Predictions, c (Y.predicted, Y.true, Other.values))
+# Annotate the data a little
+Mispreds.plot <- transform (Mispreds
+                            , X=gsub ("Branch-", "Branch-\n", Implementation)
+                            , Y=Mispredictions / Vertices)
 
-Q.cpi <- qplot (Graph, Value, data=Predictions.flat, geom="bar", stat="identity", fill=Key)
+# HACK: Reorder implementation labs
+Mispreds.plot$X <- with (Mispreds.plot, factor (X, levels=rev (levels (X))))
 
-Q.cpi <- set.hpcgarage.fill (Q.cpi, name="Predicted values: ")
-Q.cpi <- Q.cpi + theme (legend.position="bottom")
-Q.cpi <- Q.cpi + xlab ("") + ylab ("") # Erase default labels
+Q.mpb <- qplot (X, Y, data=Mispreds.plot, geom="bar", stat="identity"
+            , fill=X, facets=Architecture ~ Graph)
+Q.mpb <- Q.mpb + geom_hline (yintercept=1, colour="black", linetype="dashed") # add y=1 reference line
+if (ALG == "SV") {
+  Q.mpb <- Q.mpb + geom_hline (yintercept=3, colour="black", linetype="dashed") # add y=3 reference line
+}
+Q.mpb <- Q.mpb + xlab ("")
+Q.mpb <- Q.mpb + ylab ("")
+Q.mpb <- add.title.optsub (Q.mpb, ggtitle
+                           , main=sprintf ("%s Branch Mispredictions", alg.tag.display)
+                           , sub="(relative to lower-bound, at y=1)")
+Q.mpb <- Q.mpb + theme (legend.position="none") # hide legend
+Q.mpb <- set.hpcgarage.colours (Q.mpb)
+Q.mpb <- set.hpcgarage.fill (Q.mpb)
 
-# Add measured values
-Q.cpi <- Q.cpi + geom_point (aes (x=Graph, y=Y.true), data=Data.predicted
-                             , colour="black", fill=NA, shape=18, size=4)
-
-Q.cpi <- Q.cpi + facet_grid (Algorithm ~ Implementation, scales="free_y")
-
-Q.cpi <- Q.cpi + theme(axis.text.x=element_text(angle=35, hjust = 1))
-
-title.str <- sprintf ("Predicted %s per instruction [%s]", response.var, arch)
-Q.cpi <- add.title.optsub (Q.cpi, ggtitle, main=title.str)
-#Q.cpi <- Q.cpi + gen.axis.scale.auto (Y.values, "y")
-
-Q.cpi.display <- set.all.font.sizes (Q.cpi, base=10)
-Q.cpi.pdf <- set.all.font.sizes (Q.cpi, base=12)
+Q.mpb.display <- set.all.font.sizes (Q.mpb, base=10)
+Q.mpb.pdf <- set.all.font.sizes (Q.mpb, base=12)
 
 if (!BATCH) {
-  do.cpi <- prompt.yes.no ("\nDisplay CPI? ")
-  if (do.cpi) {
-    setDevHD ()
-    print (Q.cpi)
+  do.mpb <- prompt.yes.no ("\nDisplay misprediction bounds? ")
+  if (do.mpb) {
+    setDevPage.portrait ()
+    print (Q.mpb)
     pause.for.enter ()
   }
-  do.cpi.pdf <- prompt.yes.no (sprintf ("\nSave plot to '%s'? ", outfilename.cpi))
+  do.mpb.pdf <- prompt.yes.no (sprintf ("\nSave plot to '%s'? ", outfilename.mpb))
 } else {
-  do.cpi.pdf <- SAVE.PDF
+  do.mpb.pdf <- SAVE.PDF
 }
 
-if (do.cpi.pdf) {
-  cat (sprintf ("\n--> Writing '%s' ... ", outfilename.cpi))
-  setDevHD.pdf (outfilename.cpi, l=18)
-  print (Q.cpi.pdf)
+if (do.mpb.pdf) {
+  cat (sprintf ("\n--> Writing '%s' ... ", outfilename.mpb))
+  setDevPage.portrait.pdf (outfilename.mpb, l=10)
+  print (Q.mpb.pdf)
   dev.off ()
   cat ("done!\n\n")
 }

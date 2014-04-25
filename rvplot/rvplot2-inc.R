@@ -12,6 +12,9 @@ ALGS.ALL.MAP <- c ("sv"="SV", "bfs"="BFS/TD")
 ALGS.ALL <- names (ALGS.ALL.MAP)
 ALGS.ABBREV.MAP <- c ("SV"="sv", "BFS/TD"="bfs")
 
+ALGS.FANCY.MAP <- c ("SV"="Shiloach-Vishkin Connected Components"
+                     , "BFS/TD"="Breadth-First Search (Top-Down)")
+
 # List of available implementations
 CODES.ALL.MAP <- c ("bb"="Branch-based", "bl"="Branch-avoiding")
 CODES.ALL <- names (CODES.ALL.MAP)
@@ -29,11 +32,6 @@ GRAPHS.CONCISE <- c("audikw1", "auto", "coAuthorsDBLP", "cond-mat-2005", "ldoor"
 # Default header, for data files that don't have one
 HEADERS.DEFAULT <- c ("Algorithm", "Implementation", "Iteration", "Time", "Mispredictions", "Branches", "Instructions", "Vertices", "Edges")
   
-# ivb: Algorithm	Implementation	Iteration	Time	Cycles	Instructions	Loads.Retired	Stores.Retired	Stall.RS	Stall.SB	Stall.ROB	Branches	Mispredictions	Vertices	Edges
-# hsw: Algorithm	Implementation	Iteration	Time	Cycles	Instructions	Loads.Retired	Stores.Retired	Stall.RS	Stall.SB	Stall.ROB	Branches	Mispredictions	Vertices	Edges
-# pld: Algorithm	Implementation	Iteration	Time	Cycles	Instructions	Stall.SB	Stall.LB	Loads.Dispatched	Stores.Dispatched	Stall.LDQ	Branches	Mispredictions	Vertices	Edges
-# slv: Algorithm	Implementation	Iteration	Time	Cycles	Instructions	Stall.ROB	Stall.RAT	Stall.MEC	Stall.AnyRS	Loads.RehabQ	Stores.RehabQ	Loads.Retired	Stores.Retired	Branches	Mispredictions	Vertices	Edges
-
 #======================================================================
 # Utility functions to read results data
 #======================================================================
@@ -126,7 +124,7 @@ get.perfdf.arch <- function (Data, arch, algs, codes, verbose=TRUE) {
   if (nrow (Df) > 0) { # matched
     Df$Time <- Df$Time * 1e9 # Convert to nanoseconds
 
-    I.levels <- rev (levels (Df$Implementation)) # Put 'branch-based' before 'branch-avoiding'
+    I.levels <- names (CODES.ABBREV.MAP)
     Df$Implementation <- with (Df, factor (Implementation, levels=I.levels))
 
     if (verbose) {
