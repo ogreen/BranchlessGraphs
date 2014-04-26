@@ -338,6 +338,20 @@ rbind.fill <- function (A, B, missing.val=0) {
 }
 
 #=====================================================================
+# Computes the cumulative sum
+
+cumsum.df.select <- function (Df, Fixed, Vars, preserve.cols=TRUE) {
+  stopifnot (is.data.frame (Df))
+  f.apply <- function (X) ddply (Df, Fixed, transform, X=cumsum (X))
+  Df.cumul <- colwise (f.apply, Vars) (Df)
+  if (preserve.cols) {
+    Vars.left <- setdiff (colnames (Df), c (Fixed, Vars))
+    Df.cumul[, Vars.left] <- Df[, Vars.left]
+  }
+  return (Df.cumul)
+}
+
+#=====================================================================
 # Remap factor values and fix the order
 
 re.factor <- function (F, from, to) factor (mapvalues (F, from, to), levels=to)
