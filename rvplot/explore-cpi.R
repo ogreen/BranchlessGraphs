@@ -21,14 +21,14 @@ if (!BATCH) {
   prompt.if.undef ("ARCH", keyword="architectures", ARCHS.ALL.MAP)
   prompt.any.if.undef ("ALGS", keyword="algorithms", unique (All.data[[ARCH]]$Algorithm))
   prompt.any.if.undef ("CODES", keyword="implementations", unique (All.data[[ARCH]]$Implementation))
-  CONST.TERM <- prompt.yes.no ("When fitting, include a constant term? ")
 } else {
   assign.if.undef ("ARCH", "Haswell")
   assign.if.undef ("ALGS", as.vector (unlist (ALGS.ALL.MAP)))
   assign.if.undef ("CODES", as.vector (unlist (CODES.ALL.MAP)))
-  assign.if.undef ("CONST.TERM", FALSE)
 }
 assign.if.undef ("GRAPHS", GRAPHS.ALL)
+assign.if.undef ("CONST.TERM", TRUE)
+assign.if.undef ("NONNEG", TRUE)
 
 # Check above configuration parameters
 stopifnot ((length (ARCH) == 1) & (ARCH %in% ARCHS.ALL.MAP))
@@ -70,7 +70,9 @@ cat (sprintf ("Building models ...\n"))
 
 source ("fit-cpi-inc.R")
 
-Fits <- fit.over.all.graphs (Vars, Df.fit=Df.per.inst, Df.predict=Df.tot.per.inst)
+Fits <- fit.over.all.graphs (Vars, Df.fit=Df.per.inst, Df.predict=Df.tot.per.inst
+#Fits <- fit.one.per.graph (Vars, Df.fit=Df.per.inst, Df.predict=Df.tot.per.inst
+                           , const.term=CONST.TERM, nonneg=TRUE)
 Data.predicted <- Fits$Data.predicted
 Predictions <- Fits$Predictions
 response.var <- Fits$response.var

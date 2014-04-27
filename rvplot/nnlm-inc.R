@@ -16,7 +16,23 @@ lm.by.colnames <- function (Data.fit, response.var, Predictors
                             , verbose=TRUE)
 {
   Fit.m <- NULL
-  if (nonneg) { # use nnls
+
+  # Attempt the standard 'lm'
+  lhs <- response.var
+  rhs.const <- if (const.term) "" else "0 + "
+  rhs.preds <- paste (Predictors, collapse=" + ")
+  fit.formula <- as.formula (sprintf ("%s ~ %s%s", lhs, rhs.const, rhs.preds))
+  if (verbose) {
+    cat ("==> Fitting formula: ")
+    print (fit.formula)
+    cat ("\n")
+  }
+  Fit.lm <- lm (fit.formula, data=Data.fit)
+
+  any.problems <- any (is.na (Fit.lm$coef))
+  any.neg <- any (Fit.lm$coef[!is.na (Fit.lm$coef)] < 0)
+  
+  if (any.problems | (nonneg & any.neg)) { # user wants non-negative coefficients
     X <- as.matrix (Data.fit[, Predictors])
     if (const.term) {
       X <- cbind (1, X)
@@ -25,20 +41,13 @@ lm.by.colnames <- function (Data.fit, response.var, Predictors
     Fit.lm <- list (model=nnls (X, y)
                     , constant.term=const.term
                     , response.var=response.var
-                    , Predictors=Predictors)
+                    , Predictors=Predictors
+                    , lm=Fit.lm
+                    , any.problems=any.problems
+                    , any.neg=any.neg)
     class (Fit.lm) <- "nnlm"
-  } else { # use lm
-    lhs <- response.var
-    rhs.const <- if (const.term) "" else "0 + "
-    rhs.preds <- paste (Predictors, collapse=" + ")
-    fit.formula <- as.formula (sprintf ("%s ~ %s%s", lhs, rhs.const, rhs.preds))
-    if (verbose) {
-      cat ("==> Fitting formula: ")
-      print (fit.formula)
-      cat ("\n")
-    }
-    Fit.lm <- lm (fit.formula, data=Data.fit)
   }
+  
   return (Fit.lm)
 }
 

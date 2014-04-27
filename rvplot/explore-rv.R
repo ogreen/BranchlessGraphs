@@ -11,7 +11,6 @@ ARCH <- "Haswell"
 #CODES <- "Branch-based"
 #GRAPHS <- "power"
 
-CONST.TERM <- FALSE
 source ("explore-cpi.R")
 
 stopifnot (FALSE)
