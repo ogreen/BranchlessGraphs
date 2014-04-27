@@ -49,72 +49,37 @@ cat (sprintf ("  CPI: %s\n", outfilename.cpi))
 #======================================================================
 # Preprocess data
 
-Df.arch <- subset (get.perfdf.arch (All.data, ARCH, ALGS, CODES), Graph %in% GRAPHS)
-Vars.arch <- get.perfdf.var.info (Df.arch, All.data)
+Df <- subset (get.perfdf (All.data, ARCH, ALGS, CODES), Graph %in% GRAPHS)
+Vars <- get.perfdf.var.info (Df, All.data)
 
 cat ("Computing per-iteration data normalized by instructions ...\n")
-Inst.norm <- get.perfdf.norm (Df.arch, Vars.arch, by="Instructions")
-Df.arch.per.inst <- normalize.perfdf (Df.arch, Vars.arch, Inst.norm)
+Inst.norm <- get.perfdf.norm (Df, Vars, by="Instructions")
+Df.per.inst <- normalize.perfdf (Df, Vars, Inst.norm)
 
 cat ("Aggregating totals ...\n")
-Df.arch.tot <- total.perfdf (Df.arch, Vars.arch)
+Df.tot <- total.perfdf (Df, Vars)
 
 cat ("Normalizing totals by instructions ...\n")
-Inst.tot.norm <- get.perfdf.norm (Df.arch.tot, Vars.arch, by="Instructions")
-Df.arch.tot.per.inst <- normalize.perfdf (Df.arch.tot, Vars.arch, Inst.tot.norm)
+Inst.tot.norm <- get.perfdf.norm (Df.tot, Vars, by="Instructions")
+Df.tot.per.inst <- normalize.perfdf (Df.tot, Vars, Inst.tot.norm)
 
 #======================================================================
 # Build models of the data
 
 cat (sprintf ("Building models ...\n"))
 
-Data.predicted <- NULL
-Predictions <- NULL
-response.var <- if (Vars.arch$has.cycles) "Cycles" else "Time"
-response.true <- sprintf ("%s.true", response.var)
+source ("fit-cpi-inc.R")
 
-arch <- ARCH
-for (alg in ALGS) {
-  for (code in CODES) {
-    cat (sprintf ("==> %s for %s on %s ...\n", code, alg, arch))
-    
-    # Choose subset of data to fit
-#    Data.fit <- subset (Df.arch.tot.per.inst, Algorithm == alg & Implementation == code)
-    Data.fit <- subset (Df.arch.per.inst, Algorithm == alg & Implementation == code)
-
-    # Determine predictors
-    vars.key <- get.file.suffix (arch, alg, code)
-    vars.file <- sprintf ("figs2/explore-corr-vars--%s.txt", vars.key)
-    if (!file.exists (vars.file)) {
-      stop (sprintf ("\n*** Missing model file: '%s' ***\n", vars.file))
-    }
-    Predictors <- as.vector (unlist (read.table (vars.file)))
-
-    # Fit! Use nonnegative least squares without a constant term
-    Fit <- lm.by.colnames (Data.fit, response.var, Predictors
-                           , constant.term=CONST.TERM, nonneg=TRUE)
-
-    cat (sprintf ("\n=== Fitted model for: %s code for %s on %s ===\n", code, alg, arch))
-    print (summary (Fit))
-
-    # Use model to predict totals
-    Data.predict <- subset (Df.arch.tot.per.inst, Algorithm == alg & Implementation == code)
-    Prediction <- predict.df.lm (Fit, Data.predict, response.var)
-    Prediction[, response.true] <- Data.predict[, response.var]
-    Prediction <- cbind (Data.predict[, Vars.arch$Index], Prediction)
-
-    cat (sprintf ("\n=== Sample predictions ===\n"))
-    print (head (Prediction))
-
-    Predictions <- rbind.fill (Predictions, Prediction)
-    Data.predicted <- rbind.fill (Data.predicted, Data.predict)
-  } # for each code
-} # for each alg
+Fits <- fit.over.all.graphs (Vars, Df.fit=Df.per.inst, Df.predict=Df.tot.per.inst)
+Data.predicted <- Fits$Data.predicted
+Predictions <- Fits$Predictions
+response.var <- Fits$response.var
+response.true <- Fits$response.true
 
 #======================================================================
 # Plot
 
-Fixed.cols <- c (Vars.arch$Index, response.var, response.true)
+Fixed.cols <- c (Vars$Index, response.var, response.true)
 Predictions.FV <- split.df.by.colnames (Predictions, Fixed.cols)
 Predictions.flat <- flatten.keyvals.df (Predictions.FV$A, Predictions.FV$B)
 
@@ -130,14 +95,15 @@ Q.cpi <- Q.cpi + theme (legend.position="bottom")
 Q.cpi <- Q.cpi + xlab ("") + ylab ("") # Erase default labels
 
 # Add measured values
-Q.cpi <- Q.cpi + geom_point (aes (x=Graph, y=Y.true), data=Data.predicted
+#Q.cpi <- Q.cpi + geom_point (aes (x=Graph, y=Y.true), data=Data.predicted
+Q.cpi <- Q.cpi + geom_point (aes (x=Graph, y=Cycles.true), data=Predictions
                              , colour="black", fill=NA, shape=18, size=4)
 
 Q.cpi <- Q.cpi + facet_grid (Algorithm ~ Implementation, scales="free_y")
 
 Q.cpi <- Q.cpi + theme(axis.text.x=element_text(angle=35, hjust = 1))
 
-title.str <- sprintf ("Predicted %s per instruction [%s]", response.var, arch)
+title.str <- sprintf ("Predicted %s per instruction [%s]", response.var, ARCH)
 Q.cpi <- add.title.optsub (Q.cpi, ggtitle, main=title.str)
 #Q.cpi <- Q.cpi + gen.axis.scale.auto (Y.values, "y")
 

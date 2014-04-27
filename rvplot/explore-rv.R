@@ -7,17 +7,21 @@ source ("rvplot2-inc.R")
 BATCH <- TRUE
 SAVE.PDF <- FALSE
 ARCH <- "Haswell"
-ALGS <- "SV"
-CODES <- "Branch-based"
-GRAPHS <- "power"
+#ALGS <- "SV"
+#CODES <- "Branch-based"
+#GRAPHS <- "power"
 
 CONST.TERM <- FALSE
 source ("explore-cpi.R")
+
+stopifnot (FALSE)
+
 F.lm <- lm.by.colnames (Data.fit, response.var, Predictors, constant.term=CONST.TERM, nonneg=FALSE)
 YY <- Data.fit
 YY$Measured <- YY[[response.var]]
 YY$Modeled <- F.lm$fitted.values
 qplot (Measured, Modeled-Measured, data=YY) + facet_wrap (~ Graph) + geom_hline (yintercept=0)
+
 F.nnlm <- lm.by.colnames (Data.fit, response.var, Predictors, constant.term=CONST.TERM, nonneg=TRUE)
 
 # lm diagnostics
