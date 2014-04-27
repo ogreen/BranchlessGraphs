@@ -12,24 +12,24 @@ library (nnls)
 # 'lm'.)
 
 lm.by.colnames <- function (Data.fit, response.var, Predictors
-                            , constant.term=TRUE, nonneg=FALSE
+                            , const.term=TRUE, nonneg=FALSE
                             , verbose=TRUE)
 {
   Fit.m <- NULL
   if (nonneg) { # use nnls
     X <- as.matrix (Data.fit[, Predictors])
-    if (constant.term) {
+    if (const.term) {
       X <- cbind (1, X)
     }
     y <- as.vector (unlist (Data.fit[response.var]))
     Fit.lm <- list (model=nnls (X, y)
-                    , constant.term=constant.term
+                    , constant.term=const.term
                     , response.var=response.var
                     , Predictors=Predictors)
     class (Fit.lm) <- "nnlm"
   } else { # use lm
     lhs <- response.var
-    rhs.const <- if (constant.term) "" else "0 + "
+    rhs.const <- if (const.term) "" else "0 + "
     rhs.preds <- paste (Predictors, collapse=" + ")
     fit.formula <- as.formula (sprintf ("%s ~ %s%s", lhs, rhs.const, rhs.preds))
     if (verbose) {
@@ -71,7 +71,7 @@ get.predictor.coefs.lm <- function (fit.lm) {
     names (Fit.coefs) <- fit.lm$Predictors
   } else { # any (class (fit.lm) == "lm")
     Predictors <- setdiff (names (Fit.lm$coef), "(Intercept)")
-    Fit.coefs <- Fit.lm$coef[Predictors]
+    Fit.coefs <- fit.lm$coef[Predictors]
   }
   return (Fit.coefs)
 }
