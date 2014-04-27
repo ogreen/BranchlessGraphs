@@ -27,7 +27,7 @@ if (!BATCH) {
   assign.if.undef ("CODES", as.vector (unlist (CODES.ALL.MAP)))
 }
 assign.if.undef ("GRAPHS", GRAPHS.ALL)
-assign.if.undef ("CONST.TERM", TRUE)
+assign.if.undef ("CONST.TERM", FALSE)
 assign.if.undef ("NONNEG", TRUE)
 
 # Check above configuration parameters
@@ -77,6 +77,23 @@ Data.predicted <- Fits$Data.predicted
 Predictions <- Fits$Predictions
 response.var <- Fits$response.var
 response.true <- Fits$response.true
+
+# Dump models
+Predictors.all <- Fits$Predictors.all
+Models.all <- Fits$Models
+for (mod.key in names (Models.all)) {
+  model <- Models.all[[mod.key]]
+  preds <- Predictors.all[[mod.key]]
+  if (CONST.TERM) { preds <- c ("(Intercept)", preds) }
+  if ("nnlm" %in% class (model)) {
+    Model.summary <- data.frame (Predictor=preds, Coef=model$model$x)
+  } else {
+    Model.summary <- data.frame (Predictor=preds, Coef=as.vector (model[["coefficients"]]))
+  }
+  cat (sprintf ("\n=== Model: %s [%s] ===\n", mod.key, class (model)))
+  print (Model.summary)
+  cat (sprintf ("\nR^2: %g\n", model$res2))
+}
 
 #======================================================================
 # Plot

@@ -29,14 +29,14 @@ fit.over.all.graphs <- function (Vars, Df.fit, Df.predict
         }
         Predictors <- as.vector (unlist (read.table (vars.file)))
 
-        # Fit! Use nonnegative least squares without a constant term
+        # Fit!
         Fit <- lm.by.colnames (Data.fit, response.var, Predictors
                                , const.term=const.term, nonneg=nonneg)
 
         cat (sprintf ("\n=== Fitted model for: %s code for %s on %s ===\n", code, alg, arch))
         print (summary (Fit))
 
-        # Use model to predict totals
+        # Use fitted model to predict totals
         Data.predict <- subset (Df.predict, Architecture == arch &
                                             Algorithm == alg &
                                             Implementation == code)
@@ -46,6 +46,12 @@ fit.over.all.graphs <- function (Vars, Df.fit, Df.predict
       
         cat (sprintf ("\n=== Sample predictions ===\n"))
         print (head (Prediction))
+
+        # Compute some quality-of-fit statistics (TBD)
+        Fit$mu.obs <- mean (Data.predict[[response.var]])
+        Fit$ss.tot <- sum ((Prediction[[response.var]] - Fit$mu.obs)^2)
+        Fit$ss.res <- sum ((Prediction[[response.var]] - Data.predict[[response.var]])^2)
+        Fit$res2 <- 1 - (Fit$ss.res / Fit$ss.tot)
 
         Predictions <- rbind.fill (Predictions, Prediction)
         Data.predicted <- rbind.fill (Data.predicted, Data.predict)
@@ -100,14 +106,14 @@ fit.one.per.graph <- function (Vars, Df.fit, Df.predict
                                 Implementation == code &
                                 Graph == graph)
 
-          # Fit! Use nonnegative least squares without a constant term
+          # Fit!
           Fit <- lm.by.colnames (Data.fit, response.var, Predictors
                                  , const.term=const.term, nonneg=nonneg)
 
           cat (sprintf ("\n=== Fitted model for: %s code for %s on %s with input %s ===\n", code, alg, arch, graph))
           print (summary (Fit))
 
-          # Use model to predict totals
+          # Use fitted model to predict totals
           Data.predict <- subset (Df.predict, Architecture == arch &
                                               Algorithm == alg &
                                               Implementation == code &
