@@ -43,7 +43,8 @@ stopifnot (FACET.COL %in% c ("Graph", "Implementation"))
 # Determine output(s)
 
 outfile.suffix <- get.file.suffix (ARCH, ALGS, CODES)
-outfilename.cpi <- sprintf ("figs2/explore-cpi%s--%s.pdf"
+outfilename.cpi <- sprintf ("figs2/explore-cpi%s%s--%s.pdf"
+                            , if (FIT.PER.GRAPH) "-per_graph" else ""
                             , if (CONST.TERM) "-const" else ""
                             , outfile.suffix)
 
