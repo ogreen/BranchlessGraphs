@@ -21,10 +21,12 @@ if (!BATCH) {
   prompt.if.undef ("ARCH", keyword="architectures", ARCHS.ALL.MAP)
   prompt.any.if.undef ("ALGS", keyword="algorithms", unique (All.data[[ARCH]]$Algorithm))
   prompt.any.if.undef ("CODES", keyword="implementations", unique (All.data[[ARCH]]$Implementation))
+  CONST.TERM <- prompt.yes.no ("When fitting, include a constant term? ")
 } else {
   assign.if.undef ("ARCH", "Haswell")
   assign.if.undef ("ALGS", as.vector (unlist (ALGS.ALL.MAP)))
   assign.if.undef ("CODES", as.vector (unlist (CODES.ALL.MAP)))
+  assign.if.undef ("CONST.TERM", FALSE)
 }
 
 # Check above configuration parameters
@@ -36,7 +38,9 @@ stopifnot (all (CODES %in% CODES.ALL.MAP))
 # Determine output(s)
 
 outfile.suffix <- get.file.suffix (ARCH, ALGS, CODES)
-outfilename.cpi <- sprintf ("figs2/explore-cpi--%s.pdf", outfile.suffix)
+outfilename.cpi <- sprintf ("figs2/explore-cpi%s--%s.pdf"
+                            , if (CONST.TERM) "-const" else ""
+                            , outfile.suffix)
 
 cat (sprintf ("Output files%s:\n", if (SAVE.PDF) " [saving...]" else if (BATCH) "[*NOT* saving]" else "" ))
 cat (sprintf ("  CPI: %s\n", outfilename.cpi))
@@ -87,7 +91,7 @@ for (alg in ALGS) {
 
     # Fit! Use nonnegative least squares without a constant term
     Fit <- lm.by.colnames (Data.fit, response.var, Predictors
-                           , constant.term=FALSE, nonneg=TRUE)
+                           , constant.term=CONST.TERM, nonneg=TRUE)
 
     cat (sprintf ("\n=== Fitted model for: %s code for %s on %s ===\n", code, alg, arch))
     print (summary (Fit))
