@@ -70,7 +70,7 @@ get.predictor.coefs.lm <- function (fit.lm) {
     }
     names (Fit.coefs) <- fit.lm$Predictors
   } else { # any (class (fit.lm) == "lm")
-    Predictors <- setdiff (names (Fit.lm$coef), "(Intercept)")
+    Predictors <- setdiff (names (fit.lm$coef), "(Intercept)")
     Fit.coefs <- fit.lm$coef[Predictors]
   }
   return (Fit.coefs)
