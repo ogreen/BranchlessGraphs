@@ -28,6 +28,7 @@ if (!BATCH) {
   assign.if.undef ("CODES", as.vector (unlist (CODES.ALL.MAP)))
   assign.if.undef ("CONST.TERM", FALSE)
 }
+assign.if.undef ("GRAPHS", GRAPHS.ALL)
 
 # Check above configuration parameters
 stopifnot ((length (ARCH) == 1) & (ARCH %in% ARCHS.ALL.MAP))
@@ -48,7 +49,7 @@ cat (sprintf ("  CPI: %s\n", outfilename.cpi))
 #======================================================================
 # Preprocess data
 
-Df.arch <- get.perfdf.arch (All.data, ARCH, ALGS, CODES)
+Df.arch <- subset (get.perfdf.arch (All.data, ARCH, ALGS, CODES), Graph %in% GRAPHS)
 Vars.arch <- get.perfdf.var.info (Df.arch, All.data)
 
 cat ("Computing per-iteration data normalized by instructions ...\n")
@@ -80,7 +81,7 @@ for (alg in ALGS) {
     # Choose subset of data to fit
 #    Data.fit <- subset (Df.arch.tot.per.inst, Algorithm == alg & Implementation == code)
     Data.fit <- subset (Df.arch.per.inst, Algorithm == alg & Implementation == code)
-    
+
     # Determine predictors
     vars.key <- get.file.suffix (arch, alg, code)
     vars.file <- sprintf ("figs2/explore-corr-vars--%s.txt", vars.key)
