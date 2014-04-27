@@ -29,11 +29,14 @@ if (!BATCH) {
 assign.if.undef ("GRAPHS", GRAPHS.ALL)
 assign.if.undef ("CONST.TERM", FALSE)
 assign.if.undef ("NONNEG", TRUE)
+assign.if.undef ("FACET.COL", "Graph") # or, "Implementation"
 
 # Check above configuration parameters
 stopifnot ((length (ARCH) == 1) & (ARCH %in% ARCHS.ALL.MAP))
 stopifnot (all (ALGS %in% ALGS.ALL.MAP))
 stopifnot (all (CODES %in% CODES.ALL.MAP))
+stopifnot (all (GRAPHS %in% GRAPHS.ALL))
+stopifnot (FACET.COL %in% c ("Graph", "Implementation"))
 
 #======================================================================
 # Determine output(s)
@@ -107,20 +110,29 @@ Y.true <- Predictions[[response.true]]
 Other.values <- Predictions.flat$Value
 Y.values <- with (Predictions, c (Y.predicted, Y.true, Other.values))
 
-Q.cpi <- qplot (Graph, Value, data=Predictions.flat, geom="bar", stat="identity", fill=Key)
+if (FACET.COL == "Implementation") {
+  Predictions.flat$X <- Predictions.flat$Graph
+  Predictions.flat$Group <- Predictions.flat$Implementation
+  Predictions$X <- Predictions$Graph
+  Predictions$Group <- Predictions$Implementation
+} else {
+  stopifnot (FACET.COL == "Graph")
+  Predictions.flat$X <- Predictions.flat$Implementation
+  Predictions$X <- Predictions$Implementation
+  Predictions.flat$Group <- Predictions.flat$Graph
+  Predictions$Group <- Predictions$Graph
+}  
+
+Q.cpi <- qplot (X, Value, data=Predictions.flat, geom="bar", stat="identity", fill=Key)
+Q.cpi <- Q.cpi + geom_point (aes (x=X, y=Cycles.true), data=Predictions
+                             , colour="black", fill=NA, shape=18, size=4)
+Q.cpi <- Q.cpi + facet_grid (Algorithm ~ Group, scales="free_y")
+
+Q.cpi <- Q.cpi + theme(axis.text.x=element_text(angle=35, hjust = 1))
 
 Q.cpi <- set.hpcgarage.fill (Q.cpi, name="Predicted values: ")
 Q.cpi <- Q.cpi + theme (legend.position="bottom")
 Q.cpi <- Q.cpi + xlab ("") + ylab ("") # Erase default labels
-
-# Add measured values
-#Q.cpi <- Q.cpi + geom_point (aes (x=Graph, y=Y.true), data=Data.predicted
-Q.cpi <- Q.cpi + geom_point (aes (x=Graph, y=Cycles.true), data=Predictions
-                             , colour="black", fill=NA, shape=18, size=4)
-
-Q.cpi <- Q.cpi + facet_grid (Algorithm ~ Implementation, scales="free_y")
-
-Q.cpi <- Q.cpi + theme(axis.text.x=element_text(angle=35, hjust = 1))
 
 title.str <- sprintf ("Predicted %s per instruction [%s]", response.var, ARCH)
 Q.cpi <- add.title.optsub (Q.cpi, ggtitle, main=title.str)
