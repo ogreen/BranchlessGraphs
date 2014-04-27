@@ -49,7 +49,7 @@ get.intercept.lm <- function (fit.lm) {
   fit.intercept <- NULL
   if (any (class (fit.lm) == "nnlm")) {
     if (fit.lm$constant.term) {
-      fit.intercept <- Fit.lm$model$x[1]
+      fit.intercept <- fit.lm$model$x[1]
     }
   } else { # any (class (fit.lm) == "lm")
     if ("(Intercept)" %in% names (fit.lm$coef)) {

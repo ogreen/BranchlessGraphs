@@ -21,11 +21,14 @@ if (!BATCH) {
   prompt.if.undef ("ARCH", keyword="architectures", ARCHS.ALL.MAP)
   prompt.any.if.undef ("ALGS", keyword="algorithms", unique (All.data[[ARCH]]$Algorithm))
   prompt.any.if.undef ("CODES", keyword="implementations", unique (All.data[[ARCH]]$Implementation))
+  CONST.TERM <- prompt.yes.no ("When fitting, include a constant term? ")
 } else {
   assign.if.undef ("ARCH", "Haswell")
   assign.if.undef ("ALGS", as.vector (unlist (ALGS.ALL.MAP)))
   assign.if.undef ("CODES", as.vector (unlist (CODES.ALL.MAP)))
+  assign.if.undef ("CONST.TERM", FALSE)
 }
+assign.if.undef ("GRAPHS", GRAPHS.ALL)
 
 # Check above configuration parameters
 stopifnot ((length (ARCH) == 1) & (ARCH %in% ARCHS.ALL.MAP))
@@ -36,7 +39,9 @@ stopifnot (all (CODES %in% CODES.ALL.MAP))
 # Determine output(s)
 
 outfile.suffix <- get.file.suffix (ARCH, ALGS, CODES)
-outfilename.cpi <- sprintf ("figs2/explore-cpi--%s.pdf", outfile.suffix)
+outfilename.cpi <- sprintf ("figs2/explore-cpi%s--%s.pdf"
+                            , if (CONST.TERM) "-const" else ""
+                            , outfile.suffix)
 
 cat (sprintf ("Output files%s:\n", if (SAVE.PDF) " [saving...]" else if (BATCH) "[*NOT* saving]" else "" ))
 cat (sprintf ("  CPI: %s\n", outfilename.cpi))
@@ -44,7 +49,7 @@ cat (sprintf ("  CPI: %s\n", outfilename.cpi))
 #======================================================================
 # Preprocess data
 
-Df.arch <- get.perfdf.arch (All.data, ARCH, ALGS, CODES)
+Df.arch <- subset (get.perfdf.arch (All.data, ARCH, ALGS, CODES), Graph %in% GRAPHS)
 Vars.arch <- get.perfdf.var.info (Df.arch, All.data)
 
 cat ("Computing per-iteration data normalized by instructions ...\n")
@@ -76,7 +81,7 @@ for (alg in ALGS) {
     # Choose subset of data to fit
 #    Data.fit <- subset (Df.arch.tot.per.inst, Algorithm == alg & Implementation == code)
     Data.fit <- subset (Df.arch.per.inst, Algorithm == alg & Implementation == code)
-    
+
     # Determine predictors
     vars.key <- get.file.suffix (arch, alg, code)
     vars.file <- sprintf ("figs2/explore-corr-vars--%s.txt", vars.key)
@@ -87,7 +92,7 @@ for (alg in ALGS) {
 
     # Fit! Use nonnegative least squares without a constant term
     Fit <- lm.by.colnames (Data.fit, response.var, Predictors
-                           , constant.term=FALSE, nonneg=TRUE)
+                           , constant.term=CONST.TERM, nonneg=TRUE)
 
     cat (sprintf ("\n=== Fitted model for: %s code for %s on %s ===\n", code, alg, arch))
     print (summary (Fit))

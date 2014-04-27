@@ -52,7 +52,7 @@ cat (sprintf ("  Analysis variables: %s\n", outfilename.vars))
 Df <- get.perfdf.arch (All.data, ARCH, ALG, CODE)
 Vars <- get.perfdf.var.info (Df, All.data)
 
-# Normalize by instructions per iteration _of the branchy code_, if available
+# Normalize by instructions per iteration
 Inst.norm <- get.perfdf.norm (Df, Vars, by="Instructions")
 Df.per.inst <- normalize.perfdf (Df, Vars, Inst.norm)
 
