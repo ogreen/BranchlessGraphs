@@ -33,8 +33,8 @@ fit.over.all.graphs <- function (Vars, Df.fit, Df.predict
         Fit <- lm.by.colnames (Data.fit, response.var, Predictors
                                , const.term=const.term, nonneg=nonneg)
 
-        cat (sprintf ("\n=== Fitted model for: %s code for %s on %s ===\n", code, alg, arch))
-        print (summary (Fit))
+#        cat (sprintf ("\n=== Fitted model for: %s code for %s on %s ===\n", code, alg, arch))
+#        print (summary (Fit))
 
         # Use fitted model to predict totals
         Data.predict <- subset (Df.predict, Architecture == arch &
@@ -44,14 +44,8 @@ fit.over.all.graphs <- function (Vars, Df.fit, Df.predict
         Prediction[, response.true] <- Data.predict[, response.var]
         Prediction <- cbind (Data.predict[, Vars$Index], Prediction)
       
-        cat (sprintf ("\n=== Sample predictions ===\n"))
-        print (head (Prediction))
-
-        # Compute some quality-of-fit statistics (TBD)
-        Fit$mu.obs <- mean (Data.predict[[response.var]])
-        Fit$ss.tot <- sum ((Prediction[[response.var]] - Fit$mu.obs)^2)
-        Fit$ss.res <- sum ((Prediction[[response.var]] - Data.predict[[response.var]])^2)
-        Fit$res2 <- 1 - (Fit$ss.res / Fit$ss.tot)
+#        cat (sprintf ("\n=== Sample predictions ===\n"))
+#        print (head (Prediction))
 
         Predictions <- rbind.fill (Predictions, Prediction)
         Data.predicted <- rbind.fill (Data.predicted, Data.predict)
@@ -97,36 +91,48 @@ fit.one.per.graph <- function (Vars, Df.fit, Df.predict
 
         # Fit a model per graph
         for (graph in unique (Df.fit[["Graph"]])) {
-          cat (sprintf ("==> %s for %s on %s with input %s ...\n", code, alg, arch, graph))
+#          cat (sprintf ("==> %s for %s on %s with input %s ...\n", code, alg, arch, graph))
     
-          # Choose subset of data to fit
+          # Choose subset of training data to fit
           Data.fit <- subset (Df.fit
                               , Architecture == arch &
                                 Algorithm == alg &
                                 Implementation == code &
                                 Graph == graph)
 
-          # Fit!
-          Fit <- lm.by.colnames (Data.fit, response.var, Predictors
-                                 , const.term=const.term, nonneg=nonneg)
-
-          cat (sprintf ("\n=== Fitted model for: %s code for %s on %s with input %s ===\n", code, alg, arch, graph))
-          print (summary (Fit))
-
-          # Use fitted model to predict totals
+          # Choose subset of testing data to predict
           Data.predict <- subset (Df.predict, Architecture == arch &
                                               Algorithm == alg &
                                               Implementation == code &
                                               Graph == graph)
-          Prediction <- predict.df.lm (Fit, Data.predict, response.var)
-          Prediction[, response.true] <- Data.predict[, response.var]
-          Prediction <- cbind (Data.predict[, Vars$Index], Prediction)
+          
+          # Don't even try if there aren't enough samples
+          if (nrow (Data.fit) < 2) {
+            warning (sprintf ("Insufficient samples (n=%d) to fit: %s code for %s on %s with input %s\n"
+                              , nrow (Data.fit)
+                              , code, alg, arch, graph))
+            Fit <- list ()
+            Prediction <- Data.predict[response.var]
+            Prediction[, response.true] <- Data.predict[, response.var]
+            Prediction[, Predictors] <- 0
+            Prediction <- cbind (Data.predict[, Vars$Index], Prediction)
+          } else {
+            # Fit!
+            Fit <- lm.by.colnames (Data.fit, response.var, Predictors
+                                   , const.term=const.term, nonneg=nonneg)
+
+#            cat (sprintf ("\n=== Fitted model for: %s code for %s on %s with input %s ===\n", code, alg, arch, graph))
+#            print (summary (Fit))
+
+            Prediction <- predict.df.lm (Fit, Data.predict, response.var)
+            Prediction[, response.true] <- Data.predict[, response.var]
+            Prediction <- cbind (Data.predict[, Vars$Index], Prediction)
+          }
       
-          cat (sprintf ("\n=== Sample predictions ===\n"))
-          print (head (Prediction))
+#          cat (sprintf ("\n=== Sample predictions ===\n"))
+#          print (head (Prediction))
 
           Predictions <- rbind.fill (Predictions, Prediction)
-          Data.predicted <- rbind.fill (Data.predicted, Data.predict)
 
           mod.key <- sprintf ("%s--%s", vars.key, graph)
           Predictors.all[[mod.key]] <- Predictors

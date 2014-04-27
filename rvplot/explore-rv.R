@@ -11,6 +11,7 @@ ARCH <- "Haswell"
 #CODES <- "Branch-based"
 #GRAPHS <- "power"
 
+FIT.PER.GRAPH <- TRUE
 source ("explore-cpi.R")
 
 stopifnot (FALSE)

@@ -30,6 +30,7 @@ assign.if.undef ("GRAPHS", GRAPHS.ALL)
 assign.if.undef ("CONST.TERM", FALSE)
 assign.if.undef ("NONNEG", TRUE)
 assign.if.undef ("FACET.COL", "Graph") # or, "Implementation"
+assign.if.undef ("FIT.PER.GRAPH", FALSE)
 
 # Check above configuration parameters
 stopifnot ((length (ARCH) == 1) & (ARCH %in% ARCHS.ALL.MAP))
@@ -73,10 +74,9 @@ cat (sprintf ("Building models ...\n"))
 
 source ("fit-cpi-inc.R")
 
-Fits <- fit.over.all.graphs (Vars, Df.fit=Df.per.inst, Df.predict=Df.tot.per.inst
-#Fits <- fit.one.per.graph (Vars, Df.fit=Df.per.inst, Df.predict=Df.tot.per.inst
-                           , const.term=CONST.TERM, nonneg=TRUE)
-Data.predicted <- Fits$Data.predicted
+f.fit <- if (FIT.PER.GRAPH) fit.one.per.graph else fit.over.all.graphs
+Fits <- f.fit (Vars, Df.fit=Df.per.inst, Df.predict=Df.tot.per.inst
+               , const.term=CONST.TERM, nonneg=NONNEG)
 Predictions <- Fits$Predictions
 response.var <- Fits$response.var
 response.true <- Fits$response.true
@@ -84,8 +84,10 @@ response.true <- Fits$response.true
 # Dump models
 Predictors.all <- Fits$Predictors.all
 Models.all <- Fits$Models
+Residuals <- NULL
 for (mod.key in names (Models.all)) {
   model <- Models.all[[mod.key]]
+  if (all (class (model) == "list")) { next }
   preds <- Predictors.all[[mod.key]]
   if (CONST.TERM) { preds <- c ("(Intercept)", preds) }
   if ("nnlm" %in% class (model)) {
@@ -96,6 +98,15 @@ for (mod.key in names (Models.all)) {
   cat (sprintf ("\n=== Model: %s [%s] ===\n", mod.key, class (model)))
   print (Model.summary)
   cat (sprintf ("\nR^2: %g\n", model$res2))
+
+  tags <- unlist (strsplit (mod.key, split="--"))
+  Residuals <- rbind (Residuals, data.frame (Arch=tags[1]
+                                             , Alg=tags[2]
+                                             , Code=tags[3]
+                                             , Gr=tags[4]
+                                             , Y.obs=model$y.obs
+                                             , Y.pred=model$y.pred
+                                             , Mu=model$mu.obs))
 }
 
 #======================================================================

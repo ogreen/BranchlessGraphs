@@ -48,6 +48,17 @@ lm.by.colnames <- function (Data.fit, response.var, Predictors
     class (Fit.lm) <- "nnlm"
   }
   
+  # Compute residual stats
+  Prediction <- predict.df.lm (Fit.lm, Data.fit, response.var=response.var)
+  Y.obs <- Data.fit[[response.var]]
+  Y.pred <- Prediction[[response.var]]
+  Fit.lm$mu.obs <- mean (Y.obs)
+  Fit.lm$ss.tot <- sum ((Y.obs - Fit.lm$mu.obs)^2)
+  Fit.lm$ss.res <- sum ((Y.pred - Y.obs)^2)
+  Fit.lm$res2 <- 1 - (Fit.lm$ss.res / Fit.lm$ss.tot)
+  Fit.lm$y.obs <- Y.obs
+  Fit.lm$y.pred <- Y.pred
+
   return (Fit.lm)
 }
 
