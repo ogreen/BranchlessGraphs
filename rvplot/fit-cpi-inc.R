@@ -1,3 +1,7 @@
+#======================================================================
+
+source ("rvplot2-inc.R")
+
 fit.over.all.graphs <- function (Vars, Df.fit, Df.predict
                                , const.term=FALSE, nonneg=TRUE)
 {
@@ -57,12 +61,12 @@ fit.over.all.graphs <- function (Vars, Df.fit, Df.predict
     } # for each alg
   } # for each arch
 
-  Fits$Data.predicted <- Data.predicted
   Fits$Predictions <- Predictions
   Fits$response.var <- response.var
   Fits$response.true <- response.true
   Fits$Predictors.all <- Predictors.all
   Fits$Models <- Models
+  class (Fits) <- c ("cpi.lm", class (Fits))
   return (Fits)
 }
 
@@ -142,14 +146,95 @@ fit.one.per.graph <- function (Vars, Df.fit, Df.predict
     } # for each alg
   } # for each arch
 
-  Fits$Data.predicted <- Data.predicted
   Fits$Predictions <- Predictions
   Fits$response.var <- response.var
   Fits$response.true <- response.true
   Fits$Predictors.all <- Predictors.all
   Fits$Models <- Models
+  class (Fits) <- c ("cpi.lm", class (Fits))
   return (Fits)
 }
 
-# eof
+#======================================================================
 
+decode.cpi.lm.model.key <- function (mod.key) {
+  tags <- unlist (strsplit (mod.key, split="--"))
+  return (c ("arch"=as.character (unlist (ARCHS.ALL.MAP[tags[1]]))
+             , "alg"=as.character (unlist (ALGS.ALL.MAP[tags[2]]))
+             , "code"=as.character (unlist (CODES.ALL.MAP[tags[3]]))
+             , "graph"=tags[4]))
+}
+
+# Same as above, but returns a data frame
+decode.cpi.lm.model.key.df <- function (mod.key) {
+  meta.key <- decode.cpi.lm.model.key (mod.key)
+  Meta.df <- data.frame (Architecture=as.character (meta.key["arch"])
+                         , Algorithm=as.character (meta.key["alg"])
+                         , Implementation=as.character (meta.key["code"]))
+  if (!is.na (meta.key["graph"])) {
+    Meta.df <- cbind (Meta.df, data.frame (Graph=as.character (meta.key["graph"])))
+  }
+  return (Meta.df)
+}
+
+get.cpi.lm.coefs <- function (Fits) {
+  stopifnot ("cpi.lm" %in% class (Fits))
+
+  has.const.term <- ("(Intercept)" %in% colnames (Fits$Predictions))
+  
+  Predictors.all <- Fits$Predictors.all
+  Models.all <- Fits$Models
+  Model.summaries <- NULL
+  for (mod.key in names (Models.all)) {
+    model <- Models.all[[mod.key]]
+    if (all (class (model) == "list")) { next }
+    
+    Meta.df <- decode.cpi.lm.model.key.df (mod.key)
+    
+    preds <- Predictors.all[[mod.key]]
+    if (has.const.term) { preds <- c ("(Intercept)", preds) }
+    if ("nnlm" %in% class (model)) {
+      coefs <- model$model$x
+    } else {
+      coefs <- as.vector (model[["coefficients"]])
+    }
+    Coefs.df <- as.data.frame (t (as.matrix (coefs)))
+    colnames (Coefs.df) <- preds
+
+    Diag.df <- data.frame (Mu=model$mu.obs, R.sq=model$res2)
+
+    Model.summary <- cbind (Meta.df, Coefs.df, Diag.df)
+    
+    Model.summaries <- rbind.fill (Model.summaries, Model.summary
+                                   , missing.val=NA)
+  }
+  return (Model.summaries)
+}
+
+get.cpi.lm.residuals <- function (Fits) {
+  stopifnot ("cpi.lm" %in% class (Fits))
+
+  has.const.term <- ("(Intercept)" %in% colnames (Fits$Predictions))
+  
+  Predictors.all <- Fits$Predictors.all
+  Models.all <- Fits$Models
+  Residuals <- NULL
+  for (mod.key in names (Models.all)) {
+    model <- Models.all[[mod.key]]
+    if (all (class (model) == "list")) { next }
+
+    Meta.mod <- decode.cpi.lm.model.key.df (mod.key)
+    R.mod <- data.frame (Y.obs=model$y.obs, Y.pred=model$y.pred
+                         , Mu=model$mu.obs, R.sq=model$res2)
+    Residuals <- rbind (Residuals, cbind (Meta.mod, R.mod))
+  }
+  return (Residuals)
+}
+
+summary.cpi.lm <- function (Fits) {
+  stopifnot ("cpi.lm" %in% class (Fits))
+  print (get.cpi.lm.coefs (Fits))
+}
+
+#======================================================================
+# eof

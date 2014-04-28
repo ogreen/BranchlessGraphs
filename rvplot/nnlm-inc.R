@@ -55,7 +55,7 @@ lm.by.colnames <- function (Data.fit, response.var, Predictors
   Fit.lm$mu.obs <- mean (Y.obs)
   Fit.lm$ss.tot <- sum ((Y.obs - Fit.lm$mu.obs)^2)
   Fit.lm$ss.res <- sum ((Y.pred - Y.obs)^2)
-  Fit.lm$res2 <- 1 - (Fit.lm$ss.res / Fit.lm$ss.tot)
+  Fit.lm$res2 <- max (1 - (Fit.lm$ss.res / Fit.lm$ss.tot), 0)
   Fit.lm$y.obs <- Y.obs
   Fit.lm$y.pred <- Y.pred
 
@@ -145,4 +145,5 @@ summary.nnlm <- function (X) {
   print (X)
 }
 
+#=====================================================================
 # eof

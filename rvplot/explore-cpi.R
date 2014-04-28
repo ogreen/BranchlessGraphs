@@ -82,34 +82,6 @@ Predictions <- Fits$Predictions
 response.var <- Fits$response.var
 response.true <- Fits$response.true
 
-# Dump models
-Predictors.all <- Fits$Predictors.all
-Models.all <- Fits$Models
-Residuals <- NULL
-for (mod.key in names (Models.all)) {
-  model <- Models.all[[mod.key]]
-  if (all (class (model) == "list")) { next }
-  preds <- Predictors.all[[mod.key]]
-  if (CONST.TERM) { preds <- c ("(Intercept)", preds) }
-  if ("nnlm" %in% class (model)) {
-    Model.summary <- data.frame (Predictor=preds, Coef=model$model$x)
-  } else {
-    Model.summary <- data.frame (Predictor=preds, Coef=as.vector (model[["coefficients"]]))
-  }
-  cat (sprintf ("\n=== Model: %s [%s] ===\n", mod.key, class (model)))
-  print (Model.summary)
-  cat (sprintf ("\nR^2: %g\n", model$res2))
-
-  tags <- unlist (strsplit (mod.key, split="--"))
-  Residuals <- rbind (Residuals, data.frame (Arch=tags[1]
-                                             , Alg=tags[2]
-                                             , Code=tags[3]
-                                             , Gr=tags[4]
-                                             , Y.obs=model$y.obs
-                                             , Y.pred=model$y.pred
-                                             , Mu=model$mu.obs))
-}
-
 #======================================================================
 # Plot
 
