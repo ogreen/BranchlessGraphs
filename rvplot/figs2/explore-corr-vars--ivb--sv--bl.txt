@@ -1,0 +1,4 @@
+Loads.Retired
+Stall.RS
+Branches
+Mispredictions

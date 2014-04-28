@@ -1,0 +1,7 @@
+Loads.Retired
+Stores.Retired
+Stall.RS
+Stall.SB
+Stall.ROB
+Branches
+Mispredictions
