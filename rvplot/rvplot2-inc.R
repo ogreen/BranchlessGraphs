@@ -207,6 +207,12 @@ get.file.suffix <- function (ARCHS, ALGS, CODES) {
 #   Vars$Data -- Data variables, corresponding mainly to the numerical
 #       counter values.
 #
+#   Vars$Responses -- Best guess at the set of variables that would
+#       make suitable response variables in a model fit.
+#
+#   Vars$Predictors -- Best guess at the maximum set of variables that
+#       would make suitable predictors.
+#
 #   Vars$Platform -- Variables specific to this platform
 #   Vars$Load -- Variables related to load counters
 #   Vars$Store -- Variables related to store counters
@@ -236,6 +242,7 @@ get.perfdf.var.info <- function (Df, Data) {
                         , "Implementation"
                         , "Graph"
                         )
+  Data.alg.vars <- c ("Vertices", "Edges")
   Index.vars <- c (Select.fit.vars, "Iteration") # aggregation vars
   Data.vars <- setdiff (Df.vars, Index.vars)
   Platform.vars <- setdiff (Df.vars, Common.vars)
@@ -244,9 +251,18 @@ get.perfdf.var.info <- function (Df, Data) {
   Stall.vars <- intersect (Platform.vars, All.stall.vars)
   has.cycles <- ("Cycles" %in% Platform.vars)
 
+  Responses.vars <- "Time"
+  if (has.cycles) { Responses.vars <- c (Responses.vars, "Cycles") }
+
+  Non.predictors <- c (Index.vars, Data.alg.vars, Responses.vars)
+  Predictors.vars <- setdiff (Df.vars, Non.predictors)
+
   Vars <- list ("All"=Df.vars
                 , "Data"=Data.vars
+                , "Data.alg"=Data.alg.vars
                 , "Platform"=Platform.vars
+                , "Responses"=Responses.vars
+                , "Predictors"=Predictors.vars
                 , "Load"=Load.vars
                 , "Store"=Store.vars
                 , "Stall"=Stall.vars
