@@ -15,6 +15,7 @@ ARCH <- "Haswell"
 source ("explore-cpi.R")
 
 # try glmnet
+library (glmnet)
 
 Df.fit <- subset (Df.per.inst, Algorithm == "SV" & Implementation == "Branch-based")
 y <- Df.fit[[response.var]]
