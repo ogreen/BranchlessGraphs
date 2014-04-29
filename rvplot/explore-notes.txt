@@ -1,4 +1,124 @@
 #======================================================================
+commit 05ffa26532eb7b4ffba427cd331418e921ef05ce
+Author: rich vuduc <richie@cc.gatech.edu>
+Date:   Tue Apr 29 17:33:57 2014 -0400
+
+    Added lasso fit for one platform with a per-graph model
+
+=== Model: hsw--bfs--bb--auto ===
+  Architecture Algorithm Implementation Graph
+1      Haswell    BFS/TD   Branch-based  auto
+
+Stores.Retired       Stall.RS       Branches Mispredictions 
+     0.2581139      2.7894066      2.2427379     42.3705567 
+
+=== Model: hsw--bfs--bb--coAuthorsDBLP ===
+  Architecture Algorithm Implementation         Graph
+1      Haswell    BFS/TD   Branch-based coAuthorsDBLP
+
+ Loads.Retired Stores.Retired 
+      4.716986      17.985651 
+
+=== Model: hsw--bfs--bb--coPapersDBLP ===
+  Architecture Algorithm Implementation        Graph
+1      Haswell    BFS/TD   Branch-based coPapersDBLP
+
+ Loads.Retired Stores.Retired       Stall.RS       Stall.SB Mispredictions 
+     1.9134978      1.2871291      1.3092049      0.3260925     32.6217328 
+
+=== Model: hsw--bfs--bb--ldoor ===
+  Architecture Algorithm Implementation Graph
+1      Haswell    BFS/TD   Branch-based ldoor
+
+      Stall.RS       Branches Mispredictions 
+      2.033084       1.052122      73.904601 
+
+=== Model: hsw--bfs--bl--auto ===
+  Architecture Algorithm  Implementation Graph
+1      Haswell    BFS/TD Branch-avoiding  auto
+
+Stores.Retired       Stall.RS 
+     6.3729973      0.5987142 
+
+=== Model: hsw--bfs--bl--coAuthorsDBLP ===
+  Architecture Algorithm  Implementation         Graph
+1      Haswell    BFS/TD Branch-avoiding coAuthorsDBLP
+
+      Stall.RS       Stall.SB Mispredictions 
+      1.190472       2.284622      23.496886 
+
+=== Model: hsw--bfs--bl--coPapersDBLP ===
+  Architecture Algorithm  Implementation        Graph
+1      Haswell    BFS/TD Branch-avoiding coPapersDBLP
+
+Stores.Retired       Stall.RS       Stall.SB Mispredictions 
+     3.6115997      0.1258728      0.7753933     61.1651535 
+
+=== Model: hsw--bfs--bl--ldoor ===
+  Architecture Algorithm  Implementation Graph
+1      Haswell    BFS/TD Branch-avoiding ldoor
+
+      Stall.RS       Branches Mispredictions 
+      1.264767       2.956511      40.433791 
+
+=== Model: hsw--sv--bb--auto ===
+  Architecture Algorithm Implementation Graph
+1      Haswell        SV   Branch-based  auto
+
+ Loads.Retired Stores.Retired       Stall.RS       Branches Mispredictions 
+      1.168678       6.544270       3.542534       1.165476      16.427664 
+
+=== Model: hsw--sv--bb--coAuthorsDBLP ===
+  Architecture Algorithm Implementation         Graph
+1      Haswell        SV   Branch-based coAuthorsDBLP
+
+ Loads.Retired Stores.Retired       Branches Mispredictions 
+     0.2997845      1.3078890      0.2982264     31.9945640 
+
+=== Model: hsw--sv--bb--coPapersDBLP ===
+  Architecture Algorithm Implementation        Graph
+1      Haswell        SV   Branch-based coPapersDBLP
+
+ Loads.Retired       Branches Mispredictions 
+     0.6567802      0.7067853     35.1358770 
+
+=== Model: hsw--sv--bb--ldoor ===
+  Architecture Algorithm Implementation Graph
+1      Haswell        SV   Branch-based ldoor
+
+ Loads.Retired Stores.Retired       Branches Mispredictions 
+     0.5192295      3.5751714      0.5188542     47.1111664 
+
+=== Model: hsw--sv--bl--auto ===
+  Architecture Algorithm  Implementation Graph
+1      Haswell        SV Branch-avoiding  auto
+
+Stall.RS 
+ 2.15772 
+
+=== Model: hsw--sv--bl--coAuthorsDBLP ===
+  Architecture Algorithm  Implementation         Graph
+1      Haswell        SV Branch-avoiding coAuthorsDBLP
+
+ Loads.Retired Stores.Retired       Stall.RS       Branches Mispredictions 
+    0.78367347    12.03679935     0.08324375     1.40981448     3.90971928 
+
+=== Model: hsw--sv--bl--coPapersDBLP ===
+  Architecture Algorithm  Implementation        Graph
+1      Haswell        SV Branch-avoiding coPapersDBLP
+
+ Loads.Retired Stores.Retired       Branches 
+     0.6288252     72.2625230      1.2376341 
+
+=== Model: hsw--sv--bl--ldoor ===
+  Architecture Algorithm  Implementation Graph
+1      Haswell        SV Branch-avoiding ldoor
+
+ Loads.Retired Stores.Retired       Branches Mispredictions 
+     0.4983027     48.6935177      0.9766497      4.6475724 
+
+
+#======================================================================
 commit 2cc5c9e8ab0e189af7c65432bc2ba96d7da74d83
 Author: rich vuduc <richie@cc.gatech.edu>
 Date:   Tue Apr 29 15:42:57 2014 -0400
