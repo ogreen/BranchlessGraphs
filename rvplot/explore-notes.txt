@@ -1,4 +1,253 @@
 #======================================================================
+commit 37847b0459f2a652f3034fc2ee29fa99cae3aad2
+Author: rich vuduc <richie@cc.gatech.edu>
+Date:   Tue Apr 29 15:18:13 2014 -0400
+
+    Finished lasso-based CPI fitting scripts
+
+Based on the above commit, made the following fits:
+
+rm (list=ls ()) ; source ("batch-explore-cpi-lasso.R")
+
+Output files [saving...]:
+  CPI: figs2/explore-cpi-lasso--arn--all_algs--all_codes.pdf
+
+=== Model: arn--bfs--bb ===
+  Architecture Algorithm Implementation
+1   Cortex-A15    BFS/TD   Branch-based
+
+Branches 
+10.79078 
+
+=== Model: arn--bfs--bl ===
+  Architecture Algorithm  Implementation
+1   Cortex-A15    BFS/TD Branch-avoiding
+
+Branches 
+20.87734 
+
+=== Model: arn--sv--bb ===
+  Architecture Algorithm Implementation
+1   Cortex-A15        SV   Branch-based
+
+Mispredictions       Branches 
+     11.792866       1.873114 
+
+=== Model: arn--sv--bl ===
+  Architecture Algorithm  Implementation
+1   Cortex-A15        SV Branch-avoiding
+
+Mispredictions       Branches 
+     13.287701       3.410469 
+
+--> Writing 'figs2/explore-cpi-lasso--arn--all_algs--all_codes.pdf' ... done!
+
+
+Output files [saving...]:
+  CPI: figs2/explore-cpi-lasso--hsw--all_algs--all_codes.pdf
+
+
+=== Model: hsw--bfs--bb ===
+  Architecture Algorithm Implementation
+1      Haswell    BFS/TD   Branch-based
+
+ Loads.Retired Stores.Retired       Stall.RS Mispredictions 
+     1.3726830      6.9109585      0.8919313     34.6663945 
+
+=== Model: hsw--bfs--bl ===
+  Architecture Algorithm  Implementation
+1      Haswell    BFS/TD Branch-avoiding
+
+      Stall.RS       Branches Mispredictions 
+      0.915720       5.334823      18.157305 
+
+=== Model: hsw--sv--bb ===
+  Architecture Algorithm Implementation
+1      Haswell        SV   Branch-based
+
+Stores.Retired       Stall.RS       Branches Mispredictions 
+      3.843234      20.827720       1.187864      18.777081 
+
+=== Model: hsw--sv--bl ===
+  Architecture Algorithm  Implementation
+1      Haswell        SV Branch-avoiding
+
+ Loads.Retired Stores.Retired       Stall.RS       Branches Mispredictions 
+  1.237585e-07   1.119146e+00   1.004607e+00   1.796529e+00   1.640657e+01 
+
+--> Writing 'figs2/explore-cpi-lasso--hsw--all_algs--all_codes.pdf' ... done!
+
+
+Output files [saving...]:
+  CPI: figs2/explore-cpi-lasso--ivb--all_algs--all_codes.pdf
+
+=== Model: ivb--bfs--bb ===
+  Architecture Algorithm Implementation
+1   Ivy Bridge    BFS/TD   Branch-based
+
+ Loads.Retired Stores.Retired       Stall.RS Mispredictions 
+     1.4943374      6.8883500      0.8534646     39.5353187 
+
+=== Model: ivb--bfs--bl ===
+  Architecture Algorithm  Implementation
+1   Ivy Bridge    BFS/TD Branch-avoiding
+
+      Stall.RS       Stall.SB       Branches Mispredictions 
+      0.941692       1.770672       4.521563      25.103181 
+
+=== Model: ivb--sv--bb ===
+  Architecture Algorithm Implementation
+1   Ivy Bridge        SV   Branch-based
+
+Stores.Retired       Branches Mispredictions 
+      2.953992       1.753399      18.615019 
+
+=== Model: ivb--sv--bl ===
+  Architecture Algorithm  Implementation
+1   Ivy Bridge        SV Branch-avoiding
+
+ Loads.Retired       Stall.RS Mispredictions 
+     1.3602791      0.9788775     17.2939799 
+
+--> Writing 'figs2/explore-cpi-lasso--ivb--all_algs--all_codes.pdf' ... done!
+
+
+Output files [saving...]:
+  CPI: figs2/explore-cpi-lasso--bobcat--all_algs--all_codes.pdf
+
+=== Model: bobcat--bfs--bb ===
+  Architecture Algorithm Implementation
+1       Bobcat    BFS/TD   Branch-based
+
+Mispredictions       Branches 
+      4.545923       8.640889 
+
+=== Model: bobcat--bfs--bl ===
+  Architecture Algorithm  Implementation
+1       Bobcat    BFS/TD Branch-avoiding
+
+Branches 
+15.58054 
+
+=== Model: bobcat--sv--bb ===
+  Architecture Algorithm Implementation
+1       Bobcat        SV   Branch-based
+
+Mispredictions       Branches 
+     23.172435       2.406153 
+
+=== Model: bobcat--sv--bl ===
+  Architecture Algorithm  Implementation
+1       Bobcat        SV Branch-avoiding
+
+Mispredictions       Branches 
+     15.758571       4.495915 
+
+--> Writing 'figs2/explore-cpi-lasso--bobcat--all_algs--all_codes.pdf' ... done!
+
+
+Output files [saving...]:
+  CPI: figs2/explore-cpi-lasso--bonnell--all_algs--all_codes.pdf
+
+=== Model: bonnell--bfs--bb ===
+  Architecture Algorithm Implementation
+1      Bonnell    BFS/TD   Branch-based
+
+Branches 
+16.98522 
+
+=== Model: bonnell--bfs--bl ===
+  Architecture Algorithm  Implementation
+1      Bonnell    BFS/TD Branch-avoiding
+
+Branches 
+28.89235 
+
+=== Model: bonnell--sv--bb ===
+  Architecture Algorithm Implementation
+1      Bonnell        SV   Branch-based
+
+Mispredictions       Branches 
+     28.856820       4.246413 
+
+=== Model: bonnell--sv--bl ===
+  Architecture Algorithm  Implementation
+1      Bonnell        SV Branch-avoiding
+
+Mispredictions       Branches 
+     23.572040       9.145506 
+
+--> Writing 'figs2/explore-cpi-lasso--bonnell--all_algs--all_codes.pdf' ... done!
+
+
+Output files [saving...]:
+  CPI: figs2/explore-cpi-lasso--pld--all_algs--all_codes.pdf
+
+=== Model: pld--bfs--bb ===
+  Architecture Algorithm Implementation
+1   Piledriver    BFS/TD   Branch-based
+
+ Loads.Dispatched Stores.Dispatched          Branches 
+         1.218153         10.562104          4.720900 
+
+=== Model: pld--bfs--bl ===
+  Architecture Algorithm  Implementation
+1   Piledriver    BFS/TD Branch-avoiding
+
+      Branches Mispredictions 
+    18.4546150      0.1087812 
+
+=== Model: pld--sv--bb ===
+  Architecture Algorithm Implementation
+1   Piledriver        SV   Branch-based
+
+ Loads.Dispatched Stores.Dispatched    Mispredictions 
+         3.180171          3.766874          3.894601 
+
+=== Model: pld--sv--bl ===
+  Architecture Algorithm  Implementation
+1   Piledriver        SV Branch-avoiding
+
+Loads.Dispatched   Mispredictions 
+        2.460836         4.937044 
+
+--> Writing 'figs2/explore-cpi-lasso--pld--all_algs--all_codes.pdf' ... done!
+
+
+Output files [saving...]:
+  CPI: figs2/explore-cpi-lasso--slv--all_algs--all_codes.pdf
+
+=== Model: slv--bfs--bb ===
+  Architecture Algorithm Implementation
+1   Silvermont    BFS/TD   Branch-based
+
+     Stall.MEC    Stall.AnyRS Stores.Retired Mispredictions 
+     1.4810518      0.8147963      6.1273874     59.6018183 
+
+=== Model: slv--bfs--bl ===
+  Architecture Algorithm  Implementation
+1   Silvermont    BFS/TD Branch-avoiding
+
+     Stall.MEC    Stall.AnyRS Stores.Retired       Branches Mispredictions 
+     0.4456006      1.0087716      0.4799811      3.2777039     66.3162204 
+
+=== Model: slv--sv--bb ===
+  Architecture Algorithm Implementation
+1   Silvermont        SV   Branch-based
+
+     Stall.ROB  Loads.Retired Stores.Retired       Branches Mispredictions 
+     1.7640045      0.8325178      8.6295694      0.8314070     19.8065041 
+
+=== Model: slv--sv--bl ===
+  Architecture Algorithm  Implementation
+1   Silvermont        SV Branch-avoiding
+
+     Stall.ROB      Stall.MEC   Loads.RehabQ Stores.Retired Mispredictions 
+     1.6468672      6.9319868      0.2377036     17.9390158     17.5765131 
+
+--> Writing 'figs2/explore-cpi-lasso--slv--all_algs--all_codes.pdf' ... done!
+
+#======================================================================
 commit 51ee226a3eb2656a8fc4b156d2bac0ea7cbfddbd
 
 This first analysis considers just (HSW, SV, Branchy), and focuses on
