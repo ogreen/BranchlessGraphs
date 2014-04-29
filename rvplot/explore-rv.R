@@ -14,35 +14,57 @@ ARCH <- "Haswell"
 #FIT.PER.GRAPH <- TRUE
 source ("explore-cpi.R")
 
-# try glmnet
-library (glmnet)
-
+# Experiments: Other fittings
 Df.fit <- subset (Df.per.inst, Algorithm == "SV" & Implementation == "Branch-based")
-y <- Df.fit[[response.var]]
 Possible.predictors <- setdiff (Vars$Predictors, "Instructions")
-X <- as.matrix (Df.fit[, Possible.predictors])
-fit <- cv.glmnet (X, y, lower.limits=0, intercept=FALSE)
-#fit <- cv.glmnet (X, y, lower.limits=0, intercept=FALSE, alpha=0.2) # intercept=FALSE doesn't give good results?
-
-lambda <- fit$lambda.min
-Coefs.all <- coef (fit, s=lambda)
-Coefs.all.names <- rownames (Coefs.all)
-K.nz <- summary (Coefs.all)$i # Non-zero coefficients
-Coefs.nz.names <- setdiff (Coefs.all.names[K.nz], "(Intercept)") # Excludes "(Intercept)"
-Alpha <- as.vector (Coefs.all)
-
 Cols.predict <- c (Vars$Index, response.var, Possible.predictors)
 Df.predict <- subset (Df.tot.per.inst[, Cols.predict], Algorithm == "SV" & Implementation == "Branch-based")
-X.predict <- as.matrix (Df.predict[, Possible.predictors])
-stopifnot (all (colnames (X) == colnames (X.predict)))
 
-Y.predict <- X.predict %*% diag (Alpha[2:length (Alpha)])
-Y.predict[, 1] <- Y.predict[, 1] + Coefs.all["(Intercept)", 1]
-y.predict <- predict (fit, newx=X.predict, s="lambda.min")
-colnames (y.predict) <- response.var
-Df.predict[, Possible.predictors] <- Y.predict
-Df.predict[, response.true] <- Df.predict[, response.var]
-Df.predict[, response.var] <- y.predict
+if (TRUE) {
+  # try penalized
+  library (penalized)
+  fit <- penalized (Df.fit[[response.var]], Df.fit[, Possible.predictors], unpenalized=~0, data=Df.fit, positive=TRUE)
+  
+  Coefs.nz <- coefficients (fit) # possibly sparse
+  Alpha <- rep (0, length (Possible.predictors)) # expand to dense
+  names (Alpha) <- Possible.predictors
+  Alpha[names (Coefs.nz)] <- Coefs.nz
+
+  X.predict <- as.matrix (Df.predict[, Possible.predictors])
+  Y.predict <- X.predict %*% diag (Alpha)
+  colnames (Y.predict) <- Possible.predictors
+
+  y.predict <- predict (fit, Df.predict[, Possible.predictors])[, "mu"]
+  Df.predict[, Possible.predictors] <- Y.predict
+  Df.predict[, response.true] <- Df.predict[, response.var]
+  Df.predict[, response.var] <- y.predict
+} else {
+  # try glmnet
+  library (glmnet)
+
+  y <- Df.fit[[response.var]]
+  X <- as.matrix (Df.fit[, Possible.predictors])
+  fit <- cv.glmnet (X, y, lower.limits=0, intercept=FALSE)
+  #fit <- cv.glmnet (X, y, lower.limits=0, intercept=FALSE, alpha=0.2) # intercept=FALSE doesn't give good results?
+
+  lambda <- fit$lambda.min
+  Coefs.all <- coef (fit, s=lambda)
+  Coefs.all.names <- rownames (Coefs.all)
+  K.nz <- summary (Coefs.all)$i # Non-zero coefficients
+  Coefs.nz.names <- setdiff (Coefs.all.names[K.nz], "(Intercept)") # Excludes "(Intercept)"
+  Alpha <- as.vector (Coefs.all)
+
+  X.predict <- as.matrix (Df.predict[, Possible.predictors])
+  stopifnot (all (colnames (X) == colnames (X.predict)))
+
+  Y.predict <- X.predict %*% diag (Alpha[2:length (Alpha)])
+  Y.predict[, 1] <- Y.predict[, 1] + Coefs.all["(Intercept)", 1]
+  y.predict <- predict (fit, newx=X.predict, s="lambda.min")
+  colnames (y.predict) <- response.var
+  Df.predict[, Possible.predictors] <- Y.predict
+  Df.predict[, response.true] <- Df.predict[, response.var]
+  Df.predict[, response.var] <- y.predict
+}
 
 Fixed.cols <- c (Vars$Index, response.var, response.true)
 Df.predict.FV <- split.df.by.colnames (Df.predict, Fixed.cols)
@@ -66,22 +88,22 @@ if (FACET.COL == "Implementation") {
   Df.predict$Group <- Df.predict$Graph
 }  
 
-Q.cpi.glmnet <- qplot (X, Value, data=Df.predict.flat, geom="bar", stat="identity", fill=Key)
-Q.cpi.glmnet <- Q.cpi.glmnet + geom_point (aes (x=X, y=Cycles.true), data=Df.predict
+Q.cpi.altfit <- qplot (X, Value, data=Df.predict.flat, geom="bar", stat="identity", fill=Key)
+Q.cpi.altfit <- Q.cpi.altfit + geom_point (aes (x=X, y=Cycles.true), data=Df.predict
                              , colour="grey", fill=NA, shape=18, size=4)
-Q.cpi.glmnet <- Q.cpi.glmnet + facet_grid (Algorithm ~ Group, scales="free_y")
+Q.cpi.altfit <- Q.cpi.altfit + facet_grid (Algorithm ~ Group, scales="free_y")
 
-Q.cpi.glmnet <- Q.cpi.glmnet + theme(axis.text.x=element_text(angle=35, hjust = 1))
+Q.cpi.altfit <- Q.cpi.altfit + theme(axis.text.x=element_text(angle=35, hjust = 1))
 
-Q.cpi.glmnet <- set.hpcgarage.fill (Q.cpi.glmnet, name="Predicted values: ")
-Q.cpi.glmnet <- Q.cpi.glmnet + theme (legend.position="bottom")
-Q.cpi.glmnet <- Q.cpi.glmnet + xlab ("") + ylab ("") # Erase default labels
+Q.cpi.altfit <- set.hpcgarage.fill (Q.cpi.altfit, name="Predicted values: ")
+Q.cpi.altfit <- Q.cpi.altfit + theme (legend.position="bottom")
+Q.cpi.altfit <- Q.cpi.altfit + xlab ("") + ylab ("") # Erase default labels
 
 title.str <- sprintf ("Predicted %s per instruction [%s]", response.var, ARCH)
-Q.cpi.glmnet <- add.title.optsub (Q.cpi.glmnet, ggtitle, main=title.str)
-#Q.cpi.glmnet <- Q.cpi.glmnet + gen.axis.scale.auto (Y.values, "y")
+Q.cpi.altfit <- add.title.optsub (Q.cpi.altfit, ggtitle, main=title.str)
+#Q.cpi.altfit <- Q.cpi.altfit + gen.axis.scale.auto (Y.values, "y")
 
-Q.cpi.glmnet.display <- set.all.font.sizes (Q.cpi.glmnet, base=10)
+Q.cpi.altfit.display <- set.all.font.sizes (Q.cpi.altfit, base=10)
 
 stopifnot (FALSE)
 
