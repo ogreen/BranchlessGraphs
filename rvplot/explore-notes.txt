@@ -1,16 +1,9 @@
 #======================================================================
-commit 37847b0459f2a652f3034fc2ee29fa99cae3aad2
+commit 1032d96c28ad9312f2797c3deea5f8d6b5a464c6
 Author: rich vuduc <richie@cc.gatech.edu>
-Date:   Tue Apr 29 15:18:13 2014 -0400
+Date:   Tue Apr 29 15:20:55 2014 -0400
 
-    Finished lasso-based CPI fitting scripts
-
-Based on the above commit, made the following fits:
-
-rm (list=ls ()) ; source ("batch-explore-cpi-lasso.R")
-
-Output files [saving...]:
-  CPI: figs2/explore-cpi-lasso--arn--all_algs--all_codes.pdf
+    Added some more CPI fitting data, based on lasso
 
 === Model: arn--bfs--bb ===
   Architecture Algorithm Implementation
@@ -41,10 +34,6 @@ Mispredictions       Branches
      13.287701       3.410469 
 
 --> Writing 'figs2/explore-cpi-lasso--arn--all_algs--all_codes.pdf' ... done!
-
-
-Output files [saving...]:
-  CPI: figs2/explore-cpi-lasso--hsw--all_algs--all_codes.pdf
 
 
 === Model: hsw--bfs--bb ===
@@ -78,9 +67,6 @@ Stores.Retired       Stall.RS       Branches Mispredictions
 --> Writing 'figs2/explore-cpi-lasso--hsw--all_algs--all_codes.pdf' ... done!
 
 
-Output files [saving...]:
-  CPI: figs2/explore-cpi-lasso--ivb--all_algs--all_codes.pdf
-
 === Model: ivb--bfs--bb ===
   Architecture Algorithm Implementation
 1   Ivy Bridge    BFS/TD   Branch-based
@@ -112,9 +98,6 @@ Stores.Retired       Branches Mispredictions
 --> Writing 'figs2/explore-cpi-lasso--ivb--all_algs--all_codes.pdf' ... done!
 
 
-Output files [saving...]:
-  CPI: figs2/explore-cpi-lasso--bobcat--all_algs--all_codes.pdf
-
 === Model: bobcat--bfs--bb ===
   Architecture Algorithm Implementation
 1       Bobcat    BFS/TD   Branch-based
@@ -144,10 +127,6 @@ Mispredictions       Branches
      15.758571       4.495915 
 
 --> Writing 'figs2/explore-cpi-lasso--bobcat--all_algs--all_codes.pdf' ... done!
-
-
-Output files [saving...]:
-  CPI: figs2/explore-cpi-lasso--bonnell--all_algs--all_codes.pdf
 
 === Model: bonnell--bfs--bb ===
   Architecture Algorithm Implementation
@@ -179,10 +158,6 @@ Mispredictions       Branches
 
 --> Writing 'figs2/explore-cpi-lasso--bonnell--all_algs--all_codes.pdf' ... done!
 
-
-Output files [saving...]:
-  CPI: figs2/explore-cpi-lasso--pld--all_algs--all_codes.pdf
-
 === Model: pld--bfs--bb ===
   Architecture Algorithm Implementation
 1   Piledriver    BFS/TD   Branch-based
@@ -212,10 +187,6 @@ Loads.Dispatched   Mispredictions
         2.460836         4.937044 
 
 --> Writing 'figs2/explore-cpi-lasso--pld--all_algs--all_codes.pdf' ... done!
-
-
-Output files [saving...]:
-  CPI: figs2/explore-cpi-lasso--slv--all_algs--all_codes.pdf
 
 === Model: slv--bfs--bb ===
   Architecture Algorithm Implementation
