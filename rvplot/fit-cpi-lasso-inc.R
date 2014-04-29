@@ -72,19 +72,21 @@ coefs.lm.lasso  <- function (Fit) {
 predict.lm.lasso <- function (Fit, Df.predict
                               , response.true=NULL
                               , return.frame=TRUE
-                              , all.components=FALSE) {
+                              , all.components=TRUE) {
   stopifnot (is.lm.lasso (Fit))
 
-  Predictors.all <- Fit$Predictors.all
+  fit <- Fit$fit
+  Possible.predictors <- Fit$Possible.predictors
   response.var <- Fit$response.var
-  
-  y.predict <- as.matrix (predict (fit, Df.predict[, Predictors.all])[, "mu"])
+
+  y.predict <- as.matrix (predict (fit, Df.predict[, Possible.predictors])[, "mu"])
   colnames (y.predict) <- response.var
   if (!all.components) { return (y.predict) }
 
-  X.predict <- as.matrix (Df.predict[, Predictors.all])
+  Alpha <- coefs.lm.lasso (Fit)
+  X.predict <- as.matrix (Df.predict[, Possible.predictors])
   Y.predict <- X.predict %*% diag (Alpha)
-  colnames (Y.predict) <- Predictors.all
+  colnames (Y.predict) <- Possible.predictors
 
   if (!return.frame) {
     return (cbind (y.predict, Y.predict))
@@ -93,7 +95,7 @@ predict.lm.lasso <- function (Fit, Df.predict
   if (is.null (response.true)) {
     response.true <- sprintf ("%s.true", response.var)
   }
-  Df.predict[, Predictors.all] <- Y.predict
+  Df.predict[, Possible.predictors] <- Y.predict
   Df.predict[, response.true] <- Df.predict[, response.var]
   Df.predict[, response.var] <- y.predict
   return (Df.predict)

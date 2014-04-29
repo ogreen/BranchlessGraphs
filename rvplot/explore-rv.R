@@ -21,23 +21,16 @@ Cols.predict <- c (Vars$Index, response.var, Possible.predictors)
 Df.predict <- subset (Df.tot.per.inst[, Cols.predict], Algorithm == "SV" & Implementation == "Branch-based")
 
 if (TRUE) {
-  # try penalized
-  library (penalized)
-  fit <- penalized (Df.fit[[response.var]], Df.fit[, Possible.predictors], unpenalized=~0, data=Df.fit, positive=TRUE)
-  
-  Coefs.nz <- coefficients (fit) # possibly sparse
-  Alpha <- rep (0, length (Possible.predictors)) # expand to dense
-  names (Alpha) <- Possible.predictors
-  Alpha[names (Coefs.nz)] <- Coefs.nz
+  source ("fit-cpi-lasso-inc.R")
 
-  X.predict <- as.matrix (Df.predict[, Possible.predictors])
-  Y.predict <- X.predict %*% diag (Alpha)
-  colnames (Y.predict) <- Possible.predictors
+  Fit <- fit.lm.lasso (response.var, Possible.predictors, Df.fit, const.term=CONST.TERM, nonneg=NONNEG)
+  Df.predict <- predict.lm.lasso (Fit, Df.predict)
 
-  y.predict <- predict (fit, Df.predict[, Possible.predictors])[, "mu"]
-  Df.predict[, Possible.predictors] <- Y.predict
-  Df.predict[, response.true] <- Df.predict[, response.var]
-  Df.predict[, response.var] <- y.predict
+  cat ("=== Lasso-fitted coefficients ===\n")
+  Coefs.nz <- coefs.nz.lm.lasso (Fit)
+  Coefs.zero <- setdiff (Possible.predictors, names (coefs.nz.lm.lasso (Fit)))
+  print (Coefs.nz)
+  cat (sprintf ("(%s are all zero)\n\n", paste (Coefs.zero, collapse=", ")))
 } else {
   # try glmnet
   library (glmnet)
