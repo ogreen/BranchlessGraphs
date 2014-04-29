@@ -1,9 +1,10 @@
 #======================================================================
-commit 1032d96c28ad9312f2797c3deea5f8d6b5a464c6
+commit 2cc5c9e8ab0e189af7c65432bc2ba96d7da74d83
 Author: rich vuduc <richie@cc.gatech.edu>
-Date:   Tue Apr 29 15:20:55 2014 -0400
+Date:   Tue Apr 29 15:42:57 2014 -0400
 
-    Added some more CPI fitting data, based on lasso
+    Updated CPI results
+
 
 === Model: arn--bfs--bb ===
   Architecture Algorithm Implementation
