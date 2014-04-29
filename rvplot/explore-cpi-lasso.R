@@ -43,7 +43,7 @@ stopifnot (FACET.COL %in% c ("Graph", "Implementation"))
 # Determine output(s)
 
 outfile.suffix <- get.file.suffix (ARCH, ALGS, CODES)
-outfilename.cpi <- sprintf ("figs2/explore-cpi%s%s--%s.pdf"
+outfilename.cpi <- sprintf ("figs2/explore-cpi-lasso%s%s--%s.pdf"
                             , if (FIT.PER.GRAPH) "-per_graph" else ""
                             , if (CONST.TERM) "-const" else ""
                             , outfile.suffix)
@@ -57,30 +57,38 @@ cat (sprintf ("  CPI: %s\n", outfilename.cpi))
 Df <- subset (get.perfdf (All.data, ARCH, ALGS, CODES), Graph %in% GRAPHS)
 Vars <- get.perfdf.var.info (Df, All.data)
 
-cat ("Computing per-iteration data normalized by instructions ...\n")
-Inst.norm <- get.perfdf.norm (Df, Vars, by="Instructions")
+cat ("Computing per-iteration data normalized by branch-based instructions ...\n")
+Inst.norm <- get.perfdf.norm (Df, Vars, by="Instructions", use.branch.based=TRUE)
 Df.per.inst <- normalize.perfdf (Df, Vars, Inst.norm)
 
 cat ("Aggregating totals ...\n")
 Df.tot <- total.perfdf (Df, Vars)
 
 cat ("Normalizing totals by instructions ...\n")
-Inst.tot.norm <- get.perfdf.norm (Df.tot, Vars, by="Instructions")
+Inst.tot.norm <- get.perfdf.norm (Df.tot, Vars, by="Instructions", use.branch.based=TRUE)
 Df.tot.per.inst <- normalize.perfdf (Df.tot, Vars, Inst.tot.norm)
+
+cat ("Computing speedups over the branch-based case ...\n")
+Index.bb <- setdiff (Vars$Index, "Implementation")
+Df.tot.bb <- subset (Df.tot, Implementation == "Branch-based")[, c (Index.bb, "Time")]
+Df.speedup <- merge (Df.tot, Df.tot.bb, by=Index.bb, suffixes=c ("", ".bb"))
+Df.speedup$Speedup <- with (Df.speedup, Time.bb / Time)
 
 #======================================================================
 # Build models of the data
 
 cat (sprintf ("Building models ...\n"))
 
-source ("fit-cpi-inc.R")
+source ("fit-cpi-lasso-inc.R")
 
-f.fit <- if (FIT.PER.GRAPH) fit.one.per.graph else fit.over.all.graphs
+f.fit <- if (FIT.PER.GRAPH) fit.cpi.one.per.graph else fit.cpi.over.all.graphs
 Fits <- f.fit (Vars, Df.fit=Df.per.inst, Df.predict=Df.tot.per.inst
                , const.term=CONST.TERM, nonneg=NONNEG)
 Predictions <- Fits$Predictions
 response.var <- Fits$response.var
 response.true <- Fits$response.true
+
+summary (Fits)
 
 #======================================================================
 # Plot
@@ -105,10 +113,14 @@ if (FACET.COL == "Implementation") {
   Predictions$X <- Predictions$Implementation
   Predictions.flat$Group <- Predictions.flat$Graph
   Predictions$Group <- Predictions$Graph
-}  
+}
+
+# Filter to only the maximal set of non-zero predictors across all models
+Keys.gcp <- get.gcp.cpi.lm.lasso (Fits)
+Predictions.flat <- subset (Predictions.flat, Key %in% Keys.gcp)
 
 Q.cpi <- qplot (X, Value, data=Predictions.flat, geom="bar", stat="identity", fill=Key)
-Q.cpi <- Q.cpi + geom_point (aes (x=X, y=Cycles.true), data=Predictions
+Q.cpi <- Q.cpi + geom_point (aes (x=X, y=Y.true), data=Predictions
                              , colour="black", fill=NA, shape=18, size=4)
 Q.cpi <- Q.cpi + facet_grid (Algorithm ~ Group, scales="free_y")
 
@@ -118,8 +130,26 @@ Q.cpi <- set.hpcgarage.fill (Q.cpi, name="Predicted values: ")
 Q.cpi <- Q.cpi + theme (legend.position="bottom")
 Q.cpi <- Q.cpi + xlab ("") + ylab ("") # Erase default labels
 
+# Add speedup labels
+Df.speedup.non.bb <- subset (Df.speedup, Implementation != "Branch-based")
+Df.speedup.non.bb <- Df.speedup.non.bb[, c (Vars$Select.fit, "Speedup")]
+
+Labels.non.bb <- subset (Predictions, Implementation != "Branch-based")
+Labels.non.bb <- merge (Labels.non.bb, Df.speedup.non.bb
+                        , by=Vars$Select.fit, suffixes=c ("", ".speedup"))
+Labels.non.bb <- transform (Labels.non.bb
+                            , Label=sprintf ("%sx", genSigFigLabels (Speedup, 2)))
+Labels.non.bb$Y.true <- Labels.non.bb[[response.true]]
+
+Q.cpi <- Q.cpi + geom_text (aes (x=X, y=Y.true, label=Label, fill=NA)
+                            , colour=PAL.HPCGARAGE[["grey"]]
+                            , vjust=-1, size=4
+                            , data=Labels.non.bb)
+
+# Add titles
 title.str <- sprintf ("Predicted %s per instruction [%s]", response.var, ARCH)
-Q.cpi <- add.title.optsub (Q.cpi, ggtitle, main=title.str)
+subtitle.str <- "[normalized by the number of *branch-based* instructions]"
+Q.cpi <- add.title.optsub (Q.cpi, ggtitle, main=title.str, sub=subtitle.str)
 #Q.cpi <- Q.cpi + gen.axis.scale.auto (Y.values, "y")
 
 Q.cpi.display <- set.all.font.sizes (Q.cpi, base=10)

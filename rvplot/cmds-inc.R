@@ -235,15 +235,15 @@ add.title.optsub <- function (Q, func, main, sub=NA) {
 # Ocean Five palette:
 #    hex rgb: #664b3b (brown), #3f9fb1 (aqua), #c03040 (red), #df693e (orange), #e7ce3f (yellow), #a69e9e (grey)
 PAL.HPCGARAGE = c (
-  "red"="#c03040" # red
-  , "blue"="#3f9fb1" # aqua
-  , "brown"="#664b3b" # brown
-  , "grey"="#a69e9e" # grey
-  , "orange"="#df693e" # orange
-  , "yellow"="#e7ce3f" # yellow
-  , "black"="#000000" # black
-  , "offwhite"="#b0b0a0" # light grey / off-white
-  , "white"="white"
+  "red"="#c03040"
+  , "blue"="#3f9fb1"
+  , "brown"="#664b3b"
+  , "grey"="#a69e9e"
+  , "orange"="#df693e"
+  , "yellow"="#e7ce3f"
+  , "offwhite"="#d0d0d0"
+  , "black"="#000000"
+  , "white"="#ffffff"
   )
 
 set.hpcgarage.colours <- function (Q, ...) {
