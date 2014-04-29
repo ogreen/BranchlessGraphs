@@ -1,3 +1,9 @@
+#======================================================================
+# This module implements a fitting procedure based on lasso
+# regression, as implemented in the 'penalized' package:
+#
+# http://cran.r-project.org/web/packages/penalized/vignettes/penalized.pdf
+
 library (penalized)
 
 is.lm.lasso <- function (obj) {
