@@ -20,7 +20,7 @@ Df.tot <- total.perfdf (Df, Vars)
 # What is the minimum number of iterations for any graph?
 Iterations.per.graph <- ddply (Df.tot, .(Graph), summarise, Min=min (Iteration))
 
-assign.if.undef ("MIN.ITERS", 5)
+assign.if.undef ("MIN.ITERS", 7)
 Keepers <- (Iterations.per.graph$Min >= MIN.ITERS)
 GRAPHS <- Iterations.per.graph$Graph[Keepers]
 
