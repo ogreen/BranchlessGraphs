@@ -93,7 +93,17 @@ summary (Fits)
 #======================================================================
 # Plot
 
-Fixed.cols <- c (Vars$Index, response.var, response.true)
+if (FACET.COL == "Implementation") {
+  Predictions$X <- Predictions$Graph
+  Predictions$Group <- Predictions$Implementation
+} else {
+  stopifnot (FACET.COL == "Graph")
+  Predictions$X <- Predictions$Implementation
+  Predictions$Group <- Predictions$Graph
+}
+Predictions$Y.true <- Predictions[, response.true]
+
+Fixed.cols <- c (Vars$Index, response.var, response.true, "X", "Group")
 Predictions.FV <- split.df.by.colnames (Predictions, Fixed.cols)
 Predictions.flat <- flatten.keyvals.df (Predictions.FV$A, Predictions.FV$B)
 
@@ -101,19 +111,6 @@ Y.predicted <- Predictions[[response.var]]
 Y.true <- Predictions[[response.true]]
 Other.values <- Predictions.flat$Value
 Y.values <- with (Predictions, c (Y.predicted, Y.true, Other.values))
-
-if (FACET.COL == "Implementation") {
-  Predictions.flat$X <- Predictions.flat$Graph
-  Predictions.flat$Group <- Predictions.flat$Implementation
-  Predictions$X <- Predictions$Graph
-  Predictions$Group <- Predictions$Implementation
-} else {
-  stopifnot (FACET.COL == "Graph")
-  Predictions.flat$X <- Predictions.flat$Implementation
-  Predictions$X <- Predictions$Implementation
-  Predictions.flat$Group <- Predictions.flat$Graph
-  Predictions$Group <- Predictions$Graph
-}
 
 # Filter to only the maximal set of non-zero predictors across all models
 Keys.gcp <- get.gcp.cpi.lm.lasso (Fits)
@@ -141,8 +138,9 @@ Labels.non.bb <- transform (Labels.non.bb
                             , Label=sprintf ("%sx", genSigFigLabels (Speedup, 2)))
 Labels.non.bb$Y.true <- Labels.non.bb[[response.true]]
 
+text.colour <- if (length (Keys.gcp) == 8) PAL.HPCGARAGE[["grey"]] else "black"
 Q.cpi <- Q.cpi + geom_text (aes (x=X, y=Y.true, label=Label, fill=NA)
-                            , colour=PAL.HPCGARAGE[["grey"]]
+                            , colour=text.colour
                             , vjust=-1, size=4
                             , data=Labels.non.bb)
 
