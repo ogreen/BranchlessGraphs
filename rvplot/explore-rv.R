@@ -1,8 +1,36 @@
+#======================================================================
 # Rich's "working" script for recording a few ad-hoc analyses
 
-# Analysis: Compare different fitting procedures
 rm (list=ls ())
 source ("rvplot2-inc.R")
+
+#======================================================================
+ARCHS <- as.vector (ARCHS.ALL.MAP)
+assign.if.undef ("All.data", load.perfdata.many ())
+CODES <- unique (get.all.colvals (All.data, "Implementation"))
+ALGS <- unique (get.all.colvals (All.data, "Algorithm"))
+
+# *All* the data
+Df <- get.perfdf (All.data, ARCHS, ALGS, CODES)
+Vars <- get.perfdf.var.info (Df, All.data)
+
+# Totals
+Df.tot <- total.perfdf (Df, Vars)
+
+# What is the minimum number of iterations for any graph?
+Iterations.per.graph <- ddply (Df.tot, .(Graph), summarise, Min=min (Iteration))
+
+assign.if.undef ("MIN.ITERS", 5)
+Keepers <- (Iterations.per.graph$Min >= MIN.ITERS)
+GRAPHS <- Iterations.per.graph$Graph[Keepers]
+
+cat (sprintf ("# These graphs have at least %d iterations for any (algorithm, implementation):\n", MIN.ITERS))
+cat (sprintf ("GRAPHS <- c (\"%s\")\n", paste (GRAPHS, collapse="\", \"")))
+
+stopifnot (FALSE)
+#======================================================================
+
+# Analysis: Compare different fitting procedures
 
 BATCH <- TRUE
 SAVE.PDF <- FALSE
@@ -99,6 +127,7 @@ Q.cpi.altfit <- add.title.optsub (Q.cpi.altfit, ggtitle, main=title.str)
 Q.cpi.altfit.display <- set.all.font.sizes (Q.cpi.altfit, base=10)
 
 stopifnot (FALSE)
+#======================================================================
 
 F.lm <- lm.by.colnames (Data.fit, response.var, Predictors, constant.term=CONST.TERM, nonneg=FALSE)
 YY <- Data.fit
