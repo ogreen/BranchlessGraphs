@@ -216,6 +216,8 @@ int main (const int argc, char *argv[]) {
         { "Stores.Dispatched", PERF_TYPE_RAW, 0x0229 },
         { "Stall.LDQ", PERF_TYPE_RAW, 0x01D8 }, // Dispatch Stall for LDQ Full
     #endif
+        { "Cache references", PERF_TYPE_HARDWARE, PERF_COUNT_HW_CACHE_REFERENCES},
+        { "Cache misses", PERF_TYPE_HARDWARE, PERF_COUNT_HW_CACHE_MISSES},
         { "Branches", PERF_TYPE_HARDWARE, PERF_COUNT_HW_BRANCH_INSTRUCTIONS},
         { "Mispredictions", PERF_TYPE_HARDWARE, PERF_COUNT_HW_BRANCH_MISSES}
     };
