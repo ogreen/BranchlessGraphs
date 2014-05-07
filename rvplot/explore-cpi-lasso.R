@@ -82,14 +82,21 @@ cat (sprintf ("Building models ...\n"))
 
 source ("fit-cpi-lasso-inc.R")
 
-f.fit <- if (FIT.PER.GRAPH) fit.cpi.one.per.graph else fit.cpi.over.all.codes.and.graphs
-Fits <- f.fit (Vars, Df.fit=Df.per.inst, Df.predict=Df.tot.per.inst
+f.fit <- if (FIT.PER.GRAPH) fit.cpi.one.per.graph else fit.cpi.over.all.graphs
+#f.fit <- if (FIT.PER.GRAPH) fit.cpi.one.per.graph else fit.cpi.over.all.codes.and.graphs
+#Fits <- f.fit (Vars, Df.fit=Df.per.inst, Df.predict=Df.tot.per.inst
+Fits <- f.fit (Vars, Df.fit=Df.tot.per.inst, Df.predict=Df.tot.per.inst
                , const.term=CONST.TERM, nonneg=NONNEG)
 Predictions <- Fits$Predictions
 response.var <- Fits$response.var
 response.true <- Fits$response.true
 
 summary (Fits)
+cat ("\n=== Mean relative error ===\n")
+cat ("> ddply (Predictions, .(Architecture, Algorithm, Implementation), summarise, Mean.rel.err=mean (abs (Cycles - Cycles.true) / Cycles.true))\n")
+print (ddply (Predictions, .(Architecture, Algorithm, Implementation), summarise
+              , Mean.rel.err=mean (abs (Cycles - Cycles.true) / Cycles.true)))
+cat ("\n")
 
 #======================================================================
 # Plot
@@ -172,12 +179,16 @@ if (!BATCH) {
   do.cpi.pdf <- SAVE.PDF
 }
 
-if (do.cpi.pdf) {
-  cat (sprintf ("\n--> Writing '%s' ... ", outfilename.cpi))
-  setDevHD.pdf (outfilename.cpi, l=18)
+write.pdf <- function (filename=outfilename.cpi) {
+  cat (sprintf ("\n--> Writing '%s' ... ", filename))
+  setDevHD.pdf (filename, l=18)
   print (Q.cpi.pdf)
   dev.off ()
   cat ("done!\n\n")
+}
+
+if (do.cpi.pdf) {
+  write.pdf ()
 }
 
 #======================================================================

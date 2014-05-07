@@ -254,6 +254,7 @@ get.perfdf.var.info <- function (Df, Data) {
   Responses.vars <- "Time"
   if (has.cycles) { Responses.vars <- c (Responses.vars, "Cycles") }
 
+#  Non.predictors <- c (Index.vars, Data.alg.vars, Responses.vars)
   Non.predictors <- c (Index.vars, setdiff (Data.alg.vars, "Edges"), Responses.vars)
   Predictors.vars <- setdiff (Df.vars, Non.predictors)
 
