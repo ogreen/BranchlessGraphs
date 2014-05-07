@@ -1,7 +1,7 @@
-Algorithm	Implementation	Iteration	Time	Cycles	Instructions	Loads.Retired	Stores.Retired	Stall.RS	Stall.SB	Stall.ROB	Branches	Mispredictions	Vertices	Edges
-BFS/TD	Branch-based	0	419	269	71	21	10	0	0	0	15	1	1	2
-BFS/TD	Branch-based	1	211	275	99	30	8	0	0	0	23	3	2	5
-BFS/TD	Branch-based	2	74	146	58	19	6	0	0	0	13	3	1	1
-BFS/TD	Branch-avoiding	0	190	204	77	22	11	0	0	0	13	1	1	2
-BFS/TD	Branch-avoiding	1	169	240	123	31	17	0	0	0	18	2	2	5
-BFS/TD	Branch-avoiding	2	106	147	65	20	9	0	0	0	12	3	1	1
+Algorithm	Implementation	Iteration	Time	Cycles	Instructions	Stall.RS	Stall.SB	Stall.ROB	Cache references	Cache misses	Branches	Mispredictions	Vertices	Edges
+BFS/TD	Branch-based	0	409	464	71	0	0	0	1	0	15	2	1	2
+BFS/TD	Branch-based	1	191	509	99	0	0	0	0	0	23	2	2	5
+BFS/TD	Branch-based	2	81	342	58	0	0	0	0	0	13	2	1	1
+BFS/TD	Branch-avoiding	0	172	378	77	2	0	0	0	0	13	2	1	2
+BFS/TD	Branch-avoiding	1	153	403	123	1	0	0	0	0	18	1	2	5
+BFS/TD	Branch-avoiding	2	95	353	65	0	0	0	0	0	12	2	1	1
