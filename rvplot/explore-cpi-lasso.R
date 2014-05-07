@@ -82,7 +82,7 @@ cat (sprintf ("Building models ...\n"))
 
 source ("fit-cpi-lasso-inc.R")
 
-f.fit <- if (FIT.PER.GRAPH) fit.cpi.one.per.graph else fit.cpi.over.all.graphs
+f.fit <- if (FIT.PER.GRAPH) fit.cpi.one.per.graph else fit.cpi.over.all.codes.and.graphs
 Fits <- f.fit (Vars, Df.fit=Df.per.inst, Df.predict=Df.tot.per.inst
                , const.term=CONST.TERM, nonneg=NONNEG)
 Predictions <- Fits$Predictions
@@ -154,17 +154,19 @@ Q.cpi <- add.title.optsub (Q.cpi, ggtitle, main=title.str, sub=subtitle.str)
 Q.cpi.display <- set.all.font.sizes (Q.cpi, base=10)
 Q.cpi.pdf <- set.all.font.sizes (Q.cpi, base=12)
 
+if (is.null (DISPLAY) | !BATCH) {
+  do.cpi <- prompt.yes.no ("\nDisplay CPI? ")
+} else {
+  do.cpi <- DISPLAY
+}
+
+if (do.cpi) {
+  setDevHD ()
+  print (Q.cpi)
+  if (!BATCH) { pause.for.enter () }
+}
+
 if (!BATCH) {
-  if (!is.null (DISPLAY)) {
-    do.cpi <- prompt.yes.no ("\nDisplay CPI? ")
-  } else {
-    do.cpi <- DISPLAY
-  }
-  if (do.cpi) {
-    setDevHD ()
-    print (Q.cpi)
-    pause.for.enter ()
-  }
   do.cpi.pdf <- prompt.yes.no (sprintf ("\nSave plot to '%s'? ", outfilename.cpi))
 } else {
   do.cpi.pdf <- SAVE.PDF

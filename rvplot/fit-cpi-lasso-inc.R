@@ -3,6 +3,55 @@
 source ("rvplot2-inc.R")
 source ("lmlasso-inc.R")
 
+fit.cpi.over.all.codes.and.graphs <-
+  function (Vars, Df.fit, Df.predict, const.term=FALSE, nonneg=TRUE)
+{
+  response.var <- if (Vars$has.cycles) "Cycles" else "Time"
+  Predictors <- setdiff (Vars$Predictors, "Instructions")
+  
+  response.true <- sprintf ("%s.true", response.var)
+  Data.predicted <- NULL
+  Predictions <- NULL
+
+  Fits <- list ()
+  Models <- list ()
+  Predictors.all <- list ()
+  for (arch in unique (Df.fit[["Architecture"]])) {
+    for (alg in unique (Df.fit[["Algorithm"]])) {
+      cat (sprintf ("==> %s on %s ...\n", alg, arch))
+    
+      # Choose subset of data to fit
+      Include.fit <- with (Df.fit, Architecture == arch &
+                                     Algorithm == alg)
+      Data.fit <- subset (Df.fit, Include.fit)
+
+      # Fit!
+      Fit <- fit.lm.lasso (response.var, Predictors, Data.fit
+                           , const.term=const.term, nonneg=nonneg)
+
+      # Use fitted model to predict totals
+      Include.fit <- with (Df.predict, Architecture == arch &
+                           Algorithm == alg)
+      Cols.predict <- c (Vars$Index, Predictors, response.var)
+      Data.predict <- subset (Df.predict, Include.fit)[, Cols.predict]
+      Prediction <- predict.lm.lasso (Fit, Data.predict)
+
+      # Aggregate
+      mod.key <- get.file.suffix (arch, alg)
+      Models[[mod.key]] <- Fit
+      Predictions <- rbind.fill (Predictions, Prediction)
+    } # for each alg
+  } # for each arch
+
+  Fits$response.var <- response.var
+  Fits$response.true <- response.true
+  Fits$Predictions <- Predictions
+  Fits$Models <- Models
+  class (Fits) <- c ("cpi.lm.lasso", class (Fits))
+  return (Fits)
+}
+
+#======================================================================
 fit.cpi.over.all.graphs <- function (Vars, Df.fit, Df.predict
                                , const.term=FALSE, nonneg=TRUE)
 {

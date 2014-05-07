@@ -164,7 +164,7 @@ get.perfdf <- function (Data, archs, algs, codes, missing.val=0, verbose=TRUE) {
 # ARCHS: Long names, e.g., "Haswell", "Ivy Bridge", ...
 # ALGS: Long names, e.g., "SV", "BFS/TD"
 # CODES: Long names, e.g., "Branch-based", "Branch-avoiding"
-get.file.suffix <- function (ARCHS, ALGS, CODES) {
+get.file.suffix <- function (ARCHS, ALGS, CODES=NULL) {
   ARCHS.ABBREV <- sort (ARCHS.ABBREV.MAP[ARCHS])
   if (length (setdiff (ARCHS.ALL, ARCHS.ABBREV)) == 0) {
     archs.tag <- "all_archs"
@@ -180,7 +180,7 @@ get.file.suffix <- function (ARCHS, ALGS, CODES) {
   }
 
   CODES.ABBREV <- sort (CODES.ABBREV.MAP[CODES])
-  if (length (setdiff (CODES.ALL, CODES.ABBREV)) == 0) {
+  if (is.null (CODES) | length (setdiff (CODES.ALL, CODES.ABBREV)) == 0) {
     codes.tag <- "all_codes"
   } else {
     codes.tag <- paste (CODES.ABBREV, collapse="_")
@@ -254,7 +254,7 @@ get.perfdf.var.info <- function (Df, Data) {
   Responses.vars <- "Time"
   if (has.cycles) { Responses.vars <- c (Responses.vars, "Cycles") }
 
-  Non.predictors <- c (Index.vars, Data.alg.vars, Responses.vars)
+  Non.predictors <- c (Index.vars, setdiff (Data.alg.vars, "Edges"), Responses.vars)
   Predictors.vars <- setdiff (Df.vars, Non.predictors)
 
   Vars <- list ("All"=Df.vars
