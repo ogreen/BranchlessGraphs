@@ -15,6 +15,7 @@ All.codes <- unique (get.all.colvals (All.data, "Implementation"))
 cat ("\n")
 
 assign.if.undef ("BATCH", FALSE)
+assign.if.undef ("DISPLAY", TRUE) # NULL to prompt, FALSE to disable
 assign.if.undef ("SAVE.PDF", FALSE)
 
 if (!BATCH) {
@@ -154,7 +155,11 @@ Q.cpi.display <- set.all.font.sizes (Q.cpi, base=10)
 Q.cpi.pdf <- set.all.font.sizes (Q.cpi, base=12)
 
 if (!BATCH) {
-  do.cpi <- prompt.yes.no ("\nDisplay CPI? ")
+  if (!is.null (DISPLAY)) {
+    do.cpi <- prompt.yes.no ("\nDisplay CPI? ")
+  } else {
+    do.cpi <- DISPLAY
+  }
   if (do.cpi) {
     setDevHD ()
     print (Q.cpi)
