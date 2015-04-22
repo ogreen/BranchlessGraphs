@@ -121,7 +121,7 @@ if (NORMALIZE) {
 }
 
 Q.iters <- ggplot (Df.plot, aes (x=X, y=Y))
-Q.iters <- Q.iters + geom_point (aes (colour=Implementation, shape=Implementation), size=3.5)
+Q.iters <- Q.iters + geom_point (aes (colour=Implementation, shape=Implementation), size=2)
 Q.iters <- Q.iters + geom_line (aes (colour=Implementation))
 Q.iters <- Q.iters + x.scale
 Q.iters <- Q.iters + y.scale
