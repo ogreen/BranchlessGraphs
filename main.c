@@ -22,6 +22,12 @@ struct PerformanceCounter {
     bool supported;
 };
 
+typedef enum{
+  SV_ALG_BRANCH_BASED=0,
+  SV_ALG_BRANCH_AVOIDING,
+  SV_NUMBER_OF_ALGS
+  } eSV_Alg;
+
 void CheckPerformanceCounters(struct PerformanceCounter performanceCounters[], size_t performanceCountersCount);
 
 void Benchmark_BFS_TopDown(const char* algorithm_name, const char* implementation_name,
@@ -30,7 +36,12 @@ void Benchmark_BFS_TopDown(const char* algorithm_name, const char* implementatio
 void Benchmark_BFS_BottomUp(const char* algorithm_name, const char* implementation_name, BFS_BottomUp_Function bfs_function, uint32_t numVertices, uint32_t* off, uint32_t* ind);
 void Benchmark_ConnectedComponents_SV(const char* algorithm_name, const char* implementation_name,
     const struct PerformanceCounter performanceCounters[], size_t performanceCountersCount,
-    ConnectedComponents_SV_Function sv_function, size_t numVertices, size_t numEdges, uint32_t* off, uint32_t* ind);
+    ConnectedComponents_SV_Function* sv_function, eSV_Alg* algPerIteration, size_t numVertices, size_t numEdges, uint32_t* off, uint32_t* ind);
+
+  
+void ConnectedComponentsSVHybridIterationSelector(const char* algorithm_name, const char* implementation_name, 
+	const struct PerformanceCounter performanceCounters[], size_t performanceCounterCount, 
+	ConnectedComponents_SV_Function* sv_function, eSV_Alg* algPerIteration,size_t numVertices, size_t numEdges, uint32_t* off, uint32_t* ind);
 
 #define LINE_SIZE 10000
 
@@ -274,26 +285,52 @@ int main (const int argc, char *argv[]) {
 	#endif
 
 #if defined(BENCHMARK_SV)
-    const char* precolumns[] = {
-        "Algorithm",
-        "Implementation",
-        "Itetarion",
-        NULL
-    };
-    const char* postcolumns[] = {
-        "Vertices",
-        "Edges",
-        NULL
-    };
-    PrintHeader(precolumns, perfCounters, COUNTOF(perfCounters), postcolumns);
-	Benchmark_ConnectedComponents_SV("SV", "Branch-based", perfCounters, COUNTOF(perfCounters), ConnectedComponents_SV_Branchy_PeachPy, nv, ne, off, ind);
-	Benchmark_ConnectedComponents_SV("SV", "Branch-avoiding", perfCounters, COUNTOF(perfCounters), ConnectedComponents_SV_Branchless_PeachPy, nv, ne, off, ind);
-	#ifdef __SSE4_1__
-	Benchmark_ConnectedComponents_SV("SV", "SSE4.1", perfCounters, COUNTOF(perfCounters), ConnectedComponents_SV_Branchless_SSE4_1, nv, ne, off, ind);
-	#endif
-	#ifdef __MIC__
-	Benchmark_ConnectedComponents_SV("SV", "MIC", perfCounters, COUNTOF(perfCounters), ConnectedComponents_SV_Branchless_MIC, nv, ne, off, ind);
-	#endif
+	  const char* precolumns[] = {
+		  "Algorithm",
+		  "Implementation",
+		  "Itetarion",
+		  NULL
+	  };
+	  const char* postcolumns[] = {
+		  "Vertices",
+		  "Edges",
+		  NULL
+	  };
+
+
+	  ConnectedComponents_SV_Function* sv_function=(ConnectedComponents_SV_Function*) malloc(SV_NUMBER_OF_ALGS*sizeof(ConnectedComponents_SV_Function));
+	  sv_function[SV_ALG_BRANCH_BASED]=ConnectedComponents_SV_Branchy_PeachPy;
+	  sv_function[SV_ALG_BRANCH_AVOIDING]=ConnectedComponents_SV_Branchless_PeachPy;
+      eSV_Alg *iterBB, *iterBA, *iterHybrid;
+	  iterBB=(eSV_Alg*)malloc(sizeof(eSV_Alg)*nv);
+	  iterBA=(eSV_Alg*)malloc(sizeof(eSV_Alg)*nv);
+	  iterHybrid=(eSV_Alg*)malloc(sizeof(eSV_Alg)*nv);
+	  
+	  for(int v=0; v<nv;v++){
+		iterBB[v]=SV_ALG_BRANCH_BASED;
+		iterBA[v]=SV_ALG_BRANCH_AVOIDING;
+		iterHybrid[v]=SV_ALG_BRANCH_BASED;
+	  }
+
+	  PrintHeader(precolumns, perfCounters, COUNTOF(perfCounters), postcolumns);
+	  Benchmark_ConnectedComponents_SV("SV", "Branch-based", perfCounters, COUNTOF(perfCounters), sv_function,iterBB, nv, ne, off, ind);
+	  Benchmark_ConnectedComponents_SV("SV", "Branch-avoiding", perfCounters, COUNTOF(perfCounters), sv_function,iterBA, nv, ne, off, ind);
+	  
+	  ConnectedComponentsSVHybridIterationSelector ("SV", "Hybrid", perfCounters, COUNTOF(perfCounters), sv_function,iterHybrid, nv, ne, off, ind);
+	  Benchmark_ConnectedComponents_SV("SV", "Hybrid\t", perfCounters, COUNTOF(perfCounters), sv_function,iterHybrid, nv, ne, off, ind);
+//	  Benchmark_ConnectedComponents_SV("SV", "Branch-avoiding", perfCounters, COUNTOF(perfCounters), ConnectedComponents_SV_Branchless_PeachPy, nv, ne, off, ind);
+//	  Benchmark_ConnectedComponents_SV("SV", "Hybrid", perfCounters, COUNTOF(perfCounters), ConnectedComponents_SV_Branchless_PeachPy, nv, ne, off, ind);
+	  #ifdef __SSE4_1__
+//	  Benchmark_ConnectedComponents_SV("SV", "SSE4.1", perfCounters, COUNTOF(perfCounters), ConnectedComponents_SV_Branchless_SSE4_1, nv, ne, off, ind);
+	  #endif
+	  #ifdef __MIC__
+//	  Benchmark_ConnectedComponents_SV("SV", "MIC", perfCounters, COUNTOF(perfCounters), ConnectedComponents_SV_Branchless_MIC, nv, ne, off, ind);
+	  #endif
+
+      free(iterBB);
+	  free(iterBA);
+	  free(iterHybrid);
+
 #endif
  	free(off);
 	free(ind);
@@ -498,7 +535,7 @@ int main (const int argc, char *argv[]) {
 #endif
 
 #if defined(BENCHMARK_SV)
-	void Benchmark_ConnectedComponents_SV(const char* algorithm_name, const char* implementation_name, const struct PerformanceCounter performanceCounters[], size_t performanceCounterCount, ConnectedComponents_SV_Function sv_function, size_t numVertices, size_t numEdges, uint32_t* off, uint32_t* ind) {
+	void Benchmark_ConnectedComponents_SV(const char* algorithm_name, const char* implementation_name, const struct PerformanceCounter performanceCounters[], size_t performanceCounterCount, ConnectedComponents_SV_Function* sv_function, eSV_Alg* algPerIteration,size_t numVertices, size_t numEdges, uint32_t* off, uint32_t* ind){
 		struct perf_event_attr perf_counter;
 
 		uint32_t* components_map = (uint32_t*)memalign(64, numVertices * sizeof(uint32_t));
@@ -542,7 +579,8 @@ int main (const int argc, char *argv[]) {
                     assert(ioctl(perf_counter_fd, PERF_EVENT_IOC_ENABLE, 0) == 0);
                 }
 
-                changed = sv_function(numVertices, components_map, off, ind);
+//                printf("%d ,",sv_function[algPerIteration[iteration]]);
+                changed = (sv_function[algPerIteration[iteration]])(numVertices, components_map, off, ind);
 
                 if (performanceCounters[performanceCounterIndex].type == PERF_TYPE_TIME) {
                     struct timespec endTime;
@@ -575,4 +613,77 @@ int main (const int argc, char *argv[]) {
 		free(perf_events);
 		free(vertices);
 	}
+
+
+void ConnectedComponentsSVHybridIterationSelector(const char* algorithm_name, const char* implementation_name, const struct PerformanceCounter performanceCounters[], size_t performanceCounterCount, ConnectedComponents_SV_Function* sv_function, eSV_Alg* algPerIteration,size_t numVertices, size_t numEdges, uint32_t* off, uint32_t* ind){
+		struct perf_event_attr perf_counter;
+
+		uint32_t* components_map = (uint32_t*)memalign(64, numVertices * sizeof(uint32_t));
+        uint64_t* perf_events = (uint64_t*)malloc(numVertices * sizeof(uint64_t));
+        uint32_t* vertices = (uint32_t*)malloc(numVertices * sizeof(uint32_t));
+
+//        uint32_t iterationCount = 0;
+            int perf_counter_fd = -1;
+                memset(&perf_counter, 0, sizeof(struct perf_event_attr));
+                perf_counter.type = PERF_TYPE_HARDWARE; 
+                perf_counter.size = sizeof(struct perf_event_attr);
+                perf_counter.config =  PERF_COUNT_HW_BRANCH_MISSES;
+                perf_counter.disabled = 1;
+                perf_counter.exclude_kernel = 1;
+                perf_counter.exclude_hv = 1;
+
+                perf_counter_fd = perf_event_open(&perf_counter, 0, -1, -1, 0);
+                if (perf_counter_fd == -1) {
+                    fprintf(stderr, "Error opening counter %s\n", "Branch misses in SV-Hybrid");
+                    exit(EXIT_FAILURE);
+                }
+
+            /* Initialize level array */
+            for (size_t i = 0; i < numVertices; i++) {
+                components_map[i] = i;
+            }
+
+            bool changed;
+            size_t iteration = 0;
+			algPerIteration[iteration]=SV_ALG_BRANCH_AVOIDING;
+            do {
+                    assert(ioctl(perf_counter_fd, PERF_EVENT_IOC_RESET, 0) == 0);
+                    assert(ioctl(perf_counter_fd, PERF_EVENT_IOC_ENABLE, 0) == 0);
+
+                printf("(%d ,",algPerIteration[iteration]);
+                changed = (sv_function[algPerIteration[iteration]])(numVertices, components_map, off, ind);
+
+                    assert(ioctl(perf_counter_fd, PERF_EVENT_IOC_DISABLE, 0) == 0);
+                    assert(read(perf_counter_fd, &perf_events[ iteration], sizeof(uint64_t)) == sizeof(uint64_t));
+                
+				printf("%ld), ", perf_events[iteration]);
+			
+				int64_t  iterMisses=perf_events[iteration];
+				iteration += 1;
+				  
+
+                if(iterMisses>=(size_t)(numVertices*1.1)){
+				  algPerIteration[iteration]=SV_ALG_BRANCH_AVOIDING;
+				}
+				else{
+				  algPerIteration[iteration]=SV_ALG_BRANCH_BASED;
+                }
+				if(iteration%5==0)
+				  algPerIteration[iteration]=SV_ALG_BRANCH_BASED;
+            } while (changed);
+
+
+//            if (iterationCount == 0) {
+//                iterationCount = iteration;
+//                perf_events = realloc(perf_events, numVertices * sizeof(uint64_t) * iterationCount);
+//            }
+            printf("\n");
+
+            close(perf_counter_fd);
+       free(components_map);
+		free(perf_events);
+		free(vertices);
+	}
+ 
+
 #endif
