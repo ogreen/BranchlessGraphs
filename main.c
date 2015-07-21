@@ -7,6 +7,7 @@
 #include <inttypes.h>
 #include <assert.h>
 #include <time.h>
+#include <math.h>
 
 #include <unistd.h>
 #include <sys/ioctl.h>
@@ -316,8 +317,8 @@ int main (const int argc, char *argv[]) {
 	  Benchmark_ConnectedComponents_SV("SV", "Branch-based", perfCounters, COUNTOF(perfCounters), sv_function,iterBB, nv, ne, off, ind);
 	  Benchmark_ConnectedComponents_SV("SV", "Branch-avoiding", perfCounters, COUNTOF(perfCounters), sv_function,iterBA, nv, ne, off, ind);
 	  
-	  ConnectedComponentsSVHybridIterationSelector ("SV", "Hybrid", perfCounters, COUNTOF(perfCounters), sv_function,iterHybrid, nv, ne, off, ind);
-	  Benchmark_ConnectedComponents_SV("SV", "Hybrid\t", perfCounters, COUNTOF(perfCounters), sv_function,iterHybrid, nv, ne, off, ind);
+	  ConnectedComponentsSVHybridIterationSelector ("SV", "Branch-Hybrid", perfCounters, COUNTOF(perfCounters), sv_function,iterHybrid, nv, ne, off, ind);
+	  Benchmark_ConnectedComponents_SV("SV", "Branch-Hybrid", perfCounters, COUNTOF(perfCounters), sv_function,iterHybrid, nv, ne, off, ind);
 //	  Benchmark_ConnectedComponents_SV("SV", "Branch-avoiding", perfCounters, COUNTOF(perfCounters), ConnectedComponents_SV_Branchless_PeachPy, nv, ne, off, ind);
 //	  Benchmark_ConnectedComponents_SV("SV", "Hybrid", perfCounters, COUNTOF(perfCounters), ConnectedComponents_SV_Branchless_PeachPy, nv, ne, off, ind);
 	  #ifdef __SSE4_1__
@@ -579,7 +580,7 @@ int main (const int argc, char *argv[]) {
                     assert(ioctl(perf_counter_fd, PERF_EVENT_IOC_ENABLE, 0) == 0);
                 }
 
-//                printf("%d ,",sv_function[algPerIteration[iteration]]);
+                //printf("@@ %d @@ ",algPerIteration[iteration]);
                 changed = (sv_function[algPerIteration[iteration]])(numVertices, components_map, off, ind);
 
                 if (performanceCounters[performanceCounterIndex].type == PERF_TYPE_TIME) {
@@ -614,6 +615,21 @@ int main (const int argc, char *argv[]) {
 		free(vertices);
 	}
 
+void swapAlg(eSV_Alg* alg )
+{ 
+  if(*alg==SV_ALG_BRANCH_AVOIDING){
+	*alg=SV_ALG_BRANCH_BASED;
+  }
+  else if(*alg==SV_ALG_BRANCH_BASED){
+	*alg=SV_ALG_BRANCH_AVOIDING;
+  }
+
+}
+
+typedef struct {
+  int32_t iterationSwap;  
+  float   tolerance; 
+} svControlParams;
 
 void ConnectedComponentsSVHybridIterationSelector(const char* algorithm_name, const char* implementation_name, const struct PerformanceCounter performanceCounters[], size_t performanceCounterCount, ConnectedComponents_SV_Function* sv_function, eSV_Alg* algPerIteration,size_t numVertices, size_t numEdges, uint32_t* off, uint32_t* ind){
 		struct perf_event_attr perf_counter;
@@ -643,41 +659,70 @@ void ConnectedComponentsSVHybridIterationSelector(const char* algorithm_name, co
                 components_map[i] = i;
             }
 
-            bool changed;
+            bool changed=true;
             size_t iteration = 0;
+			double time_curr=0.0,time_prev=0.0;
 			algPerIteration[iteration]=SV_ALG_BRANCH_AVOIDING;
-            do {
-                    assert(ioctl(perf_counter_fd, PERF_EVENT_IOC_RESET, 0) == 0);
-                    assert(ioctl(perf_counter_fd, PERF_EVENT_IOC_ENABLE, 0) == 0);
-
-                printf("(%d ,",algPerIteration[iteration]);
-                changed = (sv_function[algPerIteration[iteration]])(numVertices, components_map, off, ind);
-
-                    assert(ioctl(perf_counter_fd, PERF_EVENT_IOC_DISABLE, 0) == 0);
-                    assert(read(perf_counter_fd, &perf_events[ iteration], sizeof(uint64_t)) == sizeof(uint64_t));
-                
-				printf("%ld), ", perf_events[iteration]);
-			
-				int64_t  iterMisses=perf_events[iteration];
-				iteration += 1;
-				  
-
-                if(iterMisses>=(size_t)(numVertices*1.1)){
+            int32_t last_swap=0;
+  
+			// First iteration will be branch-avoiding.
+			algPerIteration[iteration]=SV_ALG_BRANCH_AVOIDING;
+			tic();
+			changed = (sv_function[algPerIteration[iteration]])(numVertices, components_map, off, ind);
+			time_prev=toc();
+ //   		printf("%d ,\n",algPerIteration[iteration]);
+			// Second iteration will be branc-based(assuming that it is needed)
+            iteration++;
+            if(changed){
+			  algPerIteration[iteration]=SV_ALG_BRANCH_BASED;
+			  tic();
+			  changed = (sv_function[algPerIteration[iteration]])(numVertices, components_map, off, ind);
+			  time_curr=toc();
+			}
+ //   		printf("%d ,\n",algPerIteration[iteration]);
+			while (changed)
+			{
+			  iteration++;
+			  last_swap++;
+			  //int32_t cond=(fabs(time_curr-time_prev)>0.1*time_curr);
+			  //printf("%lf %lf %lf %lf ",time_curr,time_prev,fabs(time_curr-time_prev),0.1*time_curr);
+			  int32_t cond=((time_curr-time_prev)>0.05*time_curr);
+//			  printf("%lf %lf %lf %lf ",time_curr,time_prev,(time_curr-time_prev),0.1*time_curr);
+			  algPerIteration[iteration]=algPerIteration[iteration-1];
+			  time_prev=time_curr;
+//			  if(last_swap==1 && cond){
+//			  }else		  
+			  if(cond){
 				  algPerIteration[iteration]=SV_ALG_BRANCH_AVOIDING;
-				}
-				else{
-				  algPerIteration[iteration]=SV_ALG_BRANCH_BASED;
-                }
-				if(iteration%5==0)
-				  algPerIteration[iteration]=SV_ALG_BRANCH_BASED;
-            } while (changed);
+				  last_swap=0;
+//				  printf("*");
+			  }
+			  // Checking if the algorithm has been stuck for more than 5 iterations using the same algorithm.
+              if(last_swap==3){
+				printf("%d  ", algPerIteration[iteration]);
+				swapAlg(algPerIteration+iteration);
+				printf("%d  \n", algPerIteration[iteration]);
+				last_swap=0;
+			  }
+//			  printf("%d \n",algPerIteration[iteration]);
+//			  assert(ioctl(perf_counter_fd, PERF_EVENT_IOC_RESET, 0) == 0);
+//			  assert(ioctl(perf_counter_fd, PERF_EVENT_IOC_ENABLE, 0) == 0);
+			  tic();
+			  changed = (sv_function[algPerIteration[iteration]])(numVertices, components_map, off, ind);
+			  time_curr=toc();
+//			  assert(ioctl(perf_counter_fd, PERF_EVENT_IOC_DISABLE, 0) == 0);
+//			  assert(read(perf_counter_fd, &perf_events[ iteration], sizeof(uint64_t)) == sizeof(uint64_t));
+//			  int64_t  iterMisses=perf_events[iteration];
 
+			  
+
+			}
 
 //            if (iterationCount == 0) {
 //                iterationCount = iteration;
 //                perf_events = realloc(perf_events, numVertices * sizeof(uint64_t) * iterationCount);
 //            }
-            printf("\n");
+//            printf("\n");
 
             close(perf_counter_fd);
        free(components_map);
