@@ -16,14 +16,14 @@ ALGS.FANCY.MAP <- c ("SV"="Shiloach-Vishkin Connected Components"
                      , "BFS/TD"="Breadth-First Search (Top-Down)")
 
 # List of available implementations
-CODES.ALL.MAP <- c ("bb"="Branch-based", "bl"="Branch-avoiding")
+CODES.ALL.MAP <- c ("bb"="Branch-based", "bl"="Branch-avoiding", "Branch-Hybrid")
 CODES.ALL <- names (CODES.ALL.MAP)
-CODES.ABBREV.MAP <- c ("Branch-based"="bb", "Branch-avoiding"="bl")
+CODES.ABBREV.MAP <- c ("Branch-based"="bb", "Branch-avoiding"="bl", "Branch-Hybrid"="bh")
 
 # List of available architectures
-ARCHS.ALL.MAP <- c ("arn"="Cortex-A15", "hsw"="Haswell", "ivb"="Ivy Bridge", "bobcat"="Bobcat", "bonnell"="Bonnell", "pld"="Piledriver", "slv"="Silvermont")
+ARCHS.ALL.MAP <- c ("arn"="Cortex-A15", "hsw"="Haswell", "ivb"="Ivy Bridge", "bobcat"="Bobcat", "bonnell"="Bonnell", "pld"="Piledriver", "slv"="Silvermont", "hsw2"="Haswell2", "hsw3"="Haswell3")
 ARCHS.ALL <- names (ARCHS.ALL.MAP)
-ARCHS.ABBREV.MAP <- c ("Cortex-A15"="arn", "Haswell"="hsw", "Ivy Bridge"="ivb", "Bobcat"="bobcat", "Bonnell"="bonnell", "Piledriver"="pld", "Silvermont"="slv")
+ARCHS.ABBREV.MAP <- c ("Cortex-A15"="arn", "Haswell"="hsw", "Ivy Bridge"="ivb", "Bobcat"="bobcat", "Bonnell"="bonnell", "Piledriver"="pld", "Silvermont"="slv" ,"Haswell2"="hsw2","Haswell3"="hsw3")
 
 # List of graph input problems
 GRAPHS.ALL <- c("astro-ph", "audikw1", "auto", "coAuthorsDBLP", "coPapersDBLP", "cond-mat-2003", "cond-mat-2005", "ecology1", "ldoor", "power", "preferentialAttachment")

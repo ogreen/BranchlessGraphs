@@ -39,12 +39,18 @@ void Benchmark_ConnectedComponents_SV(const char* algorithm_name, const char* im
     const struct PerformanceCounter performanceCounters[], size_t performanceCountersCount,
     ConnectedComponents_SV_Function* sv_function, eSV_Alg* algPerIteration, size_t numVertices, size_t numEdges, uint32_t* off, uint32_t* ind);
 
+ typedef struct {
+  int32_t iterationSwap;  
+  float   toleranceGradient;
+  float	  toleranceSteadyState;
+} svControlParams;
   
 void ConnectedComponentsSVHybridIterationSelector(const char* algorithm_name, const char* implementation_name, 
 	const struct PerformanceCounter performanceCounters[], size_t performanceCounterCount, 
-	ConnectedComponents_SV_Function* sv_function, eSV_Alg* algPerIteration,size_t numVertices, size_t numEdges, uint32_t* off, uint32_t* ind);
+	ConnectedComponents_SV_Function* sv_function, eSV_Alg* algPerIteration,svControlParams svCP,size_t numVertices, size_t numEdges, uint32_t* off, uint32_t* ind);
 
 #define LINE_SIZE 10000
+
 
 static int perf_event_open(struct perf_event_attr *hw_event, pid_t pid, int cpu, int group_fd, unsigned long flags) {
 	return syscall(__NR_perf_event_open, hw_event, pid, cpu, group_fd, flags);
@@ -316,8 +322,12 @@ int main (const int argc, char *argv[]) {
 	  PrintHeader(precolumns, perfCounters, COUNTOF(perfCounters), postcolumns);
 	  Benchmark_ConnectedComponents_SV("SV", "Branch-based", perfCounters, COUNTOF(perfCounters), sv_function,iterBB, nv, ne, off, ind);
 	  Benchmark_ConnectedComponents_SV("SV", "Branch-avoiding", perfCounters, COUNTOF(perfCounters), sv_function,iterBA, nv, ne, off, ind);
-	  
-	  ConnectedComponentsSVHybridIterationSelector ("SV", "Branch-Hybrid", perfCounters, COUNTOF(perfCounters), sv_function,iterHybrid, nv, ne, off, ind);
+	 
+	  svControlParams svCP;
+	  svCP.toleranceGradient	=0.05;
+	  svCP.toleranceSteadyState	=0.01;
+	  svCP.iterationSwap		=5;
+	  ConnectedComponentsSVHybridIterationSelector ("SV", "Branch-Hybrid", perfCounters, COUNTOF(perfCounters), sv_function,iterHybrid,svCP, nv, ne, off, ind);
 	  Benchmark_ConnectedComponents_SV("SV", "Branch-Hybrid", perfCounters, COUNTOF(perfCounters), sv_function,iterHybrid, nv, ne, off, ind);
 //	  Benchmark_ConnectedComponents_SV("SV", "Branch-avoiding", perfCounters, COUNTOF(perfCounters), ConnectedComponents_SV_Branchless_PeachPy, nv, ne, off, ind);
 //	  Benchmark_ConnectedComponents_SV("SV", "Hybrid", perfCounters, COUNTOF(perfCounters), ConnectedComponents_SV_Branchless_PeachPy, nv, ne, off, ind);
@@ -626,109 +636,78 @@ void swapAlg(eSV_Alg* alg )
 
 }
 
-typedef struct {
-  int32_t iterationSwap;  
-  float   tolerance; 
-} svControlParams;
+void resetLastSwap(int32_t* lastSwap){
+  *lastSwap=0;
+}
 
-void ConnectedComponentsSVHybridIterationSelector(const char* algorithm_name, const char* implementation_name, const struct PerformanceCounter performanceCounters[], size_t performanceCounterCount, ConnectedComponents_SV_Function* sv_function, eSV_Alg* algPerIteration,size_t numVertices, size_t numEdges, uint32_t* off, uint32_t* ind){
-		struct perf_event_attr perf_counter;
 
-		uint32_t* components_map = (uint32_t*)memalign(64, numVertices * sizeof(uint32_t));
-        uint64_t* perf_events = (uint64_t*)malloc(numVertices * sizeof(uint64_t));
-        uint32_t* vertices = (uint32_t*)malloc(numVertices * sizeof(uint32_t));
+void ConnectedComponentsSVHybridIterationSelector(const char* algorithm_name, const char* implementation_name, const struct PerformanceCounter performanceCounters[], size_t performanceCounterCount, ConnectedComponents_SV_Function* sv_function, eSV_Alg* algPerIteration,svControlParams svCP,size_t numVertices, size_t numEdges, uint32_t* off, uint32_t* ind){
+  struct perf_event_attr perf_counter;
 
-//        uint32_t iterationCount = 0;
-            int perf_counter_fd = -1;
-                memset(&perf_counter, 0, sizeof(struct perf_event_attr));
-                perf_counter.type = PERF_TYPE_HARDWARE; 
-                perf_counter.size = sizeof(struct perf_event_attr);
-                perf_counter.config =  PERF_COUNT_HW_BRANCH_MISSES;
-                perf_counter.disabled = 1;
-                perf_counter.exclude_kernel = 1;
-                perf_counter.exclude_hv = 1;
+  uint32_t* components_map = (uint32_t*)memalign(64, numVertices * sizeof(uint32_t));
+  uint32_t* vertices = (uint32_t*)malloc(numVertices * sizeof(uint32_t));
 
-                perf_counter_fd = perf_event_open(&perf_counter, 0, -1, -1, 0);
-                if (perf_counter_fd == -1) {
-                    fprintf(stderr, "Error opening counter %s\n", "Branch misses in SV-Hybrid");
-                    exit(EXIT_FAILURE);
-                }
+  //        uint32_t iterationCount = 0;
+  for (size_t i = 0; i < numVertices; i++) {
+	components_map[i] = i;
+  }
 
-            /* Initialize level array */
-            for (size_t i = 0; i < numVertices; i++) {
-                components_map[i] = i;
-            }
+  bool changed=true;
+  size_t iteration = 0;
+  double time_curr=0.0,time_prev=0.0;
+  algPerIteration[iteration]=SV_ALG_BRANCH_AVOIDING;
+  int32_t lastSwap;resetLastSwap(&lastSwap);
 
-            bool changed=true;
-            size_t iteration = 0;
-			double time_curr=0.0,time_prev=0.0;
-			algPerIteration[iteration]=SV_ALG_BRANCH_AVOIDING;
-            int32_t last_swap=0;
-  
-			// First iteration will be branch-avoiding.
-			algPerIteration[iteration]=SV_ALG_BRANCH_AVOIDING;
-			tic();
-			changed = (sv_function[algPerIteration[iteration]])(numVertices, components_map, off, ind);
-			time_prev=toc();
- //   		printf("%d ,\n",algPerIteration[iteration]);
-			// Second iteration will be branc-based(assuming that it is needed)
-            iteration++;
-            if(changed){
-			  algPerIteration[iteration]=SV_ALG_BRANCH_BASED;
-			  tic();
-			  changed = (sv_function[algPerIteration[iteration]])(numVertices, components_map, off, ind);
-			  time_curr=toc();
-			}
- //   		printf("%d ,\n",algPerIteration[iteration]);
-			while (changed)
-			{
-			  iteration++;
-			  last_swap++;
-			  //int32_t cond=(fabs(time_curr-time_prev)>0.1*time_curr);
-			  //printf("%lf %lf %lf %lf ",time_curr,time_prev,fabs(time_curr-time_prev),0.1*time_curr);
-			  int32_t cond=((time_curr-time_prev)>0.05*time_curr);
-//			  printf("%lf %lf %lf %lf ",time_curr,time_prev,(time_curr-time_prev),0.1*time_curr);
-			  algPerIteration[iteration]=algPerIteration[iteration-1];
-			  time_prev=time_curr;
-//			  if(last_swap==1 && cond){
-//			  }else		  
-			  if(cond){
-				  algPerIteration[iteration]=SV_ALG_BRANCH_AVOIDING;
-				  last_swap=0;
-//				  printf("*");
-			  }
-			  // Checking if the algorithm has been stuck for more than 5 iterations using the same algorithm.
-              if(last_swap==3){
-				printf("%d  ", algPerIteration[iteration]);
-				swapAlg(algPerIteration+iteration);
-				printf("%d  \n", algPerIteration[iteration]);
-				last_swap=0;
-			  }
-//			  printf("%d \n",algPerIteration[iteration]);
-//			  assert(ioctl(perf_counter_fd, PERF_EVENT_IOC_RESET, 0) == 0);
-//			  assert(ioctl(perf_counter_fd, PERF_EVENT_IOC_ENABLE, 0) == 0);
-			  tic();
-			  changed = (sv_function[algPerIteration[iteration]])(numVertices, components_map, off, ind);
-			  time_curr=toc();
-//			  assert(ioctl(perf_counter_fd, PERF_EVENT_IOC_DISABLE, 0) == 0);
-//			  assert(read(perf_counter_fd, &perf_events[ iteration], sizeof(uint64_t)) == sizeof(uint64_t));
-//			  int64_t  iterMisses=perf_events[iteration];
-
-			  
-
-			}
-
-//            if (iterationCount == 0) {
-//                iterationCount = iteration;
-//                perf_events = realloc(perf_events, numVertices * sizeof(uint64_t) * iterationCount);
-//            }
-//            printf("\n");
-
-            close(perf_counter_fd);
-       free(components_map);
-		free(perf_events);
-		free(vertices);
+  // First iteration will be branch-avoiding.
+  algPerIteration[iteration]=SV_ALG_BRANCH_AVOIDING;
+  tic();
+  changed = (sv_function[algPerIteration[iteration]])(numVertices, components_map, off, ind);
+  time_prev=toc();
+  //   		printf("%d ,\n",algPerIteration[iteration]);
+  // Second iteration will be branc-based(assuming that it is needed)
+  iteration++;
+  if(changed){
+	algPerIteration[iteration]=SV_ALG_BRANCH_BASED;
+	tic();
+	changed = (sv_function[algPerIteration[iteration]])(numVertices, components_map, off, ind);
+	time_curr=toc();
+  }
+  //   		printf("%d ,\n",algPerIteration[iteration]);
+  resetLastSwap(&lastSwap);
+  while (changed)
+  {
+	iteration++;
+	lastSwap++;
+	//int32_t cond=(fabs(time_curr-time_prev)>0.1*time_curr);
+	//printf("%lf %lf %lf %lf ",time_curr,time_prev,fabs(time_curr-time_prev),0.1*time_curr);
+	int32_t gradientDetectionCond=((time_curr-time_prev)>0.05*time_curr); 
+	int32_t steadyStateCond=(fabs(time_curr-time_prev)>0.01*time_curr) && lastSwap==1;
+	//			  printf("%lf %lf %lf %lf ",time_curr,time_prev,(time_curr-time_prev),0.1*time_curr);
+	algPerIteration[iteration]=algPerIteration[iteration-1];
+	
+	int32_t swapCond=gradientDetectionCond || steadyStateCond;
+	if(swapCond){
+	  algPerIteration[iteration]=SV_ALG_BRANCH_AVOIDING;
+	  resetLastSwap(&lastSwap);
+	  //				  printf("*");
 	}
+	// Checking if the algorithm has been stuck for more than 5 iterations using the same algorithm.
+	if(lastSwap==5){
+	  swapAlg(algPerIteration+iteration);
+	  resetLastSwap(&lastSwap);
+	}
+
+	// Swapping times with the last iteration and starting and additional iteration.
+	time_prev=time_curr;
+	tic();
+	changed = (sv_function[algPerIteration[iteration]])(numVertices, components_map, off, ind);
+	time_curr=toc();
+
+  }
+
+  free(components_map);
+  free(vertices);
+}
  
 
 #endif
