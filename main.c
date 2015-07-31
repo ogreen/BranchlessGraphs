@@ -14,6 +14,8 @@
 #include <linux/perf_event.h>
 #include <asm/unistd.h>
 
+#include "cct.h"
+
 #define PERF_TYPE_TIME PERF_TYPE_MAX
 
 struct PerformanceCounter {
@@ -343,6 +345,18 @@ int main (const int argc, char *argv[]) {
 	  free(iterHybrid);
 
 #endif
+
+#if defined(BENCHMARK_CCT)
+
+   	int64_t * triNE = (int64_t *) malloc ((ne ) * sizeof (int64_t));	
+	int64_t allTrianglesCPU=0;
+	tic();
+	triangleCountBranchBased(nv, off,ind, triNE, &allTrianglesCPU);
+	double ccbranchbased=toc();
+
+	free(triNE);
+#endif
+
  	free(off);
 	free(ind);
 }
