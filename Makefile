@@ -30,7 +30,7 @@ bfs: main.c timer.c bfs.c bfsBU.c graph.o Makefile
 sv: main.c timer.c sv.c graph.o Makefile
 	$(CC) -g -O3 -std=gnu99 $(CFLAGS) $(DEFINES) -Wno-unused-result -DBENCHMARK_SV -o $@ main.c timer.c sv.c graph.o $(LDFLAGS) -lrt
 cct: main.c timer.c cct.c Makefile
-	$(CC) -g -O1 -std=gnu99 $(CFLAGS) $(DEFINES) -Wno-unused-result -DBENCHMARK_CCT -o $@  main.c timer.c cct.c $(LDFLAGS) -lrt
+	$(CC) -g -O3 -std=gnu99 $(CFLAGS) $(DEFINES) -Wno-unused-result -DBENCHMARK_CCT -o $@  main.c timer.c cct.c $(LDFLAGS) -lrt
 
 
 bench-bfs: bfs
@@ -73,6 +73,7 @@ bench-beta: sv
 	-mkdir -p $(SYSNAME)-sv
 	./sv ~/data/dimacs/matrix/ldoor.graph > $(SYSNAME)-sv/ldoor.log
  
+ 
 bench-cct: cct
 	-mkdir -p $(SYSNAME)-sv
 	./cct ~/data/dimacs/clustering/astro-ph.graph #> $(SYSNAME)-sv/astro-ph.log
@@ -85,7 +86,7 @@ bench-cct: cct
 	./cct ~/data/dimacs/matrix/ecology1.graph #> $(SYSNAME)-sv/ecology1.log
 #	./cct ~/data/dimacs/clustering/italy.graph > $(SYSNAME)-sv/italy.log
 #	./cct ~/data/dimacs/clustering/kron_g500-simple-logn16.graph > $(SYSNAME)-sv/kron_g500-simple-logn16.log
-  # ./cct ~/data/dimacs/matrix/ldoor.graph #> $(SYSNAME)-sv/ldoor.log
+#   ./cct ~/data/dimacs/matrix/ldoor.graph #> $(SYSNAME)-sv/ldoor.log
 #	./cct ~/data/dimacs/clustering/netherlands.graph > $(SYSNAME)-sv/netherlands.log
 	./cct ~/data/dimacs/clustering/netscience.graph #> $(SYSNAME)-sv/netscience.log
 	./cct ~/data/dimacs/clustering/power.graph #> $(SYSNAME)-sv/power.log

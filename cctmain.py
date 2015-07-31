@@ -44,6 +44,7 @@ def intersectionBranchBased (alen, apos,blen, bpos ,ind):
 			ka+=1;	
 		else:
 			kb+=1;	
+<<<<<<< HEAD
 
 		if(ka>=alen or kb>=blen):
 			break;
@@ -54,6 +55,8 @@ def intersectionBranchBased (alen, apos,blen, bpos ,ind):
 		else:
 			kb+=1;				
 
+=======
+>>>>>>> b4d679e81369d8efddfe46fb43a8c38b174b0349
 	return out;
 
 
@@ -69,6 +72,7 @@ def intersectionBranchAvoiding (alen, apos,blen, bpos ,ind):
 		kb+= (comp>=0);
 		out+= (comp==0);							
 
+<<<<<<< HEAD
 		if(ka>=alen or kb>=blen):
 			break;
 		comp   = (ind[apos+ka]-ind[bpos+kb]);
@@ -80,6 +84,14 @@ def intersectionBranchAvoiding (alen, apos,blen, bpos ,ind):
 
 				
 
+=======
+		# cond1=(comp==0)
+		# cond2=(comp<0)
+# #		print cond2, comp
+		# ka+= cond2 + cond1
+		# kb+= 1-cond2;
+		# out+= cond1;					
+>>>>>>> b4d679e81369d8efddfe46fb43a8c38b174b0349
 	return out;
 	
 	
@@ -126,6 +138,7 @@ def triangleCount(nv, off, ind, triNE):
 	print "TimeBA			: ", totalBA
 	return sumBB
 	
+<<<<<<< HEAD
 def benchMarkInstructions(param, n):
 	sum=0;
 	
@@ -174,6 +187,9 @@ def benchMarkInstructions(param, n):
 
 	
 
+=======
+	
+>>>>>>> b4d679e81369d8efddfe46fb43a8c38b174b0349
 def main(argv):
 	inputfile = ''
 	try:
@@ -195,7 +211,10 @@ def main(argv):
 	print nv, ne 	
 	triangleCount(nv, off, ind, triNE)
   
+<<<<<<< HEAD
 	benchMarkInstructions(4, 10000000);
+=======
+>>>>>>> b4d679e81369d8efddfe46fb43a8c38b174b0349
 
 if __name__ == "__main__":
 	main(sys.argv[1:])
