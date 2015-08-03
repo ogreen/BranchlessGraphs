@@ -1,9 +1,7 @@
 #include <stdio.h>
-<<<<<<< HEAD
 #include <stdlib.h>
 #include <string.h>
-=======
->>>>>>> b4d679e81369d8efddfe46fb43a8c38b174b0349
+
 
 #include "cct.h"
 #include "timer.h"
@@ -22,14 +20,8 @@ int64_t intersectionBranchBased (const int32_t ai, const int32_t alen, const int
   while (1) {
     if (ka >= alen || kb >= blen) break;
 
-<<<<<<< HEAD
-
 	if(a[ka]==b[kb]){
 		ka++,kb++, out++;
-=======
-	if(a[ka]==b[kb]){
-		ka++;kb++;out++;
->>>>>>> b4d679e81369d8efddfe46fb43a8c38b174b0349
 	}
 	else if(a[ka]<b[kb]){
 		ka++;	
@@ -38,21 +30,10 @@ int64_t intersectionBranchBased (const int32_t ai, const int32_t alen, const int
 		kb++;	
 	}
   }
-<<<<<<< HEAD
 
-
-
-	
 	return out;
 }
 
-//int32_t counter=0;
-=======
-	return out;
-}
-
-
->>>>>>> b4d679e81369d8efddfe46fb43a8c38b174b0349
 int64_t intersectionBranchAvoiding (const int32_t ai, const int32_t alen, const int32_t * a,
 						 const int32_t bi, const int32_t blen, const int32_t * b)
 {
@@ -67,25 +48,13 @@ int64_t intersectionBranchAvoiding (const int32_t ai, const int32_t alen, const 
     if (ka >= alen || kb >= blen) break;
 
 	int32_t comp   = (a[ka]-b[kb]);
-<<<<<<< HEAD
+
 
 	out+= comp==0;
 	ka+= (comp<=0);
 	kb+= (comp>=0);
 
-=======
-	ka+= (comp<=0);
-	kb+= (comp>=0);
-	out+= (comp==0);
-    // if (ka >= alen || kb >= blen) break;
-	// int32_t comp2  = (a[ka]-b[kb]);
 
-	// ka+= (comp2<=0);
-	// kb+= (comp2>=0);
- 
-	// out+= (comp2==0);
->>>>>>> b4d679e81369d8efddfe46fb43a8c38b174b0349
-	
   }
 
 //	counter=10;
@@ -94,7 +63,6 @@ int64_t intersectionBranchAvoiding (const int32_t ai, const int32_t alen, const 
 }
 
 
-<<<<<<< HEAD
 int64_t intersectionCountMemOps (const int32_t ai, const int32_t alen, const int32_t * a,
 						 const int32_t bi, const int32_t blen, const int32_t * b)
 {
@@ -110,15 +78,17 @@ int64_t intersectionCountMemOps (const int32_t ai, const int32_t alen, const int
     if (ka >= alen || kb >= blen) break;
 
 	if(a[ka]==b[kb]){
+		countMemOps+=2;
 		ka++,kb++, out++;
 	}
 	else if(a[ka]<b[kb]){
+		countMemOps++;
 		ka++;	
 	}
 	else {
+		countMemOps++;
 		kb++;	
 	}
-    countMemOps++;
   }
 	
 	return countMemOps;
@@ -141,33 +111,34 @@ int32_t intersectionLogMemOps (const int32_t ai, const int32_t alen, const int32
 
 	if(a[ka]==b[kb]){
 		memLog[countMemOps]=apos+ka;
+		memLog[countMemOps+1]=apos+ka;
+		countMemOps+=2;
 		ka++,kb++, out++;
 	
 	}
 	else if(a[ka]<b[kb]){
 		memLog[countMemOps]=apos+ka;
+		countMemOps++;
 		ka++;	
 	}
 	else {
 		memLog[countMemOps]=bpos+kb;
+		countMemOps++;
 		kb++;	
 	}
-    countMemOps++;
   }
 	
 	return countMemOps;
 }
  
 
-=======
->>>>>>> b4d679e81369d8efddfe46fb43a8c38b174b0349
 void triangleCountBranchBased(const int32_t nv, const int32_t * off,
     const int32_t * ind, int64_t * triNE,
     int64_t* allTriangles)
 {
 	int32_t edge=0;
 	int64_t sum=0;
-<<<<<<< HEAD
+
 	double totalBB, totalBA,iterBB, iterBA, whenFaster;
 	int64_t triBB,triBA;
 	
@@ -179,21 +150,7 @@ void triangleCountBranchBased(const int32_t nv, const int32_t * off,
     for (int src = 0; src < nv; src++)
     {
 		int srcLen=off[src+1]-off[src];
-=======
-	double totalBB, totalBA,iterBB, iterBA, whenFaster, ccGlobal;
-	int64_t triBB,triBA, actualTriangles, possibleTriangles, globalPossibleTriangles;
-	
-	triBA=triBB=actualTriangles=possibleTriangles=globalPossibleTriangles=0;
-	whenFaster=totalBB=totalBA=iterBB=iterBA=ccGlobal=0.0;
-	int32_t countFaster=0;
-	
-    for (int src = 0; src < nv; src++)
-    {
-		int srcLen=off[src+1]-off[src];
-		actualTriangles=0;
-		possibleTriangles=srcLen*srcLen;
-		globalPossibleTriangles+=possibleTriangles;
->>>>>>> b4d679e81369d8efddfe46fb43a8c38b174b0349
+
 		for(int iter=off[src]; iter<off[src+1]; iter++)
 		{
 			int dest=ind[iter];
@@ -207,25 +164,19 @@ void triangleCountBranchBased(const int32_t nv, const int32_t * off,
 			triBA+=triNE[edge];
 
 			tic();		
-<<<<<<< HEAD
+
 			triNE[edge]= intersectionBranchBased (src, srcLen, ind+off[src], dest, destLen, ind+off[dest]);			
-=======
-			triNE[edge]= intersectionBranchBased    (src, srcLen, ind+off[src], dest, destLen, ind+off[dest]);			
->>>>>>> b4d679e81369d8efddfe46fb43a8c38b174b0349
+
 			iterBB=toc();
 			totalBB+=iterBB;
 			triBB+=triNE[edge];
 
-<<<<<<< HEAD
 			memOpsCounter+=intersectionCountMemOps   (src, srcLen, ind+off[src], dest, destLen, ind+off[dest]);	
-=======
->>>>>>> b4d679e81369d8efddfe46fb43a8c38b174b0349
 
 			if(iterBA<iterBB){
 				countFaster++;
 				whenFaster+=(iterBB-iterBA);
 			}
-<<<<<<< HEAD
 			sum+=triNE[edge++];
 		}
 	}
@@ -292,38 +243,6 @@ void triangleCountBranchBased(const int32_t nv, const int32_t * off,
 
     free(logMem);
 
-=======
-			actualTriangles+=triNE[edge];
-			
-			sum+=triNE[edge++];
-		}
-		if(possibleTriangles!=0)
-			ccGlobal+= (double)actualTriangles/(double)possibleTriangles;
-	}
-	ccGlobal/=nv;
-
-	printf("Branched-based       : %lf\n", totalBB);
-	printf("Branched-avoiding    : %lf\n", totalBA);
-	printf("Faster intersections : %.2lf \% \n", 100*(double)countFaster/(double)edge);
-	printf("When faster          : %lf\n", whenFaster);
-	printf("Results are equal    : %ld %ld\n", triBB,triBA);
-	printf("Open triangles       : %ld \n", globalPossibleTriangles);
-	printf("Ratio closed 	     : %.2lf \n",ccGlobal);
-
-//	int64_t BM=10;
-	int64_t closedTriangles=triBB;
-	int64_t totalBBCycles = 3E9*totalBB;
-	int64_t BM= 2*(totalBBCycles-2*(globalPossibleTriangles+closedTriangles))/ (globalPossibleTriangles+closedTriangles);
-	printf("BM %ld\n", BM);
-	int64_t modelBB=triBB*(BM + 4) + (globalPossibleTriangles-closedTriangles)*(2+0.5*BM);
-	int64_t modelBA=6*globalPossibleTriangles;
-
-	printf("Branch-based model   : %ld\n", modelBB);
-	printf("Branch-avoiding model: %ld\n", modelBA);
-	
-	
-	
->>>>>>> b4d679e81369d8efddfe46fb43a8c38b174b0349
 /*    for (int32_t i = 0; i < N; ++i)
     {
       ntri[i]= count_triangles (nv, off, ind, i,numIntersections,possibleTriangles,elementsIntersected);
@@ -337,9 +256,6 @@ void triangleCountBranchBased(const int32_t nv, const int32_t * off,
 	*allTriangles=sum;
 }
 
-
-<<<<<<< HEAD
-=======
 
 
  /*
@@ -374,4 +290,3 @@ int64_t intersectionBranchAvoiding (const int32_t ai, const int32_t alen, const 
 }
 */ 
 
->>>>>>> b4d679e81369d8efddfe46fb43a8c38b174b0349
