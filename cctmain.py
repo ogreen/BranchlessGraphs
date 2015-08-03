@@ -3,9 +3,6 @@ import sys, getopt
 import time
 
 def readGraphDIMACS(filePath):
-
-#, uint32_t** prmoff, uint32_t** prmind, uint32_t* prmnv, uint32_t* prmne){
-
 	fp = open(filePath,"r")
 	firstLine = fp.readline().split()
 	nv = int(firstLine[0])
@@ -44,19 +41,7 @@ def intersectionBranchBased (alen, apos,blen, bpos ,ind):
 			ka+=1;	
 		else:
 			kb+=1;	
-<<<<<<< HEAD
 
-		if(ka>=alen or kb>=blen):
-			break;
-		if(ind[apos+ka]==ind[bpos+kb]):
-			ka+=1;kb+=1;out+=1;
-		elif(ind[apos+ka]<ind[bpos+kb]):
-			ka+=1;	
-		else:
-			kb+=1;				
-
-=======
->>>>>>> b4d679e81369d8efddfe46fb43a8c38b174b0349
 	return out;
 
 
@@ -72,32 +57,53 @@ def intersectionBranchAvoiding (alen, apos,blen, bpos ,ind):
 		kb+= (comp>=0);
 		out+= (comp==0);							
 
-<<<<<<< HEAD
-		if(ka>=alen or kb>=blen):
-			break;
-		comp   = (ind[apos+ka]-ind[bpos+kb]);
-		ka+= (comp<=0);
-		kb+= (comp>=0);
-		out+= (comp==0);							
-
-		
-
-				
-
-=======
-		# cond1=(comp==0)
-		# cond2=(comp<0)
-# #		print cond2, comp
-		# ka+= cond2 + cond1
-		# kb+= 1-cond2;
-		# out+= cond1;					
->>>>>>> b4d679e81369d8efddfe46fb43a8c38b174b0349
 	return out;
 	
+def intersectionCountMemOps (alen, apos,blen, bpos ,ind):
+	ka=kb=out=counter=0
+	if(alen==0 or blen==0 or ind[apos+alen-1]<ind[bpos] or ind[bpos + blen-1]<ind[apos]):
+		return counter
+	while (1):
+		if(ka>=alen or kb>=blen):
+			break;
+		if(ind[apos+ka]==ind[bpos+kb]):
+			ka+=1;kb+=1;out+=1;
+			counter+=2;
+		elif(ind[apos+ka]<ind[bpos+kb]):
+			counter+=1;
+			ka+=1;	
+		else:
+			counter+=1;
+			kb+=1;	
+	return counter;
+	
+
+def intersectionLogMemOps (alen, apos,blen, bpos ,ind,memOps,globalPos):
+	ka=kb=out=0
+	counter=globalPos
+	if(alen==0 or blen==0 or ind[apos+alen-1]<ind[bpos] or ind[bpos + blen-1]<ind[apos]):
+		return counter
+	while (1):
+		if(ka>=alen or kb>=blen):
+			break;
+		if(ind[apos+ka]==ind[bpos+kb]):
+			memOps[counter]=apos+ka;
+			memOps[counter+1]=bpos+kb;
+			counter+=2;
+			ka+=1;kb+=1;out+=1;
+		elif(ind[apos+ka]<ind[bpos+kb]):
+			memOps[counter]=apos+ka;
+			counter+=1;
+			ka+=1;	
+		else:
+			memOps[counter]=bpos+kb;
+			counter+=1;
+			kb+=1;	
+	return counter;
 	
 
 
-def triangleCount(nv, off, ind, triNE):
+def triangleCount(nv, off, ind, triNE, printOutput):
 	edge=0;
 	sumBB=sumBA=0;
 	
@@ -130,66 +136,125 @@ def triangleCount(nv, off, ind, triNE):
 			sumBB+=intersectionBranchBased (srcLen, off[src],destLen, off[dest] ,ind)
 	end=time.clock()
 	totalBB=end-start
-	
-			
-	print "Branch-Based     : ", sumBB
-	print "Branch-Avoiding  : ", sumBA
-	print "TimeBB			: ", totalBB
-	print "TimeBA			: ", totalBA
+	if (printOutput):
+		print "Branch-Based     : ", sumBB
+		print "Branch-Avoiding  : ", sumBA
+		print "TimeBB			: ", totalBB
+		print "TimeBA			: ", totalBA
+
 	return sumBB
+
+def ResetVertexAccess(vertexAccess, ne):
+	for e in range(0,ne):
+		vertexAccess[e]=0;
+
+
+def printNormalized(readTime,baseTime,  timeList):
+	for t in timeList:
+#		print( (t-readTime)/baseTime)
+#		sys.stdout.write( str((t-readTime)/baseTime) + ',' )
+		if (baseTime==0):
+			print "Normalizing time unsucessful due to short baseTime"
+			return
+		sys.stdout.write( "{:.5f}".format((t-readTime)/baseTime)  + ',' )
+
+	print 
+def benchMarkCCT(nv,ne, off, ind, triNE):
 	
-<<<<<<< HEAD
-def benchMarkInstructions(param, n):
-	sum=0;
+	totalMemOps=0;	
+	for src in range(0,nv):
+		srcLen=off[src+1]-off[src];
+		actualTriangles=0;
+		for iter in range (off[src], off[src+1]):
+			dest=ind[iter];
+			destLen=off[dest+1]-off[dest];	
+			totalMemOps+=intersectionCountMemOps (srcLen, off[src],destLen, off[dest] ,ind)
+
+	print "MemOps           : ", totalMemOps
+	pos=0;
+	memOps=[None]*totalMemOps;
+	for src in range(0,nv):
+		srcLen=off[src+1]-off[src];
+		actualTriangles=0;
+		for iter in range (off[src], off[src+1]):
+			dest=ind[iter];
+			destLen=off[dest+1]-off[dest];	
+			pos=intersectionLogMemOps (srcLen, off[src],destLen, off[dest] ,ind,memOps,pos)
 	
-	# time.clock()
-	# for i in range (0,n):
-		# if(i>50):
-			# sum++;
-	
-	# incs=time.clock()			
+	vertexAccess=[None]*ne;	
+
+#	for i in range(0,1000):
+#		sys.stdout.write(str(memOps[i])+" ,")
 
 	start=time.clock()
-	for i in range (0,n):
-#		if(i>50):
-		sum+=1;
-		sum+=1;
-	addConst1=time.clock()-start
+	ResetVertexAccess(vertexAccess,ne)
+	timeSet=time.clock()-start
 
+	ResetVertexAccess(vertexAccess,ne)
 	start=time.clock()
-	for i in range (0,n):
-#		if(i>50):
-		sum+=4;
-		sum+=1;
-	
-	addConst4=time.clock()-start			
-	
+	for m in range(0,totalMemOps):
+		vertexAccess[memOps[m]]+=1;	
+	timeInc1=time.clock()-start
+ 
+	ResetVertexAccess(vertexAccess,ne)
+	a=0
 	start=time.clock()
-	for i in range (0,n):
-#		if(i>50):
-		sum+=param;
-		sum+=1;
-	
-	addVariable=time.clock()-start			
-
+	for m in range(0,totalMemOps):
+		a+=1;	
+	timeInc1NoStore=time.clock()-start
+ 
+	ResetVertexAccess(vertexAccess,ne)
 	start=time.clock()
-	for i in range (0,n):
-#		if(i>50):
-		sum+=1;
-		sum+=(sum==1000);
-	
-	addConds=time.clock()-start			
-	
-	print addConst1, addConst4, addVariable,addConds;
-	return sum;
+	for m in range(0,totalMemOps):
+		vertexAccess[memOps[m]]+=255;	
+	timeAdd255=time.clock()-start
+
+	ResetVertexAccess(vertexAccess,ne)
+	start=time.clock()
+	for m in range(0,totalMemOps):
+		vertexAccess[memOps[m]]+=1000000;	
+	timeAdd1M=time.clock()-start
+
+	ResetVertexAccess(vertexAccess,ne)
+	start=time.clock()
+	for m in range(0,totalMemOps):
+		vertexAccess[memOps[m]]+=(vertexAccess[memOps[m]]==0);	
+	timeAddCond=time.clock()-start
+
+	ResetVertexAccess(vertexAccess,ne)
+	a=b=c=0
+	start=time.clock()
+	for m in range(0,totalMemOps):
+		a+=(vertexAccess[memOps[m]]==0);	
+		b+=(vertexAccess[memOps[m]]<=0);	
+		c+=(vertexAccess[memOps[m]]>=0);	
+	timeAdd3Cond=time.clock()-start
+	nediv2=int(0.7*ne);
+	ResetVertexAccess(vertexAccess,ne)
+	a=b=c=0
+	start=time.clock()
+	for m in range(0,totalMemOps):
+		if(memOps[m]>=nediv2):
+			vertexAccess[memOps[m]]=memOps[m];
+		else:
+			vertexAccess[memOps[m]]=memOps[m];
+
+	timeNVDiv2=time.clock()-start
 
 
+	timeList=[]
+#	timeList.append(timeSet);
+	timeList.append(timeInc1);
+	timeList.append(timeInc1NoStore);
+	timeList.append(timeAdd255);
+	timeList.append(timeAdd1M);
+	timeList.append(timeAddCond);
+	timeList.append(timeAdd3Cond);
+	timeList.append(timeNVDiv2	);
 
-	
+	print "Time-set         : ", timeSet	
+	printNormalized(timeSet, timeInc1-timeSet,timeList)
 
-=======
-	
->>>>>>> b4d679e81369d8efddfe46fb43a8c38b174b0349
 def main(argv):
 	inputfile = ''
 	try:
@@ -209,12 +274,11 @@ def main(argv):
 
 	triNE=[None]*ne
 	print nv, ne 	
-	triangleCount(nv, off, ind, triNE)
+	triangleCount(nv, off, ind, triNE,True)
+	benchMarkCCT(nv, ne, off, ind, triNE)
   
-<<<<<<< HEAD
-	benchMarkInstructions(4, 10000000);
-=======
->>>>>>> b4d679e81369d8efddfe46fb43a8c38b174b0349
+
+#	benchMarkInstructions(4, 10000);
 
 if __name__ == "__main__":
 	main(sys.argv[1:])
