@@ -114,19 +114,19 @@ def timeAlgorithms(nv, off, ind):
 #		globalPossibleTriangles+=possibleTriangles;
 		for iter1 in range (off[src], off[src+1]):
 			intersections+=1
-			start= time.clock()
+			start= time.time()
 			dest=ind[iter1];
 			destLen=off[dest+1]-off[dest];	
 			sumBA+=intersectionBranchAvoiding (srcLen, off[src],destLen, off[dest] ,ind)			
-			end=time.clock()
+			end=time.time()
 			iterBA=end
 			totalBA+=end-start
 
-			start= time.clock()	
+			start= time.time()	
 			dest=ind[iter1];
 			destLen=off[dest+1]-off[dest];	
 			sumBB+=intersectionBranchBased (srcLen, off[src],destLen, off[dest] ,ind)
-			end=time.clock()
+			end=time.time()
 			iterBB=end
 			totalBB+=end-start
 			
@@ -140,10 +140,11 @@ def ResetVertexAccess(vertexAccess, ne):
 	for e in range(0,ne):
 		vertexAccess[e]=0;
 
-def prettyPrint(nv, ne, timeBA,timeBB,intersections,countFaster, ratioBAWins, timeMem,timeList):
+def prettyPrint(nv, ne, timeBA,timeBB,intersections,countFaster, ratioBAWins, timeMem,timeList, graphName):
 
 	printStr = "";
-	printStr = printStr + "{:8s}, ".format("Python")		
+	printStr = printStr + "{:>25s}, ".format(graphName)		
+	printStr = printStr + "{:>8s}, ".format("Python")		
 	printStr = printStr + "{:8d}, ".format(nv)	
 	printStr = printStr + "{:8d}, ".format(ne)	
 	printStr = printStr + "{:8d}, ".format(intersections)		
@@ -214,54 +215,54 @@ def benchMarkCCT(nv,ne, off, ind, triNE):
 	
 	vertexAccess=[None]*ne;	
 
-	start=time.clock()
+	start=time.time()
 	ResetVertexAccess(vertexAccess,ne)
-	timeMem=time.clock()-start
+	timeMem=time.time()-start
 
 	ResetVertexAccess(vertexAccess,ne)
-	start=time.clock()
+	start=time.time()
 	for m in range(0,totalMemOps):
 		vertexAccess[memOps[m]]+=1;	
-	timeInc1=time.clock()-start
+	timeInc1=time.time()-start
 
 	ResetVertexAccess(vertexAccess,ne)
-	start=time.clock()
+	start=time.time()
 	for m in range(0,totalMemOps):
 		vertexAccess[memOps[m]]+=1000000;	
-	timeAdd1M=time.clock()-start
+	timeAdd1M=time.time()-start
 
 	ResetVertexAccess(vertexAccess,ne)
-	start=time.clock()
+	start=time.time()
 	for m in range(0,totalMemOps):
 		vertexAccess[memOps[m]]+=nv;	
-	timeAddVar=time.clock()-start
+	timeAddVar=time.time()-start
 
 
 	ResetVertexAccess(vertexAccess,ne)
-	start=time.clock()
+	start=time.time()
 	for m in range(0,totalMemOps):
 		vertexAccess[memOps[m]]+=(vertexAccess[memOps[m]]==0);	
-	timeAddCond=time.clock()-start
+	timeAddCond=time.time()-start
 
 	ResetVertexAccess(vertexAccess,ne)
 	a=b=c=0
-	start=time.clock()
+	start=time.time()
 	for m in range(0,totalMemOps):
 		a+=(vertexAccess[memOps[m]]==0);	
 		b+=(vertexAccess[memOps[m]]<=0);	
 		c+=(vertexAccess[memOps[m]]>=0);	
-	timeAdd3Cond=time.clock()-start
+	timeAdd3Cond=time.time()-start
 
 # 	nediv2=int(0.7*ne);
 # 	ResetVertexAccess(vertexAccess,ne)
 # 	a=b=c=0
-# 	start=time.clock()
+# 	start=time.time()
 # 	for m in range(0,totalMemOps):
 # 		if(memOps[m]>=nediv2):
 # 			vertexAccess[memOps[m]]=memOps[m];
 # 		else:
 # 			vertexAccess[memOps[m]]=memOps[m];
-# 	timeNVDiv2=time.clock()-start
+# 	timeNVDiv2=time.time()-start
 
 
 	timeList=[]
@@ -275,31 +276,39 @@ def benchMarkCCT(nv,ne, off, ind, triNE):
 	return timeMem, timeList
 
 def main(argv):
-	inputfile = ''
+	graphName=inputfile = ''
+
 	try:
-		opts, args = getopt.getopt(argv,"hi:",["ifile="])
-	except getopt.GetoptError:
-		print 'cctmain.py -i <inputfile>'
+		opts, args = getopt.getopt(argv,"hig:",["ifile=","gname="])
+	except getopt.GetoptError as err:
+		print str(err)
+		print 'Error cctmain.py -i<inputfile> -g<graphName>'
 		sys.exit(2)
+
 	for opt, arg in opts:
 		if opt == '-h':
-			print 'cctmain.py -i <inputfile>'
+			print 'cctmain.py -i <inputfile> -g <graphName>'
 			sys.exit()
 		elif opt in ("-i", "--ifile"):
 			inputfile = arg
-#	print 'Input file is "', inputfile
+		elif opt in ("-g", "--gname"):
+			graphName = arg
 
 	nv,ne,ind,off = readGraphDIMACS(inputfile)
 
 	triNE=[None]*ne
-#	print nv, ne 	
+
 	timeBA,timeBB,intersections,countFaster, ratioBAWins = timeAlgorithms(nv, off, ind)
 	timeMem,timeList=benchMarkCCT(nv, ne, off, ind, triNE)
 
-	prettyPrint(nv, ne, timeBA,timeBB,intersections,countFaster, ratioBAWins, timeMem,timeList)
+	prettyPrint(nv, ne, timeBA,timeBB,intersections,countFaster, ratioBAWins, timeMem,timeList,graphName)
 
 #	benchMarkInstructions(4, 10000);
 
 if __name__ == "__main__":
+#	print sys.argv[1]
 	main(sys.argv[1:])
-
+	# params=[]
+	# for par in sys.argv:
+		# params.append(par)
+	# main (params[1:])

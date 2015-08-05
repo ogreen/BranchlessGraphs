@@ -204,7 +204,32 @@ public class cct
 		int sumBB=0,sumBA=0,intersections=0, countBAFaster=0;
 		long start,end;
 		double totalBB=0,totalBA=0, currBB,currBA;
-
+/*
+		start=System.nanoTime();
+		for (int src=0; src<nv; src++){
+			int srcLen=off[src+1]-off[src];
+			for (int iter = off[src];  iter<off[src+1]; iter++){
+				int dest=ind[iter];
+				int destLen=off[dest+1]-off[dest];	
+				sumBB+=intersectionBranchBased (srcLen, off[src],destLen, off[dest] ,ind);
+			}
+		}
+		end=System.nanoTime();
+		totalBB=(end-start)/(double)1e9;
+		
+			
+		start=System.nanoTime();
+		for (int src=0; src<nv; src++){
+			int srcLen=off[src+1]-off[src];
+			for (int iter = off[src];  iter<off[src+1]; iter++){
+				int dest=ind[iter];
+				int destLen=off[dest+1]-off[dest];	
+				sumBA+=intersectionBranchAvoiding (srcLen, off[src],destLen, off[dest] ,ind);
+			}
+		}
+		end=System.nanoTime();
+		totalBA=(end-start)/(double)1e9;
+*/		
 		for (int src=0; src<nv; src++){
 			int srcLen=off[src+1]-off[src];
 			for (int iter = off[src];  iter<off[src+1]; iter++){
@@ -214,22 +239,21 @@ public class cct
 				sumBB+=intersectionBranchBased (srcLen, off[src],destLen, off[dest] ,ind);
 				end=System.nanoTime();
 				currBB=end-start;
-				totalBB=(end-start)/10e9;
-
+				totalBB+=(end-start)/(double)10e9;
+				
 				start=System.nanoTime();
 				dest=ind[iter];
 				destLen=off[dest+1]-off[dest];	
 				sumBA+=intersectionBranchAvoiding (srcLen, off[src],destLen, off[dest] ,ind);
 				end=System.nanoTime();
 				currBA=end-start;
-				totalBA+=(end-start)/10e9;				
+				totalBA+=(end-start)/(double)10e9;				
 
 				if(currBA<currBB)
 					countBAFaster++;
 			
 				intersections++;
-			}
-			
+			}			
 		}
 
 		cctStats.cctTimers[eCCTimers.CCT_TT_BA.ordinal()]=totalBA;
@@ -259,9 +283,10 @@ public class cct
 		System.out.println();
 	}
 	
-	private void prettyPrint(stats printStats){
+	private void prettyPrint(stats printStats, String graphName){
 		String printStr = "";
 
+		printStr = printStr + String.format("%25s, ",graphName);
 		printStr = printStr + String.format("%8s, ","Java");
 		
 		printStr = printStr + String.format("%8d, ",printStats.nv);
@@ -395,7 +420,7 @@ public class cct
 		cctBenchMark.benchMarkCCT(cctBenchMark.nv, cctBenchMark.ne, cctBenchMark.off,cctBenchMark.ind,cctStats);
 		cctStats.nv=cctBenchMark.nv;
 		cctStats.ne=cctBenchMark.ne;
-		cctBenchMark.prettyPrint(cctStats);
+		cctBenchMark.prettyPrint(cctStats,args[1]);
 	}
 }	
 	
