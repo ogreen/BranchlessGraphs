@@ -6,6 +6,54 @@
 #include "cct.h"
 #include "timer.h"
 
+typedef enum{
+	CCT_TT_BB,
+	CCT_TT_BA,
+	CCT_TT_MEM_ONLY,
+	CCT_TT_INC,
+	CCT_TT_ADD_1M,
+	CCT_TT_ADD_VAR,
+	CCT_TT_ADD_COND,
+	CCT_TT_ADD_COND_3,
+	CCT_TT_LAST,
+} eCCTimers;
+
+typedef struct{
+	double cctTimers[CCT_TT_LAST];
+	int64_t numberIntersections;
+	int64_t numberBAWins;
+	double ratioBAWins;		// BA over BA
+	int32_t nv,ne;
+} stats;
+
+void prettyPrint(stats printStats){
+
+	printf("%8s, ", "C");
+//	printf("%s", graphName)
+	printf("%8d, ",printStats.nv);
+	printf("%8d, ",printStats.ne);
+	printf("%8ld, ",printStats.numberIntersections);
+	printf("%8ld, ",printStats.numberBAWins);
+	printf("%.5lf, ", printStats.cctTimers[CCT_TT_BB]);
+	printf("%.5lf, ", printStats.cctTimers[CCT_TT_BA]);
+	printf("%.5lf, ",printStats.ratioBAWins);
+
+	if (printStats.cctTimers[CCT_TT_BA]==0){
+		printf("Normalizing time unsucessful due to short baseTime - Graph probably too small\n");
+		return;
+	}
+
+	double memTime=printStats.cctTimers[CCT_TT_MEM_ONLY];
+	double baseTime=printStats.cctTimers[CCT_TT_INC]-memTime;
+
+	for(eCCTimers norm=CCT_TT_INC; norm<CCT_TT_LAST; norm++)
+	{
+		printf("%.5lf, ", ((printStats.cctTimers[norm]-memTime)/baseTime));
+
+	}
+
+	printf("\n");
+}
 
 int64_t intersectionBranchBased (const int32_t ai, const int32_t alen, const int32_t * a,
 						 const int32_t bi, const int32_t blen, const int32_t * b)
@@ -153,18 +201,17 @@ void triangleCountBranchBased(const int32_t nv, const int32_t * off,
 
 		for(int iter=off[src]; iter<off[src+1]; iter++)
 		{
+			tic();
 			int dest=ind[iter];
 			int destLen=off[dest+1]-off[dest];	
-
-
-			tic();
 			triNE[edge]= intersectionBranchAvoiding (src, srcLen, ind+off[src], dest, destLen, ind+off[dest]);
 			iterBA=toc();
 			totalBA+=iterBA;			
 			triBA+=triNE[edge];
 
 			tic();		
-
+			dest=ind[iter];
+			destLen=off[dest+1]-off[dest];
 			triNE[edge]= intersectionBranchBased (src, srcLen, ind+off[src], dest, destLen, ind+off[dest]);			
 
 			iterBB=toc();
@@ -181,12 +228,18 @@ void triangleCountBranchBased(const int32_t nv, const int32_t * off,
 		}
 	}
 
-	printf("Branched-based       : %lf\n", totalBB);
-	printf("Branched-avoiding    : %lf\n", totalBA);
-	printf("Faster intersections : %lf\n", (double)countFaster/(double)edge);
-	printf("Results are equal    : %d\n", triBA==triBB);
-	printf("Results are equal    : %ld %ld\n", triBB,triBA);
-	printf("When faster          : %lf\n", whenFaster);
+    stats cctStats;
+    cctStats.cctTimers[CCT_TT_BB]=totalBB;
+    cctStats.cctTimers[CCT_TT_BA]=totalBA;
+
+    cctStats.nv=nv;
+    cctStats.ne=off[nv];
+
+    cctStats.numberIntersections=edge;
+    cctStats.numberBAWins=countFaster;
+    cctStats.ratioBAWins=(double)countFaster/(double)edge;
+
+
 
 	int32_t* logMem = (int32_t*)malloc(sizeof(int32_t)*(memOpsCounter+1)); 
 	int32_t* vertexAccess = (int32_t*)malloc(sizeof(int32_t)*off[nv]); 
@@ -199,8 +252,6 @@ void triangleCountBranchBased(const int32_t nv, const int32_t * off,
 		{
 			int dest=ind[iter];
 			int destLen=off[dest+1]-off[dest];	
-
-
 		    pos=intersectionLogMemOps(src, srcLen, ind+off[src], dest, destLen, ind+off[dest], logMem, off[src], off[dest],pos);	
 			//printf("%d, ", pos);
 		}
@@ -209,84 +260,22 @@ void triangleCountBranchBased(const int32_t nv, const int32_t * off,
 	memset(vertexAccess,0, off[nv]*sizeof(int32_t));
 
 	double timeNOP=0,timeInc=0, timeAdd1=0, timeAdd255=0, timeAdd1M=0, timeAddVar=0,timeAddCondEq0=0,timeAddCondNEq0=0,timeAdd3Cond=0;
-	memset(vertexAccess,0, off[nv]*sizeof(int32_t)); tic();	for(int m=0; m<memOpsCounter;m++) vertexAccess[logMem[m]]; timeNOP=toc();
-	memset(vertexAccess,0, off[nv]*sizeof(int32_t)); tic();	for(int m=0; m<memOpsCounter;m++) vertexAccess[logMem[m]]++; timeInc=toc();
-	memset(vertexAccess,0, off[nv]*sizeof(int32_t)); tic();	for(int m=0; m<memOpsCounter;m++) vertexAccess[logMem[m]]+=1; timeAdd1=toc();
-	memset(vertexAccess,0, off[nv]*sizeof(int32_t)); tic();	for(int m=0; m<memOpsCounter;m++) vertexAccess[logMem[m]]+=255; timeAdd255=toc();
-	memset(vertexAccess,0, off[nv]*sizeof(int32_t)); tic();	for(int m=0; m<memOpsCounter;m++) vertexAccess[logMem[m]]+=100000; timeAdd1M=toc();
-	memset(vertexAccess,0, off[nv]*sizeof(int32_t)); tic();	for(int m=0; m<memOpsCounter;m++) vertexAccess[logMem[m]]+=memOpsCounter; timeAddVar=toc();
-	memset(vertexAccess,0, off[nv]*sizeof(int32_t)); tic();	for(int m=0; m<memOpsCounter;m++) vertexAccess[logMem[m]]+=(vertexAccess[logMem[m]]==0); timeAddCondEq0=toc();
-	memset(vertexAccess,0, off[nv]*sizeof(int32_t)); tic();	for(int m=0; m<memOpsCounter;m++) vertexAccess[logMem[m]]+=(vertexAccess[logMem[m]]!=0); timeAddCondNEq0=toc();
-	memset(vertexAccess,0, off[nv]*sizeof(int32_t)); tic();	for(int m=0; m<memOpsCounter;m++) vertexAccess[logMem[m]]+=(vertexAccess[logMem[m]]==0+vertexAccess[logMem[m]]>=0+vertexAccess[logMem[m]]<=0); timeAdd3Cond=toc();
-   // memset(vertexAccess,0, off[nv]*sizeof(int32_t)); tic();	for(int m=0; m<memOpsCounter;m++) vertexAccess[logMem[m]]+=(vertexAccess[logMem[m]]==0+vertexAccess[logMem[m]]>=0+vertexAccess[logMem[m]]<=0); timeAdd3Cond=toc();
+	memset(vertexAccess,0, off[nv]*sizeof(int32_t)); tic();	for(int m=0; m<memOpsCounter;m++) vertexAccess[logMem[m]]; cctStats.cctTimers[CCT_TT_MEM_ONLY]=toc();
+	memset(vertexAccess,0, off[nv]*sizeof(int32_t)); tic();	for(int m=0; m<memOpsCounter;m++) vertexAccess[logMem[m]]++; cctStats.cctTimers[CCT_TT_INC]=toc();
+	memset(vertexAccess,0, off[nv]*sizeof(int32_t)); tic();	for(int m=0; m<memOpsCounter;m++) vertexAccess[logMem[m]]+=1000000; cctStats.cctTimers[CCT_TT_ADD_1M]=toc();
+	memset(vertexAccess,0, off[nv]*sizeof(int32_t)); tic();	for(int m=0; m<memOpsCounter;m++) vertexAccess[logMem[m]]+=memOpsCounter; cctStats.cctTimers[CCT_TT_ADD_VAR]=toc();
+	memset(vertexAccess,0, off[nv]*sizeof(int32_t)); tic();	for(int m=0; m<memOpsCounter;m++) vertexAccess[logMem[m]]+=(vertexAccess[logMem[m]]==0); cctStats.cctTimers[CCT_TT_ADD_COND]=toc();
     int32_t a=0,b=0,c=0;
-	memset(vertexAccess,0, off[nv]*sizeof(int32_t)); tic();	for(int m=0; m<memOpsCounter;m++) {a+=vertexAccess[logMem[m]]==0;b+=vertexAccess[logMem[m]]>=0;c+=vertexAccess[logMem[m]]<=0;} timeAdd3Cond=toc();
+	memset(vertexAccess,0, off[nv]*sizeof(int32_t)); tic();	for(int m=0; m<memOpsCounter;m++) {a+=vertexAccess[logMem[m]]==0;b+=vertexAccess[logMem[m]]>=0;c+=vertexAccess[logMem[m]]<=0;} cctStats.cctTimers[CCT_TT_ADD_COND_3]=toc();
 	vertexAccess[0]=a+b+c;	
-	printf("\n\n");
-	printf("Memops               : %d\n", memOpsCounter);
-	printf("NOP                  : %lf\n", timeNOP);
-	printf("Inc                  : %lf\n", timeInc);
-	printf("Add1                 : %lf\n", timeAdd1);
-	printf("Add255               : %lf\n", timeAdd255);
-	printf("Add1M                : %lf\n", timeAdd1M);
-	printf("AddVar               : %lf\n", timeAddVar);
-	printf("AddCondEq0           : %lf\n", timeAddCondEq0);
-	printf("AddCondNEq0          : %lf\n", timeAddCondNEq0);
-	printf("Add3Cond             : %lf\n", timeAdd3Cond);
 
-	
-	for(int m=0; m<memOpsCounter;m++) {
-	  
-	}; 
-	printf("\n");
+	prettyPrint(cctStats);
+
     free(vertexAccess);
-
     free(logMem);
 
-/*    for (int32_t i = 0; i < N; ++i)
-    {
-      ntri[i]= count_triangles (nv, off, ind, i,numIntersections,possibleTriangles,elementsIntersected);
-    }
-*/  
-/*	*allTriangles=0;
-    for (int32_t i = 0; i < N; ++i)
-      *allTriangles+=ntri[i];
-*/
-//	printf("CPU SUM %d\n", sum);
 	*allTriangles=sum;
 }
 
 
-
- /*
-int64_t intersectionBranchAvoiding (const int32_t ai, const int32_t alen, const int32_t * a,
-						 const int32_t bi, const int32_t blen, const int32_t * b)
-{
-  int32_t ka = 0, kb = 0;
-  int64_t out = 0;
-
-  
-  if (!alen || !blen || a[alen-1] < b[0] || b[blen-1] < a[0])
-    return 0;
-
-  while (1) {
-    if (ka >= alen || kb >= blen) break;
-
-
-
-	int32_t condEq   = ((a[ka]-b[kb])==0);
-	int32_t condDiff = ((uint32_t)(a[ka]-b[kb])>>31);
-
-	out+= condEq;
-	ka+= (condEq || condDiff);
-	kb+= (condEq || (1-condDiff));
-
-	
-  }
-
-//	counter=10;
-	
-	return out;
-}
-*/ 
 

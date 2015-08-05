@@ -10,6 +10,27 @@ import java.util.ArrayList;
 
 public class cct
 {
+	public enum eCCTimers{
+		CCT_TT_BB,
+		CCT_TT_BA,
+		CCT_TT_MEM_ONLY,
+		CCT_TT_INC,
+		CCT_TT_ADD_1M,
+		CCT_TT_ADD_VAR,
+		CCT_TT_ADD_COND,
+		CCT_TT_ADD_COND_3,
+		CCT_TT_LAST,
+	};
+
+	public static class stats{
+		public double[] cctTimers= new double[eCCTimers.CCT_TT_LAST.ordinal()]; 
+		public int numberIntersections;
+		public int numberBAWins;
+		double ratioBAWins;		// BA over BA
+		public int nv,ne;
+	} ;
+	
+	
 	public int [] ind;
 	public int [] off;
 	public int nv,ne;
@@ -32,7 +53,7 @@ public class cct
 			
 			off[0]=0;
 			off[1]=0;
-			System.out.println(Integer.toString(nv)+ " " +Integer.toString(ne));
+//			System.out.println(Integer.toString(nv)+ " " +Integer.toString(ne));
 			while (true) {
 				line = reader.readLine();
 				if (line == null) break;
@@ -66,7 +87,6 @@ public class cct
 				ex.printStackTrace();
 			}
 		}
-		System.out.println(Integer.toString(v)+ " " +Integer.toString(edges));
 		
 	}
 
@@ -159,8 +179,8 @@ public class cct
 				break;				
 			}
 			if(ind[apos+ka]==ind[bpos+kb]){
-//				memOps[memCounter]=(int)(apos+ka);
-//				memOps[memCounter+1]=(int)(bpos+kb);
+				memOps[memCounter]=(int)(apos+ka);
+				memOps[memCounter+1]=(int)(bpos+kb);
 				memCounter+=2;
 				ka+=1;kb+=1;out+=1;
 			}
@@ -180,43 +200,48 @@ public class cct
 	}
 	
 	
-	public void triangleCount(int nv, int ne, int[] off,int[] ind, boolean printOutput){
-		int sumBB=0,sumBA=0;
+	public void triangleCount(int nv, int ne, int[] off,int[] ind, stats cctStats){
+		int sumBB=0,sumBA=0,intersections=0, countBAFaster=0;
 		long start,end;
-		double totalBB=0,totalBA=0;
-		
-		start=System.nanoTime();
+		double totalBB=0,totalBA=0, currBB,currBA;
+
 		for (int src=0; src<nv; src++){
 			int srcLen=off[src+1]-off[src];
 			for (int iter = off[src];  iter<off[src+1]; iter++){
+				start=System.nanoTime();
 				int dest=ind[iter];
 				int destLen=off[dest+1]-off[dest];	
 				sumBB+=intersectionBranchBased (srcLen, off[src],destLen, off[dest] ,ind);
-			}
-		}
-		end=System.nanoTime();
-		totalBB=(end-start)/10e9;
+				end=System.nanoTime();
+				currBB=end-start;
+				totalBB=(end-start)/10e9;
 
-		start=System.nanoTime();
-		for (int src=0; src<nv; src++){
-			int srcLen=off[src+1]-off[src];
-			for (int iter = off[src];  iter<off[src+1]; iter++){
-				int dest=ind[iter];
-				int destLen=off[dest+1]-off[dest];	
+				start=System.nanoTime();
+				dest=ind[iter];
+				destLen=off[dest+1]-off[dest];	
 				sumBA+=intersectionBranchAvoiding (srcLen, off[src],destLen, off[dest] ,ind);
+				end=System.nanoTime();
+				currBA=end-start;
+				totalBA+=(end-start)/10e9;				
+
+				if(currBA<currBB)
+					countBAFaster++;
+			
+				intersections++;
 			}
+			
 		}
-		end=System.nanoTime();
-		totalBA=(end-start)/10e9;
-		
-		if (printOutput){
-			System.out.println( "Branch-Based     : " + sumBB);
-			System.out.println( "Branch-Avoiding  : " + sumBA);
-			System.out.println( "TimeBB           : " + totalBB);
-			System.out.println( "TimeBA           : " + totalBA);
-		}
+
+		cctStats.cctTimers[eCCTimers.CCT_TT_BA.ordinal()]=totalBA;
+		cctStats.cctTimers[eCCTimers.CCT_TT_BB.ordinal()]=totalBB;
+		cctStats.numberIntersections=intersections;
+		cctStats.numberBAWins=countBAFaster;
+		cctStats.ratioBAWins=(double)(countBAFaster)/(double)(intersections);
+
+		if(sumBB==sumBA)
+		  return;
 	}
-		
+
 	private void ResetVertexAccess(int [] vertexAccess, int ne){
 		for (int e=0; e<ne;e++)
 			vertexAccess[e]=0;
@@ -232,11 +257,35 @@ public class cct
 			System.out.format("%.5f, ",((t-readTime)/baseTime)  );
 		}
 		System.out.println();
+	}
+	
+	private void prettyPrint(stats printStats){
+		String printStr = "";
 
+		printStr = printStr + String.format("%8s, ","Java");
+		
+		printStr = printStr + String.format("%8d, ",printStats.nv);
+		printStr = printStr + String.format("%8d, ",printStats.ne);
+		printStr = printStr + String.format("%8d, ",printStats.numberIntersections);
+		printStr = printStr + String.format("%8d, ",printStats.numberBAWins);
+		
+		printStr = printStr + String.format("%.5f, ", printStats.cctTimers[eCCTimers.CCT_TT_BB.ordinal()]) ;
+		printStr = printStr + String.format("%.5f, ", printStats.cctTimers[eCCTimers.CCT_TT_BA.ordinal()]) ;
+		printStr = printStr + String.format("%.5f, ", printStats.ratioBAWins) ;
+
+		double baseTime=printStats.cctTimers[eCCTimers.CCT_TT_INC.ordinal()]-printStats.cctTimers[eCCTimers.CCT_TT_MEM_ONLY.ordinal()];
+		double memTime=printStats.cctTimers[eCCTimers.CCT_TT_MEM_ONLY.ordinal()];
+
+		for (int t=eCCTimers.CCT_TT_INC.ordinal(); t<eCCTimers.CCT_TT_LAST.ordinal(); t++){
+			double normalizedTime=(printStats.cctTimers[t]-memTime)/baseTime;
+			printStr = printStr + String.format("%.5f, ", normalizedTime);
+		}
+		
+		System.out.println(printStr);
 	
 	}
 	
-	public void benchMarkCCT(int nv,int ne,int[] off, int[] ind, boolean printResults){
+	public void benchMarkCCT(int nv,int ne,int[] off, int[] ind, stats cctStats){
 		int totalMemOps=0;	
 		
 		for (int src=0; src<nv; src++){
@@ -248,10 +297,8 @@ public class cct
 			}
 		}	
 
-		System.out.println ("MemOps           : "+ totalMemOps);
 		int pos=0;
 		int[] memOps = new int[totalMemOps];
-		System.out.println ("MemOps           : "+ memOps.length);
 		
 		for (int src=0; src<nv; src++){
 			int srcLen=off[src+1]-off[src];
@@ -265,7 +312,7 @@ public class cct
 		int[] vertexAccess=new int[ne];	
 		int a,b,c;
 		long start;
-		double timeSet,timeInc1,timeInc1NoStore,timeAdd255,timeAdd1M,timeAddCond,timeAdd3Cond,timeNVDiv2;
+		double timeSet,timeInc1,timeInc1NoStore,timeAddVar,timeAdd1M,timeAddCond,timeAdd3Cond,timeNVDiv2;
 
 		start=System.nanoTime();
 		ResetVertexAccess(vertexAccess,ne);
@@ -283,11 +330,6 @@ public class cct
 			a+=1;	
 		timeInc1NoStore=(System.nanoTime()-start)/10e9;
 	 
-		ResetVertexAccess(vertexAccess,ne);
-		start=System.nanoTime();
-		for (int m=0; m<totalMemOps; m++)
-			vertexAccess[memOps[m]]+=255;	
-		timeAdd255=(System.nanoTime()-start)/10e9;
 
 		ResetVertexAccess(vertexAccess,ne);
 		start=System.nanoTime();
@@ -295,6 +337,13 @@ public class cct
 			vertexAccess[memOps[m]]+=1000000;	
 		timeAdd1M=(System.nanoTime()-start)/10e9;
 
+		ResetVertexAccess(vertexAccess,ne);
+		start=System.nanoTime();
+		for (int m=0; m<totalMemOps; m++)
+			vertexAccess[memOps[m]]+=nv;	
+		timeAddVar=(System.nanoTime()-start)/10e9;
+		
+		
 		ResetVertexAccess(vertexAccess,ne);
 		start=System.nanoTime();
 		for (int m=0; m<totalMemOps; m++)
@@ -311,48 +360,45 @@ public class cct
 			c+=(vertexAccess[memOps[m]]>=0)?1:0;
 		}
 		timeAdd3Cond=(System.nanoTime()-start)/10e9;
-		int nediv2=(int)0.5*ne;
-		ResetVertexAccess(vertexAccess,ne);
-		a=b=c=0;
-		start=System.nanoTime();
-		for (int m=0; m<totalMemOps; m++){
-			if(memOps[m]>=nediv2)
-				vertexAccess[memOps[m]]=memOps[m];
-			else
-				vertexAccess[memOps[m]]=memOps[m];
-		}
-		timeNVDiv2=(System.nanoTime()-start)/10e9;
+//		int nediv2=(int)0.5*ne;
+//		ResetVertexAccess(vertexAccess,ne);
+//		a=b=c=0;
+//		start=System.nanoTime();
+//		for (int m=0; m<totalMemOps; m++){
+//			if(memOps[m]>=nediv2)
+//				vertexAccess[memOps[m]]=memOps[m];
+//			else
+//				vertexAccess[memOps[m]]=memOps[m];
+//		}
+//		timeNVDiv2=(System.nanoTime()-start)/10e9;
 
-
-		List<Double> timeList= new ArrayList<Double>();
-		timeList.add(timeInc1);
-		timeList.add(timeInc1NoStore);
-		timeList.add(timeAdd255);
-		timeList.add(timeAdd1M);
-		timeList.add(timeAddCond);
-		timeList.add(timeAdd3Cond);
-		timeList.add(timeNVDiv2	);
+		cctStats.cctTimers[eCCTimers.CCT_TT_MEM_ONLY.ordinal()]=timeSet;
+		cctStats.cctTimers[eCCTimers.CCT_TT_INC.ordinal()]=timeInc1;
+		cctStats.cctTimers[eCCTimers.CCT_TT_ADD_1M.ordinal()]=timeAdd1M;
+		cctStats.cctTimers[eCCTimers.CCT_TT_ADD_VAR.ordinal()]=timeAddVar;
+		cctStats.cctTimers[eCCTimers.CCT_TT_ADD_COND.ordinal()]=timeAddCond;
+		cctStats.cctTimers[eCCTimers.CCT_TT_ADD_COND_3.ordinal()]=timeAdd3Cond;
 
 //		print "Time-set         : ", timeSet	
-		printNormalized(timeSet, timeInc1-timeSet,timeList);
+//		printNormalized(timeSet, timeInc1-timeSet,timeList);
 			
+		
+		
 	}
 	
 	public static void main(String[] args) {
-		System.out.println(args[0]);
+//		System.out.println(args[0]);
 		cct cctBenchMark=new cct();
+		stats cctStats = new stats();
 		cctBenchMark.readGraphDIMACS(args[0]);
-		cctBenchMark.triangleCount(cctBenchMark.nv, cctBenchMark.ne, cctBenchMark.off,cctBenchMark.ind,true);	
-		
-		cctBenchMark.benchMarkCCT(cctBenchMark.nv, cctBenchMark.ne, cctBenchMark.off,cctBenchMark.ind,true);
-		
+		cctBenchMark.triangleCount(cctBenchMark.nv, cctBenchMark.ne, cctBenchMark.off,cctBenchMark.ind,cctStats);	
+		cctBenchMark.benchMarkCCT(cctBenchMark.nv, cctBenchMark.ne, cctBenchMark.off,cctBenchMark.ind,cctStats);
+		cctStats.nv=cctBenchMark.nv;
+		cctStats.ne=cctBenchMark.ne;
+		cctBenchMark.prettyPrint(cctStats);
 	}
 }	
 	
-
-
-
-
 	
 /*
 	

@@ -103,117 +103,139 @@ def intersectionLogMemOps (alen, apos,blen, bpos ,ind,memOps,globalPos):
 	
 
 
-def triangleCount(nv, off, ind, triNE, printOutput):
-	edge=0;
-	sumBB=sumBA=0;
+def timeAlgorithms(nv, off, ind):
+	sumBB=sumBA=countFaster=intersections=0;
+	totalBB=totalBA=iterBB=iterBA=0.0;
 	
-	triBA=triBB=actualTriangles=possibleTriangles=globalPossibleTriangles=0;
-	whenFaster=totalBB=totalBA=iterBB=iterBA=ccGlobal=0.0;
-	countFaster=0;
 
-	start= time.clock()
 	for src in range(0,nv):
 		srcLen=off[src+1]-off[src];
-		actualTriangles=0;
-		possibleTriangles=srcLen*srcLen;
-		globalPossibleTriangles+=possibleTriangles;
-		for iter in range (off[src], off[src+1]):
-			dest=ind[iter];
+#		possibleTriangles=srcLen*srcLen;
+#		globalPossibleTriangles+=possibleTriangles;
+		for iter1 in range (off[src], off[src+1]):
+			intersections+=1
+			start= time.clock()
+			dest=ind[iter1];
 			destLen=off[dest+1]-off[dest];	
 			sumBA+=intersectionBranchAvoiding (srcLen, off[src],destLen, off[dest] ,ind)			
-	end=time.clock()
-	totalBA=end-start
+			end=time.clock()
+			iterBA=end
+			totalBA+=end-start
 
-	start= time.clock()	
-	for src in range(0,nv):
-		srcLen=off[src+1]-off[src];
-		actualTriangles=0;
-		possibleTriangles=srcLen*srcLen;
-		globalPossibleTriangles+=possibleTriangles;
-		for iter in range (off[src], off[src+1]):
-			dest=ind[iter];
+			start= time.clock()	
+			dest=ind[iter1];
 			destLen=off[dest+1]-off[dest];	
 			sumBB+=intersectionBranchBased (srcLen, off[src],destLen, off[dest] ,ind)
-	end=time.clock()
-	totalBB=end-start
-	if (printOutput):
-		print "Branch-Based     : ", sumBB
-		print "Branch-Avoiding  : ", sumBA
-		print "TimeBB			: ", totalBB
-		print "TimeBA			: ", totalBA
+			end=time.clock()
+			iterBB=end
+			totalBB+=end-start
+			
+			if(iterBA<iterBB):
+				countFaster+=1
 
-	return sumBB
+	return totalBA,totalBB,intersections,countFaster, float(countFaster)/float(intersections)
+
 
 def ResetVertexAccess(vertexAccess, ne):
 	for e in range(0,ne):
 		vertexAccess[e]=0;
 
+def prettyPrint(nv, ne, timeBA,timeBB,intersections,countFaster, ratioBAWins, timeMem,timeList):
 
-def printNormalized(readTime,baseTime,  timeList):
+	printStr = "";
+	printStr = printStr + "{:8s}, ".format("Python")		
+	printStr = printStr + "{:8d}, ".format(nv)	
+	printStr = printStr + "{:8d}, ".format(ne)	
+	printStr = printStr + "{:8d}, ".format(intersections)		
+	printStr = printStr + "{:8d}, ".format(countFaster)	
+	printStr = printStr + "{:.5f}, ".format(timeBA)
+	printStr = printStr + "{:.5f}, ".format(timeBB)
+	printStr = printStr + "{:.5f}, ".format(ratioBAWins)
+
+	baseTime=timeList[0]-timeMem
+	if (baseTime==0):
+		print "Normalizing time unsucessful due to short baseTime"
+		return
+
 	for t in timeList:
-#		print( (t-readTime)/baseTime)
-#		sys.stdout.write( str((t-readTime)/baseTime) + ',' )
-		if (baseTime==0):
-			print "Normalizing time unsucessful due to short baseTime"
-			return
-		sys.stdout.write( "{:.5f}".format((t-readTime)/baseTime)  + ',' )
+		printStr = printStr + "{:.5f}, ".format((t-timeMem)/baseTime) 
 
-	print 
+	print printStr
+
+#	printStr = printStr + "{:.5f}".format((t-readTime)/baseTime)  + ','
+	
+#	printStr = printStr + "{:.5f}".format((t-readTime)/baseTime)  + ','
+
+# 	if (printStats.cctTimers[CCT_TT_BA]==0){
+# 		printf("Normalizing time unsucessful due to short baseTime - Graph probably too small\n");
+# 		return;
+# 	}
+# 
+# 	double memTime=printStats.cctTimers[CCT_TT_MEM_ONLY];
+# 	double baseTime=printStats.cctTimers[CCT_TT_INC]-memTime;
+# 
+# 	for(eCCTimers norm=CCT_TT_INC; norm<CCT_TT_LAST; norm++)
+# 	{
+# 		printf("%.5lf,\t", ((printStats.cctTimers[norm]-memTime)/baseTime));
+# 
+# 	}
+# 
+# 	printf("\n");
+	
+
+# def printNormalized(readTime,baseTime,  timeList):
+# 	for t in timeList:
+# 		if (baseTime==0):
+# 			print "Normalizing time unsucessful due to short baseTime"
+# 			return
+# 		sys.stdout.write( "{:.5f}".format((t-readTime)/baseTime)  + ',' )
+# 
+# 	print 
+	
 def benchMarkCCT(nv,ne, off, ind, triNE):
 	
 	totalMemOps=0;	
 	for src in range(0,nv):
 		srcLen=off[src+1]-off[src];
-		actualTriangles=0;
-		for iter in range (off[src], off[src+1]):
-			dest=ind[iter];
+		for iter1 in range (off[src], off[src+1]):
+			dest=ind[iter1];
 			destLen=off[dest+1]-off[dest];	
 			totalMemOps+=intersectionCountMemOps (srcLen, off[src],destLen, off[dest] ,ind)
 
-	print "MemOps           : ", totalMemOps
+#	print "MemOps           : ", totalMemOps
 	pos=0;
 	memOps=[None]*totalMemOps;
 	for src in range(0,nv):
 		srcLen=off[src+1]-off[src];
-		actualTriangles=0;
-		for iter in range (off[src], off[src+1]):
-			dest=ind[iter];
+		for iter1 in range (off[src], off[src+1]):
+			dest=ind[iter1];
 			destLen=off[dest+1]-off[dest];	
 			pos=intersectionLogMemOps (srcLen, off[src],destLen, off[dest] ,ind,memOps,pos)
 	
 	vertexAccess=[None]*ne;	
 
-#	for i in range(0,1000):
-#		sys.stdout.write(str(memOps[i])+" ,")
-
 	start=time.clock()
 	ResetVertexAccess(vertexAccess,ne)
-	timeSet=time.clock()-start
+	timeMem=time.clock()-start
 
 	ResetVertexAccess(vertexAccess,ne)
 	start=time.clock()
 	for m in range(0,totalMemOps):
 		vertexAccess[memOps[m]]+=1;	
 	timeInc1=time.clock()-start
- 
-	ResetVertexAccess(vertexAccess,ne)
-	a=0
-	start=time.clock()
-	for m in range(0,totalMemOps):
-		a+=1;	
-	timeInc1NoStore=time.clock()-start
- 
-	ResetVertexAccess(vertexAccess,ne)
-	start=time.clock()
-	for m in range(0,totalMemOps):
-		vertexAccess[memOps[m]]+=255;	
-	timeAdd255=time.clock()-start
 
 	ResetVertexAccess(vertexAccess,ne)
 	start=time.clock()
 	for m in range(0,totalMemOps):
 		vertexAccess[memOps[m]]+=1000000;	
 	timeAdd1M=time.clock()-start
+
+	ResetVertexAccess(vertexAccess,ne)
+	start=time.clock()
+	for m in range(0,totalMemOps):
+		vertexAccess[memOps[m]]+=nv;	
+	timeAddVar=time.clock()-start
+
 
 	ResetVertexAccess(vertexAccess,ne)
 	start=time.clock()
@@ -229,31 +251,28 @@ def benchMarkCCT(nv,ne, off, ind, triNE):
 		b+=(vertexAccess[memOps[m]]<=0);	
 		c+=(vertexAccess[memOps[m]]>=0);	
 	timeAdd3Cond=time.clock()-start
-	nediv2=int(0.7*ne);
-	ResetVertexAccess(vertexAccess,ne)
-	a=b=c=0
-	start=time.clock()
-	for m in range(0,totalMemOps):
-		if(memOps[m]>=nediv2):
-			vertexAccess[memOps[m]]=memOps[m];
-		else:
-			vertexAccess[memOps[m]]=memOps[m];
 
-	timeNVDiv2=time.clock()-start
+# 	nediv2=int(0.7*ne);
+# 	ResetVertexAccess(vertexAccess,ne)
+# 	a=b=c=0
+# 	start=time.clock()
+# 	for m in range(0,totalMemOps):
+# 		if(memOps[m]>=nediv2):
+# 			vertexAccess[memOps[m]]=memOps[m];
+# 		else:
+# 			vertexAccess[memOps[m]]=memOps[m];
+# 	timeNVDiv2=time.clock()-start
 
 
 	timeList=[]
 #	timeList.append(timeSet);
 	timeList.append(timeInc1);
-	timeList.append(timeInc1NoStore);
-	timeList.append(timeAdd255);
 	timeList.append(timeAdd1M);
+	timeList.append(timeAddVar);
 	timeList.append(timeAddCond);
 	timeList.append(timeAdd3Cond);
-	timeList.append(timeNVDiv2	);
 
-	print "Time-set         : ", timeSet	
-	printNormalized(timeSet, timeInc1-timeSet,timeList)
+	return timeMem, timeList
 
 def main(argv):
 	inputfile = ''
@@ -268,15 +287,16 @@ def main(argv):
 			sys.exit()
 		elif opt in ("-i", "--ifile"):
 			inputfile = arg
-	print 'Input file is "', inputfile
+#	print 'Input file is "', inputfile
 
 	nv,ne,ind,off = readGraphDIMACS(inputfile)
 
 	triNE=[None]*ne
-	print nv, ne 	
-	triangleCount(nv, off, ind, triNE,True)
-	benchMarkCCT(nv, ne, off, ind, triNE)
-  
+#	print nv, ne 	
+	timeBA,timeBB,intersections,countFaster, ratioBAWins = timeAlgorithms(nv, off, ind)
+	timeMem,timeList=benchMarkCCT(nv, ne, off, ind, triNE)
+
+	prettyPrint(nv, ne, timeBA,timeBB,intersections,countFaster, ratioBAWins, timeMem,timeList)
 
 #	benchMarkInstructions(4, 10000);
 

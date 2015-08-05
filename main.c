@@ -359,6 +359,7 @@ int main (const int argc, char *argv[]) {
 
  	free(off);
 	free(ind);
+	return 0;
 }
 
 #if defined(BENCHMARK_BFS)
