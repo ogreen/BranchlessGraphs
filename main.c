@@ -198,10 +198,10 @@ void readGraphDIMACS(char* filePath, uint32_t** prmoff, uint32_t** prmind, uint3
 }
 
 int main (const int argc, char *argv[]) {
-	if (argc > 3) {
-		fprintf(stderr, "Usage: bfs <graph-name>\n");
-		exit(EXIT_FAILURE);
-	}
+//	if (argc > 3) {
+//		fprintf(stderr, "Usage: bfs <graph-name>\n");
+//		exit(EXIT_FAILURE);
+//	}
 
     uint32_t nv, ne, naction;
     uint32_t* off;
@@ -351,7 +351,8 @@ int main (const int argc, char *argv[]) {
    	int32_t * triNE = (int32_t *) malloc ((ne ) * sizeof (int32_t));	
 	int32_t allTrianglesCPU=0;
 //	tic();
-	triangleCountBranchBased(nv, ne, off,ind, triNE, &allTrianglesCPU,argv[2]);
+
+	benchMarkCCT(nv, ne, off,ind, triNE, &allTrianglesCPU,argv[2],atoi(argv[3]),atoi(argv[4]));
 //	double ccbranchbased=toc();
 
 	free(triNE);
