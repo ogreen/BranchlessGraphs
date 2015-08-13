@@ -1,6 +1,9 @@
 #!/usr/bin/python
 import sys, getopt
 import time
+import random
+from numpy.matlib import rand
+
 
 def readGraphDIMACS(filePath):
 	fp = open(filePath,"r")
@@ -163,37 +166,27 @@ def prettyPrint(nv, ne, timeBA,timeBB,intersections,countFaster, ratioBAWins, ti
 
 	print printStr
 
-#	printStr = printStr + "{:.5f}".format((t-readTime)/baseTime)  + ','
-	
-#	printStr = printStr + "{:.5f}".format((t-readTime)/baseTime)  + ','
 
-# 	if (printStats.cctTimers[CCT_TT_BA]==0){
-# 		printf("Normalizing time unsucessful due to short baseTime - Graph probably too small\n");
-# 		return;
-# 	}
-# 
-# 	double memTime=printStats.cctTimers[CCT_TT_MEM_ONLY];
-# 	double baseTime=printStats.cctTimers[CCT_TT_INC]-memTime;
-# 
-# 	for(eCCTimers norm=CCT_TT_INC; norm<CCT_TT_LAST; norm++)
-# 	{
-# 		printf("%.5lf,\t", ((printStats.cctTimers[norm]-memTime)/baseTime));
-# 
-# 	}
-# 
-# 	printf("\n");
-	
+def prettyPrintSynthetic(timeMem,timeList,benchMarkName,length):
 
-# def printNormalized(readTime,baseTime,  timeList):
-# 	for t in timeList:
-# 		if (baseTime==0):
-# 			print "Normalizing time unsucessful due to short baseTime"
-# 			return
-# 		sys.stdout.write( "{:.5f}".format((t-readTime)/baseTime)  + ',' )
-# 
-# 	print 
-	
-def benchMarkCCT(nv,ne, off, ind, triNE):
+	printStr = "";
+	printStr = printStr + "{:>8s}, ".format(benchMarkName)		
+	printStr = printStr + "{:>8s}, ".format("Python")		
+	printStr = printStr + "{:>8d}, ".format(length)		
+
+
+	baseTime=timeList[0]-timeMem
+	if (baseTime==0):
+		print "Normalizing time unsucessful due to short baseTime"
+		return
+
+	for t in timeList:
+		printStr = printStr + "{:.5f}, ".format((t-timeMem)/baseTime) 
+
+	print printStr
+
+
+def benchMarkCCT(nv,ne, off, ind, limitSize, size):
 	
 	totalMemOps=0;	
 	for src in range(0,nv):
@@ -212,61 +205,97 @@ def benchMarkCCT(nv,ne, off, ind, triNE):
 			dest=ind[iter1];
 			destLen=off[dest+1]-off[dest];	
 			pos=intersectionLogMemOps (srcLen, off[src],destLen, off[dest] ,ind,memOps,pos)
+
+	if (limitSize==False):
+		timeMem,timeList=benchMarkMemoryAccessPattern(memOps,totalMemOps,ne)
+	else:
+		timeMem,timeList=benchMarkMemoryAccessPattern(memOps,size,ne)
+
+	return timeMem,timeList
+
+def benchMarkLinear(length):
 	
-	vertexAccess=[None]*ne;	
+	totalMemOps=length;	
+	memOps=[None]*totalMemOps;
+
+	for l in range(0,length):
+		memOps[l]=l
+	
+	timeMem,timeList=benchMarkMemoryAccessPattern(memOps,totalMemOps,length)
+
+	prettyPrintSynthetic(timeMem,timeList, "Linear",length)
+
+
+
+def benchMarkRandom(length):
+	
+	totalMemOps=length;	
+	memOps=[None]*totalMemOps;
+
+	for l in range(0,length):
+		memOps[l]=random.randint(0,length-1)
+	
+	timeMem,timeList=benchMarkMemoryAccessPattern(memOps,totalMemOps,length)
+	prettyPrintSynthetic(timeMem,timeList, "Random",length)
+
+def benchMarkAllSynthetic(length,inputfile):
+	
+	benchMarkLinear(length)
+
+	nv,ne,ind,off = readGraphDIMACS(inputfile)
+	timeMem,timeList=benchMarkCCT(nv, ne, off, ind,True, length)
+	prettyPrintSynthetic(timeMem,timeList, "Mix",length)
+
+	benchMarkRandom(length)
+	
+	
+	
+	
+	
+def benchMarkMemoryAccessPattern(memAccessArray,memAccessLen, vertexAccessLen):
+	var=memAccessLen/2; 
+		
+	vertexAccess=[None]*vertexAccessLen;	
 
 	start=time.time()
-	ResetVertexAccess(vertexAccess,ne)
+	ResetVertexAccess(vertexAccess,vertexAccessLen)
 	timeMem=time.time()-start
 
-	ResetVertexAccess(vertexAccess,ne)
+	ResetVertexAccess(vertexAccess,vertexAccessLen)
 	start=time.time()
-	for m in range(0,totalMemOps):
-		vertexAccess[memOps[m]]+=1;	
+	for m in range(0,memAccessLen):
+		vertexAccess[memAccessArray[m]]+=1;	
 	timeInc1=time.time()-start
 
-	ResetVertexAccess(vertexAccess,ne)
+	ResetVertexAccess(vertexAccess,vertexAccessLen)
 	start=time.time()
-	for m in range(0,totalMemOps):
-		vertexAccess[memOps[m]]+=1000000;	
+	for m in range(0,memAccessLen):
+		vertexAccess[memAccessArray[m]]+=1000000;	
 	timeAdd1M=time.time()-start
 
-	ResetVertexAccess(vertexAccess,ne)
+	ResetVertexAccess(vertexAccess,vertexAccessLen)
 	start=time.time()
-	for m in range(0,totalMemOps):
-		vertexAccess[memOps[m]]+=nv;	
+	for m in range(0,memAccessLen):
+		vertexAccess[memAccessArray[m]]+=var;	
 	timeAddVar=time.time()-start
 
 
-	ResetVertexAccess(vertexAccess,ne)
+	ResetVertexAccess(vertexAccess,vertexAccessLen)
 	start=time.time()
-	for m in range(0,totalMemOps):
-		vertexAccess[memOps[m]]+=(vertexAccess[memOps[m]]==0);	
+	for m in range(0,memAccessLen):
+		vertexAccess[memAccessArray[m]]+=(vertexAccess[memAccessArray[m]]==0);	
 	timeAddCond=time.time()-start
 
-	ResetVertexAccess(vertexAccess,ne)
+	ResetVertexAccess(vertexAccess,vertexAccessLen)
 	a=b=c=0
 	start=time.time()
-	for m in range(0,totalMemOps):
-		a+=(vertexAccess[memOps[m]]==0);	
-		b+=(vertexAccess[memOps[m]]<=0);	
-		c+=(vertexAccess[memOps[m]]>=0);	
+	for m in range(0,memAccessLen):
+		a+=(vertexAccess[memAccessArray[m]]==0);	
+		b+=(vertexAccess[memAccessArray[m]]<=0);	
+		c+=(vertexAccess[memAccessArray[m]]>=0);	
 	timeAdd3Cond=time.time()-start
 
-# 	nediv2=int(0.7*ne);
-# 	ResetVertexAccess(vertexAccess,ne)
-# 	a=b=c=0
-# 	start=time.time()
-# 	for m in range(0,totalMemOps):
-# 		if(memOps[m]>=nediv2):
-# 			vertexAccess[memOps[m]]=memOps[m];
-# 		else:
-# 			vertexAccess[memOps[m]]=memOps[m];
-# 	timeNVDiv2=time.time()-start
-
-
 	timeList=[]
-#	timeList.append(timeSet);
 	timeList.append(timeInc1);
 	timeList.append(timeAdd1M);
 	timeList.append(timeAddVar);
@@ -275,11 +304,14 @@ def benchMarkCCT(nv,ne, off, ind, triNE):
 
 	return timeMem, timeList
 
+
+
+
 def main(argv):
 	graphName=inputfile = ''
 
 	try:
-		opts, args = getopt.getopt(argv,"hig:",["ifile=","gname="])
+		opts, args = getopt.getopt(argv,"higs:",["ifile=","gname=","synthetic="])
 	except getopt.GetoptError as err:
 		print str(err)
 		print 'Error cctmain.py -i<inputfile> -g<graphName>'
@@ -293,17 +325,23 @@ def main(argv):
 			inputfile = arg
 		elif opt in ("-g", "--gname"):
 			graphName = arg
+		elif opt in ("-g", "--synthetic"):
+			if(int(arg)==1):
+				benchMarkSyn = True
+			else:
+				benchMarkSyn = False
 
-	nv,ne,ind,off = readGraphDIMACS(inputfile)
 
-	triNE=[None]*ne
+#	triNE=[None]*ne
 
-	timeBA,timeBB,intersections,countFaster, ratioBAWins = timeAlgorithms(nv, off, ind)
-	timeMem,timeList=benchMarkCCT(nv, ne, off, ind, triNE)
+	if (benchMarkSyn==False):
+		nv,ne,ind,off = readGraphDIMACS(inputfile)
+		timeBA,timeBB,intersections,countFaster, ratioBAWins = timeAlgorithms(nv, off, ind)
+		timeMem,timeList=benchMarkCCT(nv, ne, off, ind,False,0)
+		prettyPrint(nv, ne, timeBA,timeBB,intersections,countFaster, ratioBAWins, timeMem,timeList,graphName)
+	else:
+		benchMarkAllSynthetic(int(1e6),inputfile)
 
-	prettyPrint(nv, ne, timeBA,timeBB,intersections,countFaster, ratioBAWins, timeMem,timeList,graphName)
-
-#	benchMarkInstructions(4, 10000);
 
 if __name__ == "__main__":
 #	print sys.argv[1]

@@ -26,14 +26,17 @@ typedef struct{
 	int32_t nv,ne;
 } stats;
 
+
+void benchMarkMemoryAccess(int* inPattern, int sizeInPattern , int sizeOut, stats* cctStats);
+
 void prettyPrint(stats printStats,char* graphName){
 
 	printf("%25s, ", graphName);
 	printf("%8s, ", "C");
 	printf("%8d, ",printStats.nv);
 	printf("%8d, ",printStats.ne);
-	printf("%8ld, ",printStats.numberIntersections);
-	printf("%8ld, ",printStats.numberBAWins);
+	printf("%8d, ",printStats.numberIntersections);
+	printf("%8d, ",printStats.numberBAWins);
 	printf("%.5lf, ", printStats.cctTimers[CCT_TT_BB]);
 	printf("%.5lf, ", printStats.cctTimers[CCT_TT_BA]);
 	printf("%.5lf, ",printStats.ratioBAWins);
@@ -54,6 +57,30 @@ void prettyPrint(stats printStats,char* graphName){
 
 	printf("\n");
 }
+
+void prettyPrintSynthetic(stats printStats,char* benchmark,int length){
+
+	printf("%8s, ", benchmark);
+	printf("%8s, ", "C");
+	printf("%8d, ",length);
+
+	if (printStats.cctTimers[CCT_TT_BA]==0){
+		printf("Normalizing time unsucessful due to short baseTime - Graph probably too small\n");
+		return;
+	}
+
+	double memTime=printStats.cctTimers[CCT_TT_MEM_ONLY];
+	double baseTime=printStats.cctTimers[CCT_TT_INC]-memTime;
+
+	for(eCCTimers norm=CCT_TT_INC; norm<CCT_TT_LAST; norm++)
+	{
+		printf("%.5lf, ", ((printStats.cctTimers[norm]-memTime)/baseTime));
+
+	}
+
+	printf("\n");
+}
+
 
 int32_t intersectionBranchBased ( const int32_t alen, const int32_t * a,
 						  const int32_t blen, const int32_t * b)
@@ -81,35 +108,7 @@ int32_t intersectionBranchBased ( const int32_t alen, const int32_t * a,
 
 	return out;
 }
-/*
-int32_t intersectionBranchAvoiding ( const int32_t alen, const int32_t * a,
-						  const int32_t blen, const int32_t * b)
-{
-  int32_t ka = 0, kb = 0;
-  int32_t out = 0;
 
-  
-  if (!alen || !blen || a[alen-1] < b[0] || b[blen-1] < a[0])
-    return 0;
-
-  while (1) {
-    if (ka >= alen || kb >= blen) break;
-
-	int32_t comp   = (a[ka]-b[kb]);
-
-
-	out+= comp==0;
-	ka+= (comp<=0);
-	kb+= (comp>=0);
-
-
-  }
-
-//	counter=10;
-	
-	return out;
-}
-*/
 int32_t intersectionBranchAvoiding ( const int32_t alen, const int32_t apos,
 						  const int32_t blen, const int32_t bpos, const int32_t* ind)
 {
@@ -131,7 +130,6 @@ int comp;
 	return out;	
 	
 }
-
 
 
 int32_t intersectionCountMemOps ( const int32_t alen, const int32_t * a,
@@ -208,9 +206,9 @@ void triangleCountBranchBased(const int32_t nv, const int32_t ne, const int32_t 
 	int32_t edge=0;
 	int32_t sum=0;
 
-	double totalBB, totalBA,iterBB, iterBA, whenFaster;
-	int32_t triBB,triBA;
-	
+	double totalBB, totalBA,iterBB, iterBA, whenFaster,cc=0;
+	int32_t triBB,triBA, verTriangle=0, openTotal,temp;
+
 	triBA=triBB=0;
 	whenFaster=totalBB=totalBA=iterBB=iterBA=0.0;
 	int32_t countFaster=0;
@@ -225,7 +223,7 @@ void triangleCountBranchBased(const int32_t nv, const int32_t ne, const int32_t 
 			tic();
 			int dest=ind[iter];
 			int destLen=off[dest+1]-off[dest];	
-			triBA+=intersectionBranchAvoiding(srcLen, off[src], destLen, off[dest],ind);
+			triBA+=temp=intersectionBranchAvoiding(srcLen, off[src], destLen, off[dest],ind);
 			//triBA+= intersectionBranchAvoiding (srcLen, ind+off[src], destLen, ind+off[dest]);
 			iterBA=toc();
 			totalBA+=iterBA;			
@@ -238,15 +236,25 @@ void triangleCountBranchBased(const int32_t nv, const int32_t ne, const int32_t 
 			iterBB=toc();
 			totalBB+=iterBB;
 
-			memOpsCounter+=intersectionCountMemOps   (srcLen, ind+off[src], destLen, ind+off[dest]);	
+			memOpsCounter+=intersectionCountMemOps   (srcLen, ind+off[src], destLen, ind+off[dest]);
 
 			if(iterBA<iterBB){
 				countFaster++;
 				whenFaster+=(iterBB-iterBA);
 			}
 			sum+=triNE[edge++];
+			verTriangle+=temp;
 		}
+
+		if(srcLen>1){
+			openTotal+=(srcLen*srcLen-1);
+			cc+=(double)verTriangle/(double)(srcLen*srcLen-1);
+		}
+		else
+			openTotal++;
+		verTriangle=0;
 	}
+    cc/=nv;
 
     stats cctStats;
     cctStats.cctTimers[CCT_TT_BB]=totalBB;
@@ -262,7 +270,6 @@ void triangleCountBranchBased(const int32_t nv, const int32_t ne, const int32_t 
 
 
 	int32_t* logMem = (int32_t*)malloc(sizeof(int32_t)*(memOpsCounter+1)); 
-	int32_t* vertexAccess = (int32_t*)malloc(sizeof(int32_t)*off[nv]); 
 	
 	int pos=0;
     for (int src = 0; src < nv; src++)
@@ -277,21 +284,26 @@ void triangleCountBranchBased(const int32_t nv, const int32_t ne, const int32_t 
 		}
 	}
 
-	memset(vertexAccess,0, off[nv]*sizeof(int32_t));
+    //	printf("CC: %lf, Fraction: %lf\n",cc, (double)triBA/(double)openTotal);
+    int32_t* vertexAccess = (int32_t*)malloc(sizeof(int32_t)*off[nv]);
 
-	double timeNOP=0,timeInc=0, timeAdd1=0, timeAdd255=0, timeAdd1M=0, timeAddVar=0,timeAddCondEq0=0,timeAddCondNEq0=0,timeAdd3Cond=0;
-	memset(vertexAccess,0, off[nv]*sizeof(int32_t)); tic();	for(int m=0; m<memOpsCounter;m++) vertexAccess[logMem[m]]; cctStats.cctTimers[CCT_TT_MEM_ONLY]=toc();
-	memset(vertexAccess,0, off[nv]*sizeof(int32_t)); tic();	for(int m=0; m<memOpsCounter;m++) vertexAccess[logMem[m]]++; cctStats.cctTimers[CCT_TT_INC]=toc();
-	memset(vertexAccess,0, off[nv]*sizeof(int32_t)); tic();	for(int m=0; m<memOpsCounter;m++) vertexAccess[logMem[m]]+=1000000; cctStats.cctTimers[CCT_TT_ADD_1M]=toc();
-	memset(vertexAccess,0, off[nv]*sizeof(int32_t)); tic();	for(int m=0; m<memOpsCounter;m++) vertexAccess[logMem[m]]+=memOpsCounter; cctStats.cctTimers[CCT_TT_ADD_VAR]=toc();
-	memset(vertexAccess,0, off[nv]*sizeof(int32_t)); tic();	for(int m=0; m<memOpsCounter;m++) vertexAccess[logMem[m]]+=(vertexAccess[logMem[m]]==0); cctStats.cctTimers[CCT_TT_ADD_COND]=toc();
-    int32_t a=0,b=0,c=0;
-	memset(vertexAccess,0, off[nv]*sizeof(int32_t)); tic();	for(int m=0; m<memOpsCounter;m++) {a+=vertexAccess[logMem[m]]==0;b+=vertexAccess[logMem[m]]>=0;c+=vertexAccess[logMem[m]]<=0;} cctStats.cctTimers[CCT_TT_ADD_COND_3]=toc();
-	vertexAccess[0]=a+b+c;	
+//    memset(vertexAccess,0, off[nv]*sizeof(int32_t));
+//    memset(vertexAccess,0, off[nv]*sizeof(int32_t)); tic(); for(int m=0; m<memOpsCounter;m++) vertexAccess[logMem[m]]; cctStats.cctTimers[CCT_TT_MEM_ONLY]=toc();
+//    memset(vertexAccess,0, off[nv]*sizeof(int32_t)); tic(); for(int m=0; m<memOpsCounter;m++) vertexAccess[logMem[m]]++; cctStats.cctTimers[CCT_TT_INC]=toc();
+//    memset(vertexAccess,0, off[nv]*sizeof(int32_t)); tic(); for(int m=0; m<memOpsCounter;m++) vertexAccess[logMem[m]]+=1000000; cctStats.cctTimers[CCT_TT_ADD_1M]=toc();
+//    memset(vertexAccess,0, off[nv]*sizeof(int32_t)); tic(); for(int m=0; m<memOpsCounter;m++) vertexAccess[logMem[m]]+=memOpsCounter; cctStats.cctTimers[CCT_TT_ADD_VAR]=toc();
+//    memset(vertexAccess,0, off[nv]*sizeof(int32_t)); tic(); for(int m=0; m<memOpsCounter;m++) vertexAccess[logMem[m]]+=(vertexAccess[logMem[m]]==0); cctStats.cctTimers[CCT_TT_ADD_COND]=toc();
+//         int32_t a=0,b=0,c=0;
+//    memset(vertexAccess,0, off[nv]*sizeof(int32_t)); tic(); for(int m=0; m<memOpsCounter;m++) {a+=vertexAccess[logMem[m]]==0;b+=vertexAccess[logMem[m]]>=0;c+=vertexAccess[logMem[m]]<=0;} cctStats.cctTimers[CCT_TT_ADD_COND_3]=toc();
+//    vertexAccess[0]=a+b+c;
+    benchMarkMemoryAccess(logMem,memOpsCounter,ne,&cctStats);
+
+
+    free(vertexAccess);
 
 	prettyPrint(cctStats,graphName);
 
-    free(vertexAccess);
+
     free(logMem);
 
 	*allTriangles=sum;
@@ -299,3 +311,54 @@ void triangleCountBranchBased(const int32_t nv, const int32_t ne, const int32_t 
 
 
 
+void benchMarkMemoryAccess(int32_t* inPattern, int32_t sizeInPattern , int32_t sizeOut, stats* cctStats)
+{
+	int32_t* outArray = (int32_t*)malloc(sizeof(int32_t)*sizeOut);
+
+    memset(outArray,0, sizeOut*sizeof(int32_t));
+
+    memset(outArray,0, sizeOut*sizeof(int32_t));
+    tic();
+    for(int m=0; m<sizeInPattern;m++) outArray[inPattern[m]];
+    cctStats->cctTimers[CCT_TT_MEM_ONLY]=toc();
+
+    memset(outArray,0, sizeOut*sizeof(int32_t));
+    tic();
+    for(int m=0; m<sizeInPattern;m++)
+    	outArray[inPattern[m]]++;
+    cctStats->cctTimers[CCT_TT_INC]=toc();
+
+    memset(outArray,0, sizeOut*sizeof(int32_t));
+    tic();
+    for(int m=0; m<sizeInPattern;m++)
+    	outArray[inPattern[m]]+=1000000;
+    cctStats->cctTimers[CCT_TT_ADD_1M]=toc();
+
+    memset(outArray,0, sizeOut*sizeof(int32_t));
+    tic();
+    for(int m=0; m<sizeInPattern;m++)
+    	outArray[inPattern[m]]+=sizeInPattern;
+    cctStats->cctTimers[CCT_TT_ADD_VAR]=toc();
+
+    memset(outArray,0, sizeOut*sizeof(int32_t));
+    tic();
+    for(int m=0; m<sizeInPattern;m++)
+    	outArray[inPattern[m]]+=(outArray[inPattern[m]]==0);
+    cctStats->cctTimers[CCT_TT_ADD_COND]=toc();
+
+    int32_t a=0,b=0,c=0;
+    memset(outArray,0, sizeOut*sizeof(int32_t));
+    tic();
+    for(int m=0; m<sizeInPattern;m++) {
+    	a+=outArray[inPattern[m]]==0;
+    	b+=outArray[inPattern[m]]>=0;
+    	c+=outArray[inPattern[m]]<=0;}
+    outArray[0]=a+b+c;
+    cctStats->cctTimers[CCT_TT_ADD_COND_3]=toc();
+
+
+
+    free(outArray);
+
+
+}

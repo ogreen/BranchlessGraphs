@@ -152,6 +152,46 @@ def genSyntheticCompare(resDir,results,graphs,title,ylabel,columnmin,columnmax,m
 
 
     return
+
+def genSyntheticCompareAll(resDir,results,title,ylabel,columnmin,columnmax,maxy,fileName, dashedLine,lang):
+    fig, ax = plt.subplots()
+#    index = np.arange(len(graphs))
+    index = np.arange(3)
+    bar_width = 1.0/(columnmax-columnmin+1)
+    
+    counter=0
+
+    for col in range(columnmin,columnmax):  
+        filterByLang=filterLanguages(lang, results)
+        
+        columnVals=filterColumn(col, filterByLang)
+
+        plt.bar(index+bar_width*counter, columnVals, bar_width, 
+                      color=plotColors[counter], label=syntheticNames[counter])
+        counter+=1
+
+    if (dashedLine>0):
+        plt.plot([0,len(index)], [dashedLine,dashedLine],lw=1.2, color='black', linestyle='--')
+
+
+    plt.ylabel(ylabel) 
+    plt.title(title)
+    plt.xticks(index,graphs,rotation=graphLabelRotation)
+
+    plt.legend( loc=0,ncol=3, mode="expand", borderaxespad=0. )    
+
+    plt.ylim(0, maxy)
+    
+    plt.tight_layout()
+    
+    figName=resDir+fileName
+    plt.savefig(figName+".pdf", format="pdf");
+    plt.savefig(figName+".png", format="png");    
+
+
+    return
+
+
 #######
 ## MAIN
 #######        
@@ -178,8 +218,17 @@ genCrossLangCompare(resDir,results,graphs,"Percentage of intersection whens Bran
 genCrossLangCompare(resDir,results,graphs,"Normalized execution time in comparison with addition/increment","Normalized Execution Time",13,4,"cond3",1.0)
 
 for lang in allPlat:
-    genSyntheticCompare(resDir,results,graphs,"Normalized execution time for synthetic benchmarks","Normalized Execution Time",9,14,4,"synthetic"+lang,1.0,lang)
+    genSyntheticCompare(resDir,results,graphs,"Normalized execution time for synthetic benchmarks","Normalized Execution Time",9,14,6,"synthetic"+lang,1.0,lang)
 #def genSyntheticCompare(resDir,results,graphs,title,ylabel,columnmin,columnmax,maxy,fileName, dashedLine,lang):
+
+
+resultssyn = []
+resDir="res-titan/"
+graphResFile=resDir+"synthetic.csv"
+resultssyn.append(parseResultFile(graphResFile))
+
+for lang in ["Python"]:
+    genSyntheticCompareAll(resDir,resultssyn,"Normalized execution time for synthetic benchmarks","Normalized Execution Time",3,7,4,"syntheticAll"+lang,1.0,lang)
 
 
 #    plt.show()
