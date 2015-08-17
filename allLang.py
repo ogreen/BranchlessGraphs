@@ -2,7 +2,7 @@
 import sys
 import subprocess
 from graphNames import graphList
-from plotter import resDir
+#from plotter import resDir
 
 def printGraphList(graphList):
     for g in graphList:
@@ -10,7 +10,7 @@ def printGraphList(graphList):
 
 def main(argv):
     printC=True
-    printJava=True
+    printJava=False
     printPy=True
     
     benchMarkRealData=True;
@@ -26,7 +26,7 @@ def main(argv):
             with open(resDir+graph[1]+".csv", "w") as outfile:
                 print graphName
                 if(printC==True):
-                    subprocess.call(["./cct", graphName, graph[1]],stdout=outfile)   
+                    subprocess.call(["./cct", graphName, graph[1],str(0),str(0)],stdout=outfile)   
                 if(printJava==True):
                     subprocess.call(["java","cct",graphName,graph[1]],stdout=outfile)
                 if(printPy==True):
@@ -39,16 +39,19 @@ def main(argv):
         graph=[None]*2
         graph[0]="clustering/"; graph[1]="astro-ph";
         graphName=graphDir+graph[0]+graph[1]+".graph"
-        with open("res-titan/"+"synthetic" +".csv", "w") as outfile:
-#            if(printC==True):
-#                subprocess.call(["./cct", graphName, graph[1]],stdout=outfile)   
+        synSize=str(10000000);        
+        
+        with open(resDir+"synthetic" +".csv", "w") as outfile:
+            if(printC==True):
+                subprocess.call(["./cct", graphName, graph[1],str(1), synSize ],stdout=outfile)   
 #            if(printJava==True):
 #                subprocess.call(["java","cct",graphName,graph[1]],stdout=outfile)
             if(printPy==True):
                 temp1="--ifile="+graphName
                 temp2="--gname="+graph[1]
                 temp3="--synthetic=1"
-                subprocess.call(["python", "cctmain.py", temp1,temp2,temp3 ],stdout=outfile)
+                temp4="--size="+str(synSize)
+                subprocess.call(["python", "cctmain.py", temp1,temp2,temp3,temp4 ],stdout=outfile)
                 
 
 if __name__ == "__main__":

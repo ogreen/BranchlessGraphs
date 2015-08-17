@@ -172,7 +172,6 @@ def prettyPrintSynthetic(timeMem,timeList,benchMarkName,length):
 	printStr = "";
 	printStr = printStr + "{:>8s}, ".format(benchMarkName)		
 	printStr = printStr + "{:>8s}, ".format("Python")		
-	printStr = printStr + "{:>8d}, ".format(length)		
 
 
 	baseTime=timeList[0]-timeMem
@@ -182,6 +181,8 @@ def prettyPrintSynthetic(timeMem,timeList,benchMarkName,length):
 
 	for t in timeList:
 		printStr = printStr + "{:.5f}, ".format((t-timeMem)/baseTime) 
+
+	printStr = printStr + "{:>8d}, ".format(length)		
 
 	print printStr
 
@@ -311,7 +312,7 @@ def main(argv):
 	graphName=inputfile = ''
 
 	try:
-		opts, args = getopt.getopt(argv,"higs:",["ifile=","gname=","synthetic="])
+		opts, args = getopt.getopt(argv,"higsS:",["ifile=","gname=","synthetic=","size="])
 	except getopt.GetoptError as err:
 		print str(err)
 		print 'Error cctmain.py -i<inputfile> -g<graphName>'
@@ -325,11 +326,13 @@ def main(argv):
 			inputfile = arg
 		elif opt in ("-g", "--gname"):
 			graphName = arg
-		elif opt in ("-g", "--synthetic"):
+		elif opt in ("-s", "--synthetic"):
 			if(int(arg)==1):
 				benchMarkSyn = True
 			else:
 				benchMarkSyn = False
+		elif opt in ("-S", "--size"):
+			sizeSyn=int(arg)
 
 
 #	triNE=[None]*ne
@@ -340,7 +343,7 @@ def main(argv):
 		timeMem,timeList=benchMarkCCT(nv, ne, off, ind,False,0)
 		prettyPrint(nv, ne, timeBA,timeBB,intersections,countFaster, ratioBAWins, timeMem,timeList,graphName)
 	else:
-		benchMarkAllSynthetic(int(1e6),inputfile)
+		benchMarkAllSynthetic(sizeSyn,inputfile)
 
 
 if __name__ == "__main__":

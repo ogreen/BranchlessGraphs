@@ -202,7 +202,7 @@ graphNum=len(graphList)
 
 graphs = []
 results = []
-resDir="res-titan/"
+resDir="res-has/"
 for graph in graphList:
     graphs.append(graph[1])
     graphResFile=resDir+graph[1]+".csv"
@@ -223,7 +223,6 @@ for lang in allPlat:
 
 
 resultssyn = []
-resDir="res-titan/"
 graphResFile=resDir+"synthetic.csv"
 resultssyn.append(parseResultFile(graphResFile))
 

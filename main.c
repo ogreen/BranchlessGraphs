@@ -157,7 +157,7 @@ void readGraphDIMACS(char* filePath, uint32_t** prmoff, uint32_t** prmind, uint3
 //	  for (u = 1; fgets (line, &bytesRead, fp); u++)
 	for (u = 1; (temp=getline (&line, &bytesRead, fp))!=-1; u++)
 	{	
-//		printf("%s",line);	
+//		printf("%s",line);	,
 /*		bytesRead=0;	
 		free(line);	
 		if (u>10) 
@@ -352,8 +352,15 @@ int main (const int argc, char *argv[]) {
 	int32_t allTrianglesCPU=0;
 //	tic();
 
-	benchMarkCCT(nv, ne, off,ind, triNE, &allTrianglesCPU,argv[2],atoi(argv[3]),atoi(argv[4]));
-//	double ccbranchbased=toc();
+	if (atoi(argv[3])){
+		benchMarkAllSynthetic(nv, ne, off,ind,triNE,atoi(argv[4]),argv[2]);
+	}
+	else{
+		benchMarkCCT(nv, ne, off,ind, triNE, &allTrianglesCPU,argv[2],0,0);
+
+	}
+
+	//	double ccbranchbased=toc();
 
 	free(triNE);
 #endif

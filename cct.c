@@ -30,7 +30,6 @@ typedef struct{
 
 
 void benchMarkMemoryAccess(int32_t* inPattern, int32_t sizeInPattern , int32_t sizeOut, stats* cctStats);
-void benchMarkAllSynthetic(int32_t length, char* graphName);
 
 void prettyPrint(stats printStats,char* graphName){
 
@@ -65,17 +64,19 @@ void prettyPrintSynthetic(stats printStats,char* benchmark,int length){
 
 	printf("%8s, ", benchmark);
 	printf("%8s, ", "C");
-	printf("%8d, ",length);
 
 
 	double memTime=printStats.cctTimers[CCT_TT_MEM_ONLY];
 	double baseTime=printStats.cctTimers[CCT_TT_INC]-memTime;
+
+//	printf("** %lf, %lf **,", memTime,baseTime);
 
 	for(eCCTimers norm=CCT_TT_INC; norm<CCT_TT_LAST; norm++)
 	{
 		printf("%.5lf, ", ((printStats.cctTimers[norm]-memTime)/baseTime));
 
 	}
+	printf("%10d, ",length);
 
 	printf("\n");
 }
@@ -262,8 +263,6 @@ void benchMarkCCT(const int32_t nv, const int32_t ne, const int32_t * off,   con
     cctStats.numberBAWins=countFaster;
     cctStats.ratioBAWins=(double)countFaster/(double)edge;
 
-
-
 	int32_t* logMem = (int32_t*)malloc(sizeof(int32_t)*(memOpsCounter+1)); 
 	
 	int pos=0;
@@ -282,11 +281,9 @@ void benchMarkCCT(const int32_t nv, const int32_t ne, const int32_t * off,   con
     //	printf("CC: %lf, Fraction: %lf\n",cc, (double)triBA/(double)openTotal);
 
     if(benchMarkSyn==1){
-
     	benchMarkMemoryAccess(logMem,synSize,ne,&cctStats);
     	prettyPrintSynthetic(cctStats,"Mix",synSize);
-
-    }
+        }
     else{
 		benchMarkMemoryAccess(logMem,memOpsCounter,ne,&cctStats);
 		prettyPrint(cctStats,graphName);
@@ -320,56 +317,73 @@ void benchMarkRandom(int32_t length){
 
 	for(int32_t l=0; l<length; l++)
 		logMem[l]=rand()%length;
-printf("%d %d %d\n", length, logMem[0],logMem[1]);
 	benchMarkMemoryAccess(logMem,length,length,&cctStats);
 	prettyPrintSynthetic(cctStats,"Random",length);
 	free(logMem);
 }
 
-void benchMarkAllSynthetic(int32_t length, char* graphName){
+void benchMarkAllSynthetic(const int32_t nv, const int32_t ne, const int32_t * off, const int32_t * ind,int32_t * triNE,int32_t length, char* graphName){
 	  time_t t;
 	  srand((unsigned) time(NULL));
-
+	  int32_t allTrianglesCPU=0;
 	  benchMarkLinear(length);
-
+	  benchMarkCCT( nv, ne, off,ind, triNE, &allTrianglesCPU,graphName, 1, length);
 	  benchMarkRandom(length);
+
 }
 
 void benchMarkMemoryAccess(int32_t* inPattern, int32_t sizeInPattern , int32_t sizeOut, stats* cctStats)
 {
 	int32_t* outArray = (int32_t*)malloc(sizeof(int32_t)*sizeOut);
 
-    memset(outArray,0, sizeOut*sizeof(int32_t));
+//	printf("%d   %d\n",sizeInPattern,sizeOut);
+//	for(int i=0; i< 30;i++)
+//	{
+//		printf("%d, ", inPattern[i]);
+//	}
+//	printf("\n");
 
+	int temp=0;
     memset(outArray,0, sizeOut*sizeof(int32_t));
+    memset(outArray,1, sizeOut*sizeof(int32_t));
+    memset(outArray,1, sizeOut*sizeof(int32_t));
+
+    memset(outArray,1, sizeOut*sizeof(int32_t));
     tic();
     for(int m=0; m<sizeInPattern;m++)
     	outArray[inPattern[m]]=0;
     cctStats->cctTimers[CCT_TT_MEM_ONLY]=toc();
 
+	temp+=outArray[10000];
+
+
     memset(outArray,0, sizeOut*sizeof(int32_t));
     tic();
     for(int m=0; m<sizeInPattern;m++)
-    	outArray[inPattern[m]]++;
+    	outArray[inPattern[m]]+=1;
     cctStats->cctTimers[CCT_TT_INC]=toc();
+	temp+=outArray[10000];
 
     memset(outArray,0, sizeOut*sizeof(int32_t));
     tic();
     for(int m=0; m<sizeInPattern;m++)
     	outArray[inPattern[m]]+=1000000;
     cctStats->cctTimers[CCT_TT_ADD_1M]=toc();
+	temp+=outArray[10000];
 
     memset(outArray,0, sizeOut*sizeof(int32_t));
     tic();
     for(int m=0; m<sizeInPattern;m++)
-    	outArray[inPattern[m]]+=sizeInPattern;
+    	outArray[inPattern[m]]+=temp;
     cctStats->cctTimers[CCT_TT_ADD_VAR]=toc();
+	temp+=outArray[10000];
 
     memset(outArray,0, sizeOut*sizeof(int32_t));
     tic();
     for(int m=0; m<sizeInPattern;m++)
     	outArray[inPattern[m]]+=(outArray[inPattern[m]]==0);
     cctStats->cctTimers[CCT_TT_ADD_COND]=toc();
+	temp+=outArray[10000];
 
     int32_t a=0,b=0,c=0;
     memset(outArray,0, sizeOut*sizeof(int32_t));
@@ -380,8 +394,7 @@ void benchMarkMemoryAccess(int32_t* inPattern, int32_t sizeInPattern , int32_t s
     	c+=outArray[inPattern[m]]<=0;}
     outArray[0]=a+b+c;
     cctStats->cctTimers[CCT_TT_ADD_COND_3]=toc();
-
-
+	temp+=outArray[10000];
 
     free(outArray);
 
