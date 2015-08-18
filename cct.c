@@ -29,7 +29,7 @@ typedef struct{
 } stats;
 
 
-void benchMarkMemoryAccess(int32_t* inPattern, int32_t sizeInPattern , int32_t sizeOut, stats* cctStats);
+int32_t benchMarkMemoryAccess(int32_t* inPattern, int32_t sizeInPattern , int32_t sizeOut, stats* cctStats);
 
 void prettyPrint(stats printStats,char* graphName){
 
@@ -69,11 +69,13 @@ void prettyPrintSynthetic(stats printStats,char* benchmark,int length){
 	double memTime=printStats.cctTimers[CCT_TT_MEM_ONLY];
 	double baseTime=printStats.cctTimers[CCT_TT_INC]-memTime;
 
-//	printf("** %lf, %lf **,", memTime,baseTime);
+ //   printf("** %lf, %lf **,", memTime,baseTime);
 
 	for(eCCTimers norm=CCT_TT_INC; norm<CCT_TT_LAST; norm++)
 	{
 		printf("%.5lf, ", ((printStats.cctTimers[norm]-memTime)/baseTime));
+		//printf("%.5lf, ", ((printStats.cctTimers[norm]-memTime)));
+		//printf("%.5lf, ", ((printStats.cctTimers[norm])));
 
 	}
 	printf("%10d, ",length);
@@ -336,9 +338,14 @@ void resetOutput(int32_t* out, int32_t len){
   for(int i=0;i<len; i++)
 	out[i]=0;
 }
+int32_t sumOutput(int32_t* out, int32_t len){
+  int32_t sum=0;
+  for(int i=0;i<len; i++)
+	sum+=out[i];
+}
+ 
 
-
-void benchMarkMemoryAccess(int32_t* inPattern, int32_t sizeInPattern , int32_t sizeOut, stats* cctStats)
+int32_t benchMarkMemoryAccess(int32_t* inPattern, int32_t sizeInPattern , int32_t sizeOut, stats* cctStats)
 {
 	int32_t* outArray = (int32_t*)malloc(sizeof(int32_t)*sizeOut);
 
@@ -349,58 +356,52 @@ void benchMarkMemoryAccess(int32_t* inPattern, int32_t sizeInPattern , int32_t s
 //	}
 //	printf("\n");
 
-	int temp=0;
+	int sum=0;
     resetOutput(outArray,sizeOut);
 	tic();
     for(int m=0; m<sizeInPattern;m++)
     	outArray[inPattern[m]]=0;
     cctStats->cctTimers[CCT_TT_MEM_ONLY]=toc();
 
-	temp+=outArray[10000];
-
+	sum+=sumOutput(outArray,sizeOut);
+	
 
     resetOutput(outArray,sizeOut);
     tic();
     for(int m=0; m<sizeInPattern;m++)
     	outArray[inPattern[m]]+=1;
     cctStats->cctTimers[CCT_TT_INC]=toc();
-	temp+=outArray[10000];
+	sum+=sumOutput(outArray,sizeOut);
 
     resetOutput(outArray,sizeOut);
     tic();
     for(int m=0; m<sizeInPattern;m++)
     	outArray[inPattern[m]]+=1000000;
     cctStats->cctTimers[CCT_TT_ADD_1M]=toc();
-	temp+=outArray[10000];
 
+	sum+=sumOutput(outArray,sizeOut);
     resetOutput(outArray,sizeOut);
     tic();
     for(int m=0; m<sizeInPattern;m++)
-    	outArray[inPattern[m]]+=temp;
+    	outArray[inPattern[m]]+=sizeInPattern;
     cctStats->cctTimers[CCT_TT_ADD_VAR]=toc();
-	temp+=outArray[10000];
 
+	sum+=sumOutput(outArray,sizeOut);
     resetOutput(outArray,sizeOut);
     tic();
     for(int m=0; m<sizeInPattern;m++)
     	outArray[inPattern[m]]+=(outArray[inPattern[m]]==0);
     cctStats->cctTimers[CCT_TT_ADD_COND]=toc();
-	temp+=outArray[10000];
 
-    int32_t a=0,b=0,c=0;
+	sum+=sumOutput(outArray,sizeOut);
     resetOutput(outArray,sizeOut);
     tic();
     for(int m=0; m<sizeInPattern;m++) {
-    	//a+=inPattern[m]==0;
-    	//b+=inPattern[m]>=0;
-    	//c+=inPattern[m]<=0;
-		outArray[inPattern[m]]=(inPattern[m]==0) +(inPattern[m]<=0)+ (inPattern[m]>=10);
+    	outArray[inPattern[m]]+=(outArray[inPattern[m]]==0)+(outArray[inPattern[m]]>=0)+(outArray[inPattern[m]]<=0);
 	}
-    //outArray[0]=a+b+c;
     cctStats->cctTimers[CCT_TT_ADD_COND_3]=toc();
-	temp+=outArray[10000];
 
+	sum+=sumOutput(outArray,sizeOut);
     free(outArray);
-	inPattern[10]=temp;
-
+	return sum;
 }

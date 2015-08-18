@@ -319,10 +319,12 @@ public class cct
 
 		double baseTime=printStats.cctTimers[eCCTimers.CCT_TT_INC.ordinal()]-printStats.cctTimers[eCCTimers.CCT_TT_MEM_ONLY.ordinal()];
 		double memTime=printStats.cctTimers[eCCTimers.CCT_TT_MEM_ONLY.ordinal()];
-
+        //Double temp=memTime;
+		//printStr = printStr + String.format("** %.5f, **", memTime);
 		for (int t=eCCTimers.CCT_TT_INC.ordinal(); t<eCCTimers.CCT_TT_LAST.ordinal(); t++){
 			double normalizedTime=(printStats.cctTimers[t]-memTime)/baseTime;
 			printStr = printStr + String.format("%.5f, ", normalizedTime);
+			//printStr = printStr + String.format("%.5f, ", printStats.cctTimers[t]);
 		}
 
 		printStr = printStr + String.format("%10d, ", length);
@@ -394,19 +396,51 @@ public class cct
 
 
 		int[] output=new int[outputLen];	
-		int a,b,c;
+		//int a,b,c;
+		int temp=0;
 		long start;
 		double timeSet,timeInc1,timeAddVar,timeAdd1M,timeAddCond,timeAdd3Cond;
     	ResetOutput(output,outputLen);
-		start=System.nanoTime();
- 		for (int m=0; m<inputLen; m++)
-			output[input[m]]=0;	
-		timeSet=(System.nanoTime()-start)/10e9;
+ 
+		ResetOutput(output,outputLen);
+    	start=System.nanoTime();
+  		for (int m=0; m<inputLen; m++){
+		  int a=(output[input[m]]==0?1:0);
+		  output[input[m]]+=a;
+		  //output[input[m]]+=(output[input[m]]==0?1:0);
+		
+		}
+		timeAddCond=(System.nanoTime()-start)/10e9;
 
+
+ 		ResetOutput(output,outputLen);
+    	start=System.nanoTime();
+ 		for (int m=0; m<inputLen; m++){
+		  int a=(output[input[m]]==0?1:0);
+		  int b=(output[input[m]]<=0?1:0);
+		  int c=(output[input[m]]>=0?1:0);
+		  output[input[m]]+=a+b+c;
+		}
+		
+		timeAdd3Cond=(System.nanoTime()-start)/10e9;
+ 
+       // start=System.nanoTime();
+ 		for (int m=0; m<inputLen; m++)
+			temp=output[input[m]];	
+	   // timeSet=(System.nanoTime()-start)/10e9;
+         for (int m=0; m<inputLen; m++)
+			output[input[m]]+=1;	
+	   //
 		ResetOutput(output,outputLen);
 		start=System.nanoTime();
-		for (int m=0; m<inputLen; m++)
-			output[input[m]]+=1;	
+  		for (int m=0; m<inputLen; m++)
+			temp=output[input[m]];	
+		timeSet=(System.nanoTime()-start)/10e9;
+        temp++;
+		ResetOutput(output,outputLen);
+		start=System.nanoTime();
+  		for (int m=0; m<inputLen; m++)
+			output[input[m]]++;	
 		timeInc1=(System.nanoTime()-start)/10e9;
 
 		ResetOutput(output,outputLen);
@@ -418,26 +452,10 @@ public class cct
 		ResetOutput(output,outputLen);
 		start=System.nanoTime();
   		for (int m=0; m<inputLen; m++)
-			output[input[m]]+=inputLen;	
+			output[input[m]]+=temp;	
 		timeAddVar=(System.nanoTime()-start)/10e9;
 				
-		ResetOutput(output,outputLen);
-		start=System.nanoTime();
-  		for (int m=0; m<inputLen; m++)
-			output[input[m]]+=(output[input[m]]==0)?1:0;	
-		timeAddCond=(System.nanoTime()-start)/10e9;
 
-		ResetOutput(output,outputLen);
-		a=b=c=0;
-		start=System.nanoTime();
-		for (int m=0; m<inputLen; m++){
-			//a+=(output[input[m]]==0)?1:0;	
-			//b+=(output[input[m]]<=0)?1:0;	
-			//c+=(output[input[m]]>=0)?1:0;
-			output[input[m]]+=((output[input[m]]==0)?1:0)+((output[input[m]]<=1)?1:0) + ((output[input[m]]>=-1)?1:0); 	
-		}
-    	//output[0]=a+b+c;
-		timeAdd3Cond=(System.nanoTime()-start)/10e9;
 
 		cctStats.cctTimers[eCCTimers.CCT_TT_MEM_ONLY.ordinal()]=timeSet;
 		cctStats.cctTimers[eCCTimers.CCT_TT_INC.ordinal()]=timeInc1;
