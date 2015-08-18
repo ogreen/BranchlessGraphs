@@ -6,6 +6,7 @@ import java.io.InputStreamReader;
 import java.util.Iterator;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.Random;
 
 
 public class cct
@@ -266,9 +267,9 @@ public class cct
 		  return;
 	}
 
-	private void ResetVertexAccess(int [] vertexAccess, int ne){
-		for (int e=0; e<ne;e++)
-			vertexAccess[e]=0;
+	private void ResetOutput(int [] output, int inLen){
+		for (int i=0; i<inLen;i++)
+			output[i]=0;
 	}
 
 	private void printNormalized(double readTime,double baseTime, List<Double> timeList){
@@ -310,7 +311,51 @@ public class cct
 	
 	}
 	
-	public void benchMarkCCT(int nv,int ne,int[] off, int[] ind, stats cctStats){
+	private void prettyPrintSynthetic(stats printStats, String benchMarkName,int length){
+		String printStr = "";
+
+		printStr = printStr + String.format("%8s, ",benchMarkName);
+		printStr = printStr + String.format("%8s, ","Java");
+
+		double baseTime=printStats.cctTimers[eCCTimers.CCT_TT_INC.ordinal()]-printStats.cctTimers[eCCTimers.CCT_TT_MEM_ONLY.ordinal()];
+		double memTime=printStats.cctTimers[eCCTimers.CCT_TT_MEM_ONLY.ordinal()];
+
+		for (int t=eCCTimers.CCT_TT_INC.ordinal(); t<eCCTimers.CCT_TT_LAST.ordinal(); t++){
+			double normalizedTime=(printStats.cctTimers[t]-memTime)/baseTime;
+			printStr = printStr + String.format("%.5f, ", normalizedTime);
+		}
+
+		printStr = printStr + String.format("%10d, ", length);
+		
+		System.out.println(printStr);
+	
+	}
+	public void benchMarkLinear(int length){
+
+		int[] memOps= new int[length];
+		stats cctStats = new stats();
+		
+		for(int l=0; l<length; l++)
+			memOps[l]=l;
+		benchMarkMemoryAccess(memOps,length,length,cctStats);
+		prettyPrintSynthetic(cctStats,"Linear",length);
+		
+	}
+	public void benchMarkRandom(int length){
+
+		int[] memOps= new int[length];
+		stats cctStats = new stats();
+		Random rnd = new Random();
+		
+		for(int l=0; l<length; l++)
+			memOps[l]=rnd.nextInt(length);
+		benchMarkMemoryAccess(memOps,length,length,cctStats);
+		prettyPrintSynthetic(cctStats,"Random",length);
+		
+	}
+	
+		
+	public void benchMarkCCT(int nv,int ne,int[] off, int[] ind, stats cctStats,int benchMarkSyn, int synLength){
 		int totalMemOps=0;	
 		
 		for (int src=0; src<nv; src++){
@@ -332,70 +377,67 @@ public class cct
 				int destLen=off[dest+1]-off[dest];	
 				pos=intersectionLogMemOps(srcLen, off[src],destLen, off[dest] ,ind, memOps,pos);
 			}
-		}	
+		}
+		if(benchMarkSyn==0){
+			benchMarkMemoryAccess(memOps,totalMemOps,ne,cctStats);
+		}
+		else{
+//			System.out.println("baaaa - "+synLength);
+			benchMarkMemoryAccess(memOps,synLength,ne+1,cctStats);
+			prettyPrintSynthetic(cctStats,"Mix",synLength);
+			
+		}
+	}
+	
+	public void benchMarkMemoryAccess(int[] input, int inputLen, int outputLen,stats cctStats){
+//		System.out.println("baaaa - "+ inputLen + "  "+outputLen);
 
-		int[] vertexAccess=new int[ne];	
+
+		int[] output=new int[outputLen];	
 		int a,b,c;
 		long start;
-		double timeSet,timeInc1,timeInc1NoStore,timeAddVar,timeAdd1M,timeAddCond,timeAdd3Cond,timeNVDiv2;
-
+		double timeSet,timeInc1,timeAddVar,timeAdd1M,timeAddCond,timeAdd3Cond;
+    	ResetOutput(output,outputLen);
 		start=System.nanoTime();
-		ResetVertexAccess(vertexAccess,ne);
+ 		for (int m=0; m<inputLen; m++)
+			output[input[m]]=0;	
 		timeSet=(System.nanoTime()-start)/10e9;
 
-		ResetVertexAccess(vertexAccess,ne);
+		ResetOutput(output,outputLen);
 		start=System.nanoTime();
-		for (int m=0; m<totalMemOps; m++)
-			vertexAccess[memOps[m]]+=1;	
+		for (int m=0; m<inputLen; m++)
+			output[input[m]]+=1;	
 		timeInc1=(System.nanoTime()-start)/10e9;
-		ResetVertexAccess(vertexAccess,ne);
-		a=0;
-		start=System.nanoTime();
-		for (int m=0; m<totalMemOps; m++)
-			a+=1;	
-		timeInc1NoStore=(System.nanoTime()-start)/10e9;
-	 
 
-		ResetVertexAccess(vertexAccess,ne);
+		ResetOutput(output,outputLen);
 		start=System.nanoTime();
-		for (int m=0; m<totalMemOps; m++)
-			vertexAccess[memOps[m]]+=1000000;	
+ 		for (int m=0; m<inputLen; m++)
+			output[input[m]]+=1000000;	
 		timeAdd1M=(System.nanoTime()-start)/10e9;
 
-		ResetVertexAccess(vertexAccess,ne);
+		ResetOutput(output,outputLen);
 		start=System.nanoTime();
-		for (int m=0; m<totalMemOps; m++)
-			vertexAccess[memOps[m]]+=nv;	
+  		for (int m=0; m<inputLen; m++)
+			output[input[m]]+=inputLen;	
 		timeAddVar=(System.nanoTime()-start)/10e9;
-		
-		
-		ResetVertexAccess(vertexAccess,ne);
+				
+		ResetOutput(output,outputLen);
 		start=System.nanoTime();
-		for (int m=0; m<totalMemOps; m++)
-			vertexAccess[memOps[m]]+=(vertexAccess[memOps[m]]==0)?1:0;	
+  		for (int m=0; m<inputLen; m++)
+			output[input[m]]+=(output[input[m]]==0)?1:0;	
 		timeAddCond=(System.nanoTime()-start)/10e9;
 
-
-		ResetVertexAccess(vertexAccess,ne);
+		ResetOutput(output,outputLen);
 		a=b=c=0;
 		start=System.nanoTime();
-		for (int m=0; m<totalMemOps; m++){
-			a+=(vertexAccess[memOps[m]]==0)?1:0;	
-			b+=(vertexAccess[memOps[m]]<=0)?1:0;	
-			c+=(vertexAccess[memOps[m]]>=0)?1:0;
+		for (int m=0; m<inputLen; m++){
+			//a+=(output[input[m]]==0)?1:0;	
+			//b+=(output[input[m]]<=0)?1:0;	
+			//c+=(output[input[m]]>=0)?1:0;
+			output[input[m]]+=((output[input[m]]==0)?1:0)+((output[input[m]]<=1)?1:0) + ((output[input[m]]>=-1)?1:0); 	
 		}
+    	//output[0]=a+b+c;
 		timeAdd3Cond=(System.nanoTime()-start)/10e9;
-//		int nediv2=(int)0.5*ne;
-//		ResetVertexAccess(vertexAccess,ne);
-//		a=b=c=0;
-//		start=System.nanoTime();
-//		for (int m=0; m<totalMemOps; m++){
-//			if(memOps[m]>=nediv2)
-//				vertexAccess[memOps[m]]=memOps[m];
-//			else
-//				vertexAccess[memOps[m]]=memOps[m];
-//		}
-//		timeNVDiv2=(System.nanoTime()-start)/10e9;
 
 		cctStats.cctTimers[eCCTimers.CCT_TT_MEM_ONLY.ordinal()]=timeSet;
 		cctStats.cctTimers[eCCTimers.CCT_TT_INC.ordinal()]=timeInc1;
@@ -403,10 +445,6 @@ public class cct
 		cctStats.cctTimers[eCCTimers.CCT_TT_ADD_VAR.ordinal()]=timeAddVar;
 		cctStats.cctTimers[eCCTimers.CCT_TT_ADD_COND.ordinal()]=timeAddCond;
 		cctStats.cctTimers[eCCTimers.CCT_TT_ADD_COND_3.ordinal()]=timeAdd3Cond;
-
-//		print "Time-set         : ", timeSet	
-//		printNormalized(timeSet, timeInc1-timeSet,timeList);
-			
 		
 		
 	}
@@ -415,12 +453,28 @@ public class cct
 //		System.out.println(args[0]);
 		cct cctBenchMark=new cct();
 		stats cctStats = new stats();
-		cctBenchMark.readGraphDIMACS(args[0]);
-		cctBenchMark.triangleCount(cctBenchMark.nv, cctBenchMark.ne, cctBenchMark.off,cctBenchMark.ind,cctStats);	
-		cctBenchMark.benchMarkCCT(cctBenchMark.nv, cctBenchMark.ne, cctBenchMark.off,cctBenchMark.ind,cctStats);
 		cctStats.nv=cctBenchMark.nv;
 		cctStats.ne=cctBenchMark.ne;
-		cctBenchMark.prettyPrint(cctStats,args[1]);
+	
+		Integer benchMark=Integer.parseInt(args[2]);
+		if(benchMark==0){
+			cctBenchMark.readGraphDIMACS(args[0]);
+			cctBenchMark.triangleCount(cctBenchMark.nv, cctBenchMark.ne, cctBenchMark.off,cctBenchMark.ind,cctStats);	
+			cctBenchMark.benchMarkCCT(cctBenchMark.nv, cctBenchMark.ne, cctBenchMark.off,cctBenchMark.ind,cctStats,0,0);
+			cctBenchMark.prettyPrint(cctStats,args[1]);
+		}
+		else{
+			Integer synLength=Integer.parseInt(args[3]);
+			
+			cctBenchMark.benchMarkLinear(synLength);
+			cctBenchMark.readGraphDIMACS(args[0]);
+			cctBenchMark.triangleCount(cctBenchMark.nv, cctBenchMark.ne, cctBenchMark.off,cctBenchMark.ind,cctStats);	
+			cctBenchMark.benchMarkCCT(cctBenchMark.nv, cctBenchMark.ne, cctBenchMark.off,cctBenchMark.ind,cctStats,1,synLength);
+
+			cctBenchMark.benchMarkRandom(synLength);
+			
+		}
+		
 	}
 }	
 	

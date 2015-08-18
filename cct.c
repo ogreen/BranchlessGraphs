@@ -300,8 +300,8 @@ void benchMarkLinear(int32_t length){
 	int32_t* logMem = (int32_t*)malloc(sizeof(int32_t)*(length+1));
 
 
-	for(int32_t l=0; l<length; l++)
-		logMem[l]=l;
+	for(int32_t i=0; i<length; i++)
+		logMem[i]=i;
 
 	benchMarkMemoryAccess(logMem,length,length,&cctStats);
 
@@ -315,8 +315,8 @@ void benchMarkRandom(int32_t length){
 
 	int32_t* logMem = (int32_t*)malloc(sizeof(int32_t)*(length+1));
 
-	for(int32_t l=0; l<length; l++)
-		logMem[l]=rand()%length;
+	for(int32_t i=0; i<length; i++)
+		logMem[i]=rand()%length;
 	benchMarkMemoryAccess(logMem,length,length,&cctStats);
 	prettyPrintSynthetic(cctStats,"Random",length);
 	free(logMem);
@@ -332,6 +332,12 @@ void benchMarkAllSynthetic(const int32_t nv, const int32_t ne, const int32_t * o
 
 }
 
+void resetOutput(int32_t* out, int32_t len){
+  for(int i=0;i<len; i++)
+	out[i]=0;
+}
+
+
 void benchMarkMemoryAccess(int32_t* inPattern, int32_t sizeInPattern , int32_t sizeOut, stats* cctStats)
 {
 	int32_t* outArray = (int32_t*)malloc(sizeof(int32_t)*sizeOut);
@@ -344,12 +350,8 @@ void benchMarkMemoryAccess(int32_t* inPattern, int32_t sizeInPattern , int32_t s
 //	printf("\n");
 
 	int temp=0;
-    memset(outArray,0, sizeOut*sizeof(int32_t));
-    memset(outArray,1, sizeOut*sizeof(int32_t));
-    memset(outArray,1, sizeOut*sizeof(int32_t));
-
-    memset(outArray,1, sizeOut*sizeof(int32_t));
-    tic();
+    resetOutput(outArray,sizeOut);
+	tic();
     for(int m=0; m<sizeInPattern;m++)
     	outArray[inPattern[m]]=0;
     cctStats->cctTimers[CCT_TT_MEM_ONLY]=toc();
@@ -357,28 +359,28 @@ void benchMarkMemoryAccess(int32_t* inPattern, int32_t sizeInPattern , int32_t s
 	temp+=outArray[10000];
 
 
-    memset(outArray,0, sizeOut*sizeof(int32_t));
+    resetOutput(outArray,sizeOut);
     tic();
     for(int m=0; m<sizeInPattern;m++)
     	outArray[inPattern[m]]+=1;
     cctStats->cctTimers[CCT_TT_INC]=toc();
 	temp+=outArray[10000];
 
-    memset(outArray,0, sizeOut*sizeof(int32_t));
+    resetOutput(outArray,sizeOut);
     tic();
     for(int m=0; m<sizeInPattern;m++)
     	outArray[inPattern[m]]+=1000000;
     cctStats->cctTimers[CCT_TT_ADD_1M]=toc();
 	temp+=outArray[10000];
 
-    memset(outArray,0, sizeOut*sizeof(int32_t));
+    resetOutput(outArray,sizeOut);
     tic();
     for(int m=0; m<sizeInPattern;m++)
     	outArray[inPattern[m]]+=temp;
     cctStats->cctTimers[CCT_TT_ADD_VAR]=toc();
 	temp+=outArray[10000];
 
-    memset(outArray,0, sizeOut*sizeof(int32_t));
+    resetOutput(outArray,sizeOut);
     tic();
     for(int m=0; m<sizeInPattern;m++)
     	outArray[inPattern[m]]+=(outArray[inPattern[m]]==0);
@@ -386,17 +388,19 @@ void benchMarkMemoryAccess(int32_t* inPattern, int32_t sizeInPattern , int32_t s
 	temp+=outArray[10000];
 
     int32_t a=0,b=0,c=0;
-    memset(outArray,0, sizeOut*sizeof(int32_t));
+    resetOutput(outArray,sizeOut);
     tic();
     for(int m=0; m<sizeInPattern;m++) {
-    	a+=outArray[inPattern[m]]==0;
-    	b+=outArray[inPattern[m]]>=0;
-    	c+=outArray[inPattern[m]]<=0;}
-    outArray[0]=a+b+c;
+    	//a+=inPattern[m]==0;
+    	//b+=inPattern[m]>=0;
+    	//c+=inPattern[m]<=0;
+		outArray[inPattern[m]]=(inPattern[m]==0) +(inPattern[m]<=0)+ (inPattern[m]>=10);
+	}
+    //outArray[0]=a+b+c;
     cctStats->cctTimers[CCT_TT_ADD_COND_3]=toc();
 	temp+=outArray[10000];
 
     free(outArray);
-
+	inPattern[10]=temp;
 
 }

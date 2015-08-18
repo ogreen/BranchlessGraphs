@@ -10,10 +10,10 @@ def printGraphList(graphList):
 
 def main(argv):
     printC=True
-    printJava=False
+    printJava=True
     printPy=True
     
-    benchMarkRealData=True;
+    benchMarkRealData=False;
     benchMarkSynthetic=True;
 
 #    print graphList
@@ -28,7 +28,7 @@ def main(argv):
                 if(printC==True):
                     subprocess.call(["./cct", graphName, graph[1],str(0),str(0)],stdout=outfile)   
                 if(printJava==True):
-                    subprocess.call(["java","cct",graphName,graph[1]],stdout=outfile)
+                    subprocess.call(["java","cct",graphName,graph[1],str(0),str(0)],stdout=outfile)
                 if(printPy==True):
                     temp1="--ifile="+graphName
                     temp2="--gname="+graph[1]
@@ -39,13 +39,13 @@ def main(argv):
         graph=[None]*2
         graph[0]="clustering/"; graph[1]="astro-ph";
         graphName=graphDir+graph[0]+graph[1]+".graph"
-        synSize=str(10000000);        
+        synSize=str(1000000);        
         
         with open(resDir+"synthetic" +".csv", "w") as outfile:
             if(printC==True):
                 subprocess.call(["./cct", graphName, graph[1],str(1), synSize ],stdout=outfile)   
-#            if(printJava==True):
-#                subprocess.call(["java","cct",graphName,graph[1]],stdout=outfile)
+            if(printJava==True):
+                subprocess.call(["java","cct",graphName,graph[1],str(1), synSize],stdout=outfile)
             if(printPy==True):
                 temp1="--ifile="+graphName
                 temp2="--gname="+graph[1]
