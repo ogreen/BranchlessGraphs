@@ -258,8 +258,10 @@ def benchMarkMemoryAccessPattern(memAccessArray,memAccessLen, vertexAccessLen):
 		
 	vertexAccess=[None]*vertexAccessLen;	
 
+        ResetVertexAccess(vertexAccess,vertexAccessLen)
 	start=time.time()
-	ResetVertexAccess(vertexAccess,vertexAccessLen)
+ 	for m in range(0,memAccessLen):
+		vertexAccess[memAccessArray[m]]=0;	
 	timeMem=time.time()-start
 
 	ResetVertexAccess(vertexAccess,vertexAccessLen)
@@ -291,10 +293,13 @@ def benchMarkMemoryAccessPattern(memAccessArray,memAccessLen, vertexAccessLen):
 	a=b=c=0
 	start=time.time()
 	for m in range(0,memAccessLen):
-		a+=(vertexAccess[memAccessArray[m]]==0);	
-		b+=(vertexAccess[memAccessArray[m]]<=0);	
-		c+=(vertexAccess[memAccessArray[m]]>=0);	
-	timeAdd3Cond=time.time()-start
+#		a=(vertexAccess[memAccessArray[m]]==0);	
+#		b=(vertexAccess[memAccessArray[m]]<=0);	
+#		c=(vertexAccess[memAccessArray[m]]>=0);	
+#		vertexAccess[memAccessArray[m]]+=a+b+c;
+		vertexAccess[memAccessArray[m]]+=(vertexAccess[memAccessArray[m]]==0) + (vertexAccess[memAccessArray[m]]<=0) + (vertexAccess[memAccessArray[m]]>=0);	
+		vertexAccess[memAccessArray[m]]+=a+b+c;
+        timeAdd3Cond=time.time()-start
 
 	timeList=[]
 	timeList.append(timeInc1);

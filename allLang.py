@@ -13,11 +13,11 @@ def main(argv):
     printJava=True
     printPy=True
     
-    benchMarkRealData=False;
+    benchMarkRealData=True;
     benchMarkSynthetic=True;
 
 #    print graphList
-    graphDir="/home/greenman/data/dimacs/"
+    graphDir="/shared/users/greenman/dimacs/"
     resDir="res-has/"    
     #graphDir="/shared/users/greenman/dimacs/"
     if(benchMarkRealData):
@@ -37,9 +37,9 @@ def main(argv):
 
     if(benchMarkSynthetic):
         graph=[None]*2
-        graph[0]="clustering/"; graph[1]="astro-ph";
+        graph[0]="coauthor/"; graph[1]="coAuthorsDBLP";
         graphName=graphDir+graph[0]+graph[1]+".graph"
-        synSize=str(1000000);        
+        synSize=str(10000000);        
         
         with open(resDir+"synthetic" +".csv", "w") as outfile:
             if(printC==True):

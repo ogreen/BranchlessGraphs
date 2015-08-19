@@ -404,6 +404,19 @@ public class cct
  
 		ResetOutput(output,outputLen);
     	start=System.nanoTime();
+ 		for (int m=0; m<inputLen; m++){
+ //		  int a=(output[input[m]]==0?1:0);
+ //   	  int b=(output[input[m]]<=0?1:0);
+ //   	  int c=(output[input[m]]>=0?1:0);
+ //   	  output[input[m]]+=a+b+c;
+    	  output[input[m]]+=(output[input[m]]==0?1:0)+
+		  (output[input[m]]<=0?1:0)+ (output[input[m]]>=0?1:0);
+		}
+		
+		timeAdd3Cond=(System.nanoTime()-start)/10e9;
+ 
+		ResetOutput(output,outputLen);
+    	start=System.nanoTime();
   		for (int m=0; m<inputLen; m++){
 		  int a=(output[input[m]]==0?1:0);
 		  output[input[m]]+=a;
@@ -413,17 +426,21 @@ public class cct
 		timeAddCond=(System.nanoTime()-start)/10e9;
 
 
- 		ResetOutput(output,outputLen);
-    	start=System.nanoTime();
- 		for (int m=0; m<inputLen; m++){
-		  int a=(output[input[m]]==0?1:0);
-		  int b=(output[input[m]]<=0?1:0);
-		  int c=(output[input[m]]>=0?1:0);
-		  output[input[m]]+=a+b+c;
-		}
-		
-		timeAdd3Cond=(System.nanoTime()-start)/10e9;
+
  
+		ResetOutput(output,outputLen);
+		start=System.nanoTime();
+  		for (int m=0; m<inputLen; m++)
+			output[input[m]]+=temp;	
+		timeAddVar=(System.nanoTime()-start)/10e9;
+				
+ 
+		ResetOutput(output,outputLen);
+		start=System.nanoTime();
+ 		for (int m=0; m<inputLen; m++)
+			output[input[m]]+=1000000;	
+		timeAdd1M=(System.nanoTime()-start)/10e9;
+        
        // start=System.nanoTime();
  		for (int m=0; m<inputLen; m++)
 			temp=output[input[m]];	
@@ -443,18 +460,6 @@ public class cct
 			output[input[m]]++;	
 		timeInc1=(System.nanoTime()-start)/10e9;
 
-		ResetOutput(output,outputLen);
-		start=System.nanoTime();
- 		for (int m=0; m<inputLen; m++)
-			output[input[m]]+=1000000;	
-		timeAdd1M=(System.nanoTime()-start)/10e9;
-
-		ResetOutput(output,outputLen);
-		start=System.nanoTime();
-  		for (int m=0; m<inputLen; m++)
-			output[input[m]]+=temp;	
-		timeAddVar=(System.nanoTime()-start)/10e9;
-				
 
 
 		cctStats.cctTimers[eCCTimers.CCT_TT_MEM_ONLY.ordinal()]=timeSet;
@@ -497,37 +502,6 @@ public class cct
 }	
 	
 	
-/*
-	
-
-/*
-def main(argv):
-	inputfile = ''
-	try:
-		opts, args = getopt.getopt(argv,"hi:",["ifile="])
-	except getopt.GetoptError:
-		print 'cctmain.py -i <inputfile>'
-		sys.exit(2)
-	for opt, arg in opts:
-		if opt == '-h':
-			print 'cctmain.py -i <inputfile>'
-			sys.exit()
-		elif opt in ("-i", "--ifile"):
-			inputfile = arg
-	print 'Input file is "', inputfile
-
-	nv,ne,ind,off = readGraphDIMACS(inputfile)
-
-	triNE=[None]*ne
-	print nv, ne 	
-	triangleCount(nv, off, ind, triNE,False)
-	benchMarkCCT(nv, ne, off, ind, triNE)
-  
-if __name__ == "__main__":
-	main(sys.argv[1:])
-
-
-*/
 	
 	
 
