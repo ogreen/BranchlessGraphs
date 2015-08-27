@@ -94,6 +94,13 @@ int32_t intersectionBranchBased ( const int32_t alen, const int32_t * a,
   if (!alen || !blen || a[alen-1] < b[0] || b[blen-1] < a[0])
     return 0;
 
+	const int32_t* inda = &ind[apos];
+	const int32_t* indb = &ind[bpos];
+		
+		int32_t vala=inda[ka];
+		int32_t valb=indb[kb];
+
+
   while (1) {
     if (ka >= alen || kb >= blen) break;
 
@@ -114,9 +121,9 @@ int32_t intersectionBranchBased ( const int32_t alen, const int32_t * a,
 int32_t intersectionBranchAvoiding ( const int32_t alen, const int32_t apos,
 						  const int32_t blen, const int32_t bpos, const int32_t* ind)
 {
-  int32_t ka = 0, kb = 0;
-  int32_t out = 0;
-int comp;
+	int32_t ka = 0, kb = 0;
+	int32_t out = 0;
+	int comp;
 	if(alen==0 || blen==0 || ind[apos+alen-1]<ind[bpos] || ind[bpos + blen-1]<ind[apos] )
 		return 0;
 
@@ -133,7 +140,61 @@ int comp;
 	
 }
 
+#if defined( ARMASM)
+int32_t intersectionBranchAvoidingArmAsm ( const int32_t alen, const int32_t apos,
+						  const int32_t blen, const int32_t bpos, const int32_t* ind)
+{
+  int32_t ka = 0, kb = 0;
+  int32_t out = 0;
+int comp;
+	if(alen==0 || blen==0 || ind[apos+alen-1]<ind[bpos] || ind[bpos + blen-1]<ind[apos] )
+		return 0;
+	const int32_t* inda = &ind[apos];
+	const int32_t* indb = &ind[bpos];
+	while (1){
+		if(ka>=alen || kb>=blen){
+			break;				
+		}
+		//comp   = (ind[apos+ka]-ind[bpos+kb]);
+		
+		int32_t vala=inda[ka];
+		int32_t valb=indb[kb];
+//		int32_t vala=ind[apos+ka];
+//		int32_t valb=ind[bpos+kb];
+		
+		__asm__ __volatile__ (
+			"CMP %[vala], %[valb];"
+			"ADDEQ %[out], %[out], #1;"
+			"ADDLS %[ka], %[ka], #1;"
+			"ADDHS %[kb], %[kb], #1;"
+			: [ka] "+r" (ka), [kb] "+r" (kb), [out] "+r" (out)
+			: [vala] "r" (vala), [valb] "r" (valb)
+		);
 
+		
+		
+
+//		if(vala==valb)
+//		  printf("*");
+		//printf("%d, %d, %d, %d, %d, %d, %d\n", alen,ka, blen,kb,out,vala, valb);
+		
+			//"CMP %0,%1\n" : : "r" (vala), "r" (valb));
+		//__asm__ ("ADDEQ %[out], %[out], #1;": [out] "+r" (out) ) ;
+	//	__asm__ ("ADDLS %[ka], %[ka], #1;": [ka] "+r" (ka) ) ;
+		//__asm__ ("ADDHS %[kb], %[kb], #1;": [kb] "+r" (kb) ) ;
+	//   ka+= (comp<=0)?1:0;
+	//   kb+= (comp>=0)?1:0;
+		 //out+= (comp==0)?1:0;
+
+ 
+
+	}
+	return out;	
+	
+}
+
+#endif
+ 
 int32_t intersectionCountMemOps ( const int32_t alen, const int32_t * a,
 						  const int32_t blen, const int32_t * b)
 {
@@ -222,7 +283,7 @@ void benchMarkCCT(const int32_t nv, const int32_t ne, const int32_t * off,   con
 			tic();
 			int dest=ind[iter];
 			int destLen=off[dest+1]-off[dest];	
-			triBA+=temp=intersectionBranchAvoiding(srcLen, off[src], destLen, off[dest],ind);
+			triBA+=temp=intersectionBranchAvoidingArmAsm(srcLen, off[src], destLen, off[dest],ind);
 			iterBA=toc();
 			totalBA+=iterBA;			
 
@@ -241,6 +302,8 @@ void benchMarkCCT(const int32_t nv, const int32_t ne, const int32_t * off,   con
 			}
 			sum+=triNE[edge++];
 			verTriangle+=temp;
+			//if(triBB!=temp)
+			//  printf("not working correctly\n");
 		}
 
 		if(srcLen>1){
