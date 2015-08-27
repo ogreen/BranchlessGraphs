@@ -466,7 +466,7 @@ public class cct
 		ResetOutput(output,outputLen);
 		start=System.nanoTime();
   		for (int m=0; m<inputLen; m++)
-			temp=output[input[m]];	
+			output[input[m]]=0;	
 		timeSet=(System.nanoTime()-start)/10e9;
         temp++;
 		ResetOutput(output,outputLen);

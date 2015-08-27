@@ -112,26 +112,25 @@ int32_t intersectionBranchBased ( const int32_t alen, const int32_t * a,
 	return out;
 }
 
-int32_t intersectionBranchAvoiding ( const int32_t alen, const int32_t apos,
-						  const int32_t blen, const int32_t bpos, const int32_t* ind)
+int32_t intersectionBranchAvoiding ( const int32_t alen, const int32_t * a,  const int32_t blen, const int32_t * b)
 {
-  int32_t ka = 0, kb = 0;
-  int32_t out = 0;
-int comp;
-	if(alen==0 || blen==0 || ind[apos+alen-1]<ind[bpos] || ind[bpos + blen-1]<ind[apos] )
+	int32_t ka = 0, kb = 0;
+	int32_t out = 0;
+
+	if (!alen || !blen || a[alen-1] < b[0] || b[blen-1] < a[0])
 		return 0;
+	int comp;
 
 	while (1){
 		if(ka>=alen || kb>=blen){
 			break;				
 		}
-		comp   = (ind[apos+ka]-ind[bpos+kb]);
+		comp   = (a[ka]-b[kb]);
 		ka+= (comp<=0)?1:0;
 		kb+= (comp>=0)?1:0;
-		out+= (comp==0)?1:0;							
+		out+= (comp==0)?1:0;		
 	}
 	return out;	
-	
 }
 
 
@@ -223,7 +222,7 @@ void benchMarkCCT(const int32_t nv, const int32_t ne, const int32_t * off,   con
 			tic();
 			int dest=ind[iter];
 			int destLen=off[dest+1]-off[dest];	
-			triBA+=temp=intersectionBranchAvoiding(srcLen, off[src], destLen, off[dest],ind);
+			triBA+=temp=intersectionBranchAvoiding(srcLen, ind+off[src], destLen, ind+off[dest]);
 			iterBA=toc();
 			totalBA+=iterBA;			
 
@@ -242,6 +241,9 @@ void benchMarkCCT(const int32_t nv, const int32_t ne, const int32_t * off,   con
 			}
 			sum+=triNE[edge++];
 			verTriangle+=temp;
+			
+			//if(temp!=triBB)
+			//	printf("*");
 		}
 
 		if(srcLen>1){
