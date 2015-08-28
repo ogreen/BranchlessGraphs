@@ -15,8 +15,10 @@ typedef enum{
 	CCT_TT_INC,
 	CCT_TT_ADD_1M,
 	CCT_TT_ADD_VAR,
-	CCT_TT_ADD_COND,
+	CCT_TT_ADD_COND_EQ,
+	CCT_TT_ADD_COND_GEQ,
 	CCT_TT_ADD_COND_3,
+	CCT_TT_ADD_BRANCH,
 	CCT_TT_LAST,
 } eCCTimers;
 
@@ -29,7 +31,7 @@ typedef struct{
 } stats;
 
 
-int32_t benchMarkMemoryAccess(int32_t* inPattern, int32_t sizeInPattern , int32_t sizeOut, stats* cctStats);
+int32_t benchMarkMemoryAccess(int32_t* inPattern, int32_t sizeInPattern , int32_t sizeOut, stats* cctStats, int BranchVal);
 
 void prettyPrint(stats printStats,char* graphName){
 
@@ -54,7 +56,6 @@ void prettyPrint(stats printStats,char* graphName){
 	for(eCCTimers norm=CCT_TT_INC; norm<CCT_TT_LAST; norm++)
 	{
 		printf("%.5lf, ", ((printStats.cctTimers[norm]-memTime)/baseTime));
-
 	}
 
 	printf("\n");
@@ -94,12 +95,6 @@ int32_t intersectionBranchBased ( const int32_t alen, const int32_t * a,
   if (!alen || !blen || a[alen-1] < b[0] || b[blen-1] < a[0])
     return 0;
 
-	const int32_t* inda = &ind[apos];
-	const int32_t* indb = &ind[bpos];
-		
-		int32_t vala=inda[ka];
-		int32_t valb=indb[kb];
-
 
   while (1) {
     if (ka >= alen || kb >= blen) break;
@@ -118,47 +113,42 @@ int32_t intersectionBranchBased ( const int32_t alen, const int32_t * a,
 	return out;
 }
 
-int32_t intersectionBranchAvoiding ( const int32_t alen, const int32_t apos,
-						  const int32_t blen, const int32_t bpos, const int32_t* ind)
+int32_t intersectionBranchAvoiding ( const int32_t alen, const int32_t * a,  const int32_t blen, const int32_t * b)
 {
 	int32_t ka = 0, kb = 0;
 	int32_t out = 0;
-	int comp;
-	if(alen==0 || blen==0 || ind[apos+alen-1]<ind[bpos] || ind[bpos + blen-1]<ind[apos] )
+
+	if (!alen || !blen || a[alen-1] < b[0] || b[blen-1] < a[0])
 		return 0;
+	int comp;
 
 	while (1){
 		if(ka>=alen || kb>=blen){
 			break;				
 		}
-		comp   = (ind[apos+ka]-ind[bpos+kb]);
+		comp   = (a[ka]-b[kb]);
 		ka+= (comp<=0)?1:0;
 		kb+= (comp>=0)?1:0;
-		out+= (comp==0)?1:0;							
+		out+= (comp==0)?1:0;		
 	}
 	return out;	
-	
 }
 
 #if defined( ARMASM)
-int32_t intersectionBranchAvoidingArmAsm ( const int32_t alen, const int32_t apos,
-						  const int32_t blen, const int32_t bpos, const int32_t* ind)
-{
+int32_t intersectionBranchAvoidingArmAsm (const int32_t alen, const int32_t * a,
+						  const int32_t blen, const int32_t * b)   {
   int32_t ka = 0, kb = 0;
   int32_t out = 0;
-int comp;
-	if(alen==0 || blen==0 || ind[apos+alen-1]<ind[bpos] || ind[bpos + blen-1]<ind[apos] )
+  if (!alen || !blen || a[alen-1] < b[0] || b[blen-1] < a[0])
 		return 0;
-	const int32_t* inda = &ind[apos];
-	const int32_t* indb = &ind[bpos];
 	while (1){
 		if(ka>=alen || kb>=blen){
 			break;				
 		}
 		//comp   = (ind[apos+ka]-ind[bpos+kb]);
 		
-		int32_t vala=inda[ka];
-		int32_t valb=indb[kb];
+		int32_t vala=a[ka];
+		int32_t valb=b[kb];
 //		int32_t vala=ind[apos+ka];
 //		int32_t valb=ind[bpos+kb];
 		
@@ -283,7 +273,7 @@ void benchMarkCCT(const int32_t nv, const int32_t ne, const int32_t * off,   con
 			tic();
 			int dest=ind[iter];
 			int destLen=off[dest+1]-off[dest];	
-			triBA+=temp=intersectionBranchAvoidingArmAsm(srcLen, off[src], destLen, off[dest],ind);
+			triBA+=temp=intersectionBranchAvoidingArmAsm(srcLen, ind+off[src], destLen, ind+off[dest]);
 			iterBA=toc();
 			totalBA+=iterBA;			
 
@@ -302,8 +292,9 @@ void benchMarkCCT(const int32_t nv, const int32_t ne, const int32_t * off,   con
 			}
 			sum+=triNE[edge++];
 			verTriangle+=temp;
-			//if(triBB!=temp)
-			//  printf("not working correctly\n");
+			
+			//if(temp!=triBB)
+			//	printf("*");
 		}
 
 		if(srcLen>1){
@@ -346,11 +337,11 @@ void benchMarkCCT(const int32_t nv, const int32_t ne, const int32_t * off,   con
     //	printf("CC: %lf, Fraction: %lf\n",cc, (double)triBA/(double)openTotal);
 
     if(benchMarkSyn==1){
-    	benchMarkMemoryAccess(logMem,synSize,ne,&cctStats);
+    	benchMarkMemoryAccess(logMem,synSize,ne,&cctStats, nv/2);
     	prettyPrintSynthetic(cctStats,"Mix",synSize);
         }
     else{
-		benchMarkMemoryAccess(logMem,memOpsCounter,ne,&cctStats);
+		benchMarkMemoryAccess(logMem,memOpsCounter,ne,&cctStats, nv/2);
 		prettyPrint(cctStats,graphName);
     }
 
@@ -368,7 +359,7 @@ void benchMarkLinear(int32_t length){
 	for(int32_t i=0; i<length; i++)
 		logMem[i]=i;
 
-	benchMarkMemoryAccess(logMem,length,length,&cctStats);
+	benchMarkMemoryAccess(logMem,length,length,&cctStats, length/2);
 
 	prettyPrintSynthetic(cctStats,"Linear",length);
 
@@ -382,7 +373,7 @@ void benchMarkRandom(int32_t length){
 
 	for(int32_t i=0; i<length; i++)
 		logMem[i]=rand()%length;
-	benchMarkMemoryAccess(logMem,length,length,&cctStats);
+	benchMarkMemoryAccess(logMem,length,length,&cctStats, length/2);
 	prettyPrintSynthetic(cctStats,"Random",length);
 	free(logMem);
 }
@@ -408,7 +399,7 @@ int32_t sumOutput(int32_t* out, int32_t len){
 }
  
 
-int32_t benchMarkMemoryAccess(int32_t* inPattern, int32_t sizeInPattern , int32_t sizeOut, stats* cctStats)
+int32_t benchMarkMemoryAccess(int32_t* inPattern, int32_t sizeInPattern , int32_t sizeOut, stats* cctStats, int branchVal)
 {
 	int32_t* outArray = (int32_t*)malloc(sizeof(int32_t)*sizeOut);
 
@@ -449,22 +440,45 @@ int32_t benchMarkMemoryAccess(int32_t* inPattern, int32_t sizeInPattern , int32_
     	outArray[inPattern[m]]+=sizeInPattern;
     cctStats->cctTimers[CCT_TT_ADD_VAR]=toc();
 
+
 	sum+=sumOutput(outArray,sizeOut);
     resetOutput(outArray,sizeOut);
     tic();
     for(int m=0; m<sizeInPattern;m++)
-    	outArray[inPattern[m]]+=(outArray[inPattern[m]]==0);
-    cctStats->cctTimers[CCT_TT_ADD_COND]=toc();
+    	outArray[inPattern[m]]+=(inPattern[m]<=0);
+    cctStats->cctTimers[CCT_TT_ADD_COND_GEQ]=toc();
+	
+	
+	sum+=sumOutput(outArray,sizeOut);
+    resetOutput(outArray,sizeOut);
+    tic();
+    for(int m=0; m<sizeInPattern;m++)
+    	outArray[inPattern[m]]+=(inPattern[m]==0);
+    cctStats->cctTimers[CCT_TT_ADD_COND_EQ]=toc();
 
+	
 	sum+=sumOutput(outArray,sizeOut);
     resetOutput(outArray,sizeOut);
     tic();
     for(int m=0; m<sizeInPattern;m++) {
-    	outArray[inPattern[m]]+=(outArray[inPattern[m]]==0)+(outArray[inPattern[m]]>=0)+(outArray[inPattern[m]]<=0);
+    	outArray[inPattern[m]]+=(inPattern[m]==0)+(inPattern[m]>=0)+(inPattern[m]<=0);
 	}
     cctStats->cctTimers[CCT_TT_ADD_COND_3]=toc();
 
 	sum+=sumOutput(outArray,sizeOut);
+
+    resetOutput(outArray,sizeOut);
+    tic();
+    for(int m=0; m<sizeInPattern;m++) {
+		if(inPattern[m]>=branchVal)
+			outArray[inPattern[m]]+=branchVal;
+		else 
+			outArray[inPattern[m]]+=1;
+	}
+    cctStats->cctTimers[CCT_TT_ADD_BRANCH]=toc();
+
+	sum+=sumOutput(outArray,sizeOut);
+
     free(outArray);
 	return sum;
 }

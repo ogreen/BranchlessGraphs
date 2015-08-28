@@ -16,10 +16,11 @@ def main(argv):
     benchMarkRealData=True;
     benchMarkSynthetic=True;
 
+	
 #    print graphList
-    graphDir="/shared/users/greenman/dimacs/"
-    resDir="res-has/"    
     #graphDir="/shared/users/greenman/dimacs/"
+    resDir="res-arm/"    
+    graphDir="/home/greenman/dimacs-sub/"
     if(benchMarkRealData):
         for graph in graphList:
             graphName=graphDir+graph[0]+graph[1]+".graph"

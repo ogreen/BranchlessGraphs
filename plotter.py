@@ -10,9 +10,9 @@ from graphNames import graphList
 allPlat=["C","Java", "Python"]
 #plotColors=['MediumSpringGreen', 'RebeccaPurple','RoyalBlue','FireBrick','DarkCyan']
 #plotColors=['MediumSpringGreen', 'RebeccaPurple','RoyalBlue','FireBrick','DarkCyan']
-plotColors=['MediumSpringGreen', 'Purple','RoyalBlue','FireBrick','DarkCyan']
+plotColors=['MediumSpringGreen', 'Purple','RoyalBlue','FireBrick','DarkCyan', "DarkGray", "DarkGoldenRod"]
 
-syntheticNames=["Increment", "Add Integer", "Add Variable", "Add 1 Condition", "Add 3 Conditions"]
+syntheticNames=["Increment", "Add Integer", "Add Variable", "Add Condition =", "Add Condition >=", "Add 3 Conditions", "Add Branch"]
 
 #allPlat=["C"]
 graphLabelRotation = 60
@@ -153,7 +153,7 @@ def genSyntheticCompare(resDir,results,graphs,title,ylabel,columnmin,columnmax,m
 
     return
 
-def genSyntheticCompareAll(resDir,results,title,ylabel,columnmin,columnmax,maxy,fileName, dashedLine,lang):
+def genSyntheticCompareAll(resDir,results,title,ylabel,columnmin,columnmax,maxy,fileName, dashedLine, lang):
     fig, ax = plt.subplots()
 #    index = np.arange(len(graphs))
     index = np.arange(3)
@@ -176,7 +176,7 @@ def genSyntheticCompareAll(resDir,results,title,ylabel,columnmin,columnmax,maxy,
 
     plt.ylabel(ylabel) 
     plt.title(title)
-    plt.xticks(index,graphs,rotation=graphLabelRotation)
+    plt.xticks(index,["Linear","Mix","Random"],rotation=graphLabelRotation, horizontalalignment='left')
 
     plt.legend( loc=0,ncol=3, mode="expand", borderaxespad=0. )    
 
@@ -215,36 +215,18 @@ filteredJava=filterLanguages("Java",results)
 
 genTimePlots(resDir,results,graphs)
 genCrossLangCompare(resDir,results,graphs,"Percentage of intersection whens Branch-Avoiding is faster","Percentage (%)",8,1.2,"ba-wins",0.5)
-genCrossLangCompare(resDir,results,graphs,"Normalized execution time in comparison with addition/increment","Normalized Execution Time",13,4,"cond3",1.0)
+genCrossLangCompare(resDir,results,graphs,"Normalized execution time in comparison with addition/increment","Normalized Execution Time",14,25,"cond3",1.0)
 
 for lang in allPlat:
-    genSyntheticCompare(resDir,results,graphs,"Normalized execution time for synthetic benchmarks","Normalized Execution Time",9,14,6,"synthetic"+lang,1.0,lang)
-#def genSyntheticCompare(resDir,results,graphs,title,ylabel,columnmin,columnmax,maxy,fileName, dashedLine,lang):
+    genSyntheticCompare(resDir,results,graphs,"Normalized execution time for synthetic benchmarks using \n triangle counting memory access pattern","Normalized Execution Time",9,16,30,"graphSynthetic"+lang,1.0,lang)
 
 
 resultssyn = []
 graphResFile=resDir+"synthetic.csv"
 resultssyn.append(parseResultFile(graphResFile))
 
-for lang in ["Python"]:
-    genSyntheticCompareAll(resDir,resultssyn,"Normalized execution time for synthetic benchmarks","Normalized Execution Time",3,7,4,"syntheticAll"+lang,1.0,lang)
+for lang in allPlat:
+	genSyntheticCompareAll(resDir,resultssyn,"Normalized execution time for synthetic benchmarks","Normalized Execution Time",2,9,20,"synthetic"+lang,1.0,lang)
 
 
-#    plt.show()
-# opacity = 0.4
-# error_config = {'ecolor': '0.3'}
-# 
-# plt.xlabel('Group')
-# plt.ylabel('Scores')
-# plt.title('Scores by group and gender')
-# plt.xticks(index + bar_width, ('A', 'B', 'C', 'D', 'E'))
-# plt.legend()
-# 
-# plt.tight_layout()
 
-
-#plt.savefig('temp'+".png", format="png")
-#plt.savefig('temp'+".pdf", format="pdf")
-
-
-#plt.show()

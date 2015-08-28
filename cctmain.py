@@ -208,9 +208,9 @@ def benchMarkCCT(nv,ne, off, ind, limitSize, size):
 			pos=intersectionLogMemOps (srcLen, off[src],destLen, off[dest] ,ind,memOps,pos)
 
 	if (limitSize==False):
-		timeMem,timeList=benchMarkMemoryAccessPattern(memOps,totalMemOps,ne)
+		timeMem,timeList=benchMarkMemoryAccessPattern(memOps,totalMemOps,ne,nv/2)
 	else:
-		timeMem,timeList=benchMarkMemoryAccessPattern(memOps,size,ne)
+		timeMem,timeList=benchMarkMemoryAccessPattern(memOps,size,ne,nv/2)
 
 	return timeMem,timeList
 
@@ -222,7 +222,7 @@ def benchMarkLinear(length):
 	for l in range(0,length):
 		memOps[l]=l
 	
-	timeMem,timeList=benchMarkMemoryAccessPattern(memOps,totalMemOps,length)
+	timeMem,timeList=benchMarkMemoryAccessPattern(memOps,totalMemOps,length, length/2)
 
 	prettyPrintSynthetic(timeMem,timeList, "Linear",length)
 
@@ -236,7 +236,7 @@ def benchMarkRandom(length):
 	for l in range(0,length):
 		memOps[l]=random.randint(0,length-1)
 	
-	timeMem,timeList=benchMarkMemoryAccessPattern(memOps,totalMemOps,length)
+	timeMem,timeList=benchMarkMemoryAccessPattern(memOps,totalMemOps,length, length/2)
 	prettyPrintSynthetic(timeMem,timeList, "Random",length)
 
 def benchMarkAllSynthetic(length,inputfile):
@@ -253,12 +253,12 @@ def benchMarkAllSynthetic(length,inputfile):
 	
 	
 	
-def benchMarkMemoryAccessPattern(memAccessArray,memAccessLen, vertexAccessLen):
+def benchMarkMemoryAccessPattern(memAccessArray,memAccessLen, vertexAccessLen, branchVal):
 	var=memAccessLen/2; 
 		
 	vertexAccess=[None]*vertexAccessLen;	
 
-        ResetVertexAccess(vertexAccess,vertexAccessLen)
+	ResetVertexAccess(vertexAccess,vertexAccessLen)
 	start=time.time()
  	for m in range(0,memAccessLen):
 		vertexAccess[memAccessArray[m]]=0;	
@@ -286,9 +286,17 @@ def benchMarkMemoryAccessPattern(memAccessArray,memAccessLen, vertexAccessLen):
 	ResetVertexAccess(vertexAccess,vertexAccessLen)
 	start=time.time()
 	for m in range(0,memAccessLen):
-		vertexAccess[memAccessArray[m]]+=(vertexAccess[memAccessArray[m]]==0);	
-	timeAddCond=time.time()-start
+		vertexAccess[memAccessArray[m]]+=(memAccessArray[m]==0);	
+	timeAddCondEq=time.time()-start
+	
 
+	ResetVertexAccess(vertexAccess,vertexAccessLen)
+	start=time.time()
+	for m in range(0,memAccessLen):
+		vertexAccess[memAccessArray[m]]+=(memAccessArray[m]>=0);	
+	timeAddCondGEq=time.time()-start
+
+	
 	ResetVertexAccess(vertexAccess,vertexAccessLen)
 	a=b=c=0
 	start=time.time()
@@ -297,16 +305,29 @@ def benchMarkMemoryAccessPattern(memAccessArray,memAccessLen, vertexAccessLen):
 #		b=(vertexAccess[memAccessArray[m]]<=0);	
 #		c=(vertexAccess[memAccessArray[m]]>=0);	
 #		vertexAccess[memAccessArray[m]]+=a+b+c;
-		vertexAccess[memAccessArray[m]]+=(vertexAccess[memAccessArray[m]]==0) + (vertexAccess[memAccessArray[m]]<=0) + (vertexAccess[memAccessArray[m]]>=0);	
-		vertexAccess[memAccessArray[m]]+=a+b+c;
-        timeAdd3Cond=time.time()-start
+		vertexAccess[memAccessArray[m]]+=(memAccessArray[m]==0) + (memAccessArray[m]<=0) + (memAccessArray[m]>=0);	
+#		vertexAccess[memAccessArray[m]]+=a+b+c;
+	timeAdd3Cond=time.time()-start
 
+	ResetVertexAccess(vertexAccess,vertexAccessLen)
+	start=time.time()
+	for m in range(0,memAccessLen):
+		if(memAccessArray[m]>branchVal):
+			vertexAccess[memAccessArray[m]]+=branchVal
+		else:
+			vertexAccess[memAccessArray[m]]+=1
+	timeAddBranch=time.time()-start
+	
+	
+	
 	timeList=[]
 	timeList.append(timeInc1);
 	timeList.append(timeAdd1M);
 	timeList.append(timeAddVar);
-	timeList.append(timeAddCond);
+	timeList.append(timeAddCondEq);
+	timeList.append(timeAddCondGEq);
 	timeList.append(timeAdd3Cond);
+	timeList.append(timeAddBranch);
 
 	return timeMem, timeList
 

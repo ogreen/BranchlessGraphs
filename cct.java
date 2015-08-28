@@ -18,8 +18,10 @@ public class cct
 		CCT_TT_INC,
 		CCT_TT_ADD_1M,
 		CCT_TT_ADD_VAR,
-		CCT_TT_ADD_COND,
+		CCT_TT_ADD_COND_EQ,
+		CCT_TT_ADD_COND_GEQ,
 		CCT_TT_ADD_COND_3,
+		CCT_TT_ADD_BRANCH,
 		CCT_TT_LAST,
 	};
 
@@ -339,7 +341,7 @@ public class cct
 		
 		for(int l=0; l<length; l++)
 			memOps[l]=l;
-		benchMarkMemoryAccess(memOps,length,length,cctStats);
+		benchMarkMemoryAccess(memOps,length,length,cctStats,length/2);
 		prettyPrintSynthetic(cctStats,"Linear",length);
 		
 	}
@@ -351,7 +353,7 @@ public class cct
 		
 		for(int l=0; l<length; l++)
 			memOps[l]=rnd.nextInt(length);
-		benchMarkMemoryAccess(memOps,length,length,cctStats);
+		benchMarkMemoryAccess(memOps,length,length,cctStats,length/2);
 		prettyPrintSynthetic(cctStats,"Random",length);
 		
 	}
@@ -381,17 +383,17 @@ public class cct
 			}
 		}
 		if(benchMarkSyn==0){
-			benchMarkMemoryAccess(memOps,totalMemOps,ne,cctStats);
+			benchMarkMemoryAccess(memOps,totalMemOps,ne,cctStats,nv/2);
 		}
 		else{
 //			System.out.println("baaaa - "+synLength);
-			benchMarkMemoryAccess(memOps,synLength,ne+1,cctStats);
+			benchMarkMemoryAccess(memOps,synLength,ne+1,cctStats,nv/2);
 			prettyPrintSynthetic(cctStats,"Mix",synLength);
 			
 		}
 	}
 	
-	public void benchMarkMemoryAccess(int[] input, int inputLen, int outputLen,stats cctStats){
+	public void benchMarkMemoryAccess(int[] input, int inputLen, int outputLen,stats cctStats,int branchVal){
 //		System.out.println("baaaa - "+ inputLen + "  "+outputLen);
 
 
@@ -399,7 +401,7 @@ public class cct
 		//int a,b,c;
 		int temp=0;
 		long start;
-		double timeSet,timeInc1,timeAddVar,timeAdd1M,timeAddCond,timeAdd3Cond;
+		double timeSet,timeInc1,timeAddVar,timeAdd1M,timeAddCondEq,timeAddCondGEq,timeAdd3Cond,timeAddBranch;
     	ResetOutput(output,outputLen);
  
 		ResetOutput(output,outputLen);
@@ -420,13 +422,26 @@ public class cct
   		for (int m=0; m<inputLen; m++){
 		  int a=(output[input[m]]==0?1:0);
 		  output[input[m]]+=a;
-		  //output[input[m]]+=(output[input[m]]==0?1:0);
-		
 		}
-		timeAddCond=(System.nanoTime()-start)/10e9;
+		timeAddCondEq=(System.nanoTime()-start)/10e9;
 
+		ResetOutput(output,outputLen);
+    	start=System.nanoTime();
+  		for (int m=0; m<inputLen; m++){
+		  int a=(output[input[m]]>=0?1:0);
+		  output[input[m]]+=a;
+		}
+		timeAddCondGEq=(System.nanoTime()-start)/10e9;
 
-
+		ResetOutput(output,outputLen);
+    	start=System.nanoTime();
+  		for (int m=0; m<inputLen; m++){
+			if (input[m]>=branchVal)
+				output[input[m]]+=branchVal;
+			else 
+				output[input[m]]+=1;
+		}
+		timeAddBranch=(System.nanoTime()-start)/10e9;	
  
 		ResetOutput(output,outputLen);
 		start=System.nanoTime();
@@ -451,7 +466,7 @@ public class cct
 		ResetOutput(output,outputLen);
 		start=System.nanoTime();
   		for (int m=0; m<inputLen; m++)
-			temp=output[input[m]];	
+			output[input[m]]=0;	
 		timeSet=(System.nanoTime()-start)/10e9;
         temp++;
 		ResetOutput(output,outputLen);
@@ -466,9 +481,10 @@ public class cct
 		cctStats.cctTimers[eCCTimers.CCT_TT_INC.ordinal()]=timeInc1;
 		cctStats.cctTimers[eCCTimers.CCT_TT_ADD_1M.ordinal()]=timeAdd1M;
 		cctStats.cctTimers[eCCTimers.CCT_TT_ADD_VAR.ordinal()]=timeAddVar;
-		cctStats.cctTimers[eCCTimers.CCT_TT_ADD_COND.ordinal()]=timeAddCond;
+		cctStats.cctTimers[eCCTimers.CCT_TT_ADD_COND_EQ.ordinal()]=timeAddCondEq;
+		cctStats.cctTimers[eCCTimers.CCT_TT_ADD_COND_GEQ.ordinal()]=timeAddCondGEq;
 		cctStats.cctTimers[eCCTimers.CCT_TT_ADD_COND_3.ordinal()]=timeAdd3Cond;
-		
+		cctStats.cctTimers[eCCTimers.CCT_TT_ADD_BRANCH.ordinal()]=timeAddBranch;
 		
 	}
 	
