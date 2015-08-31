@@ -143,7 +143,7 @@ def ResetVertexAccess(vertexAccess, ne):
 	for e in range(0,ne):
 		vertexAccess[e]=0;
 
-def prettyPrint(nv, ne, timeBA,timeBB,intersections,countFaster, ratioBAWins, timeMem,timeList, graphName):
+def prettyPrint(nv, ne, timeBA,timeBB,intersections,countFaster, ratioBAWins, graphName):
 
 	printStr = "";
 	printStr = printStr + "{:>25s}, ".format(graphName)		
@@ -154,15 +154,17 @@ def prettyPrint(nv, ne, timeBA,timeBB,intersections,countFaster, ratioBAWins, ti
 	printStr = printStr + "{:8d}, ".format(countFaster)	
 	printStr = printStr + "{:.5f}, ".format(timeBA)
 	printStr = printStr + "{:.5f}, ".format(timeBB)
+	printStr = printStr + "{:.5f}, ".format(0)
 	printStr = printStr + "{:.5f}, ".format(ratioBAWins)
+	printStr = printStr + "{:.5f}, ".format(0)
 
-	baseTime=timeList[0]-timeMem
-	if (baseTime==0):
-		print "Normalizing time unsucessful due to short baseTime"
-		return
+	# baseTime=timeList[0]-timeMem
+	# if (baseTime==0):
+		# print "Normalizing time unsucessful due to short baseTime"
+		# return
 
-	for t in timeList:
-		printStr = printStr + "{:.5f}, ".format((t-timeMem)/baseTime) 
+	# for t in timeList:
+		# printStr = printStr + "{:.5f}, ".format((t-timeMem)/baseTime) 
 
 	print printStr
 
@@ -366,8 +368,9 @@ def main(argv):
 	if (benchMarkSyn==False):
 		nv,ne,ind,off = readGraphDIMACS(inputfile)
 		timeBA,timeBB,intersections,countFaster, ratioBAWins = timeAlgorithms(nv, off, ind)
-		timeMem,timeList=benchMarkCCT(nv, ne, off, ind,False,0)
-		prettyPrint(nv, ne, timeBA,timeBB,intersections,countFaster, ratioBAWins, timeMem,timeList,graphName)
+		# timeMem,timeList=benchMarkCCT(nv, ne, off, ind,False,0)
+		# prettyPrint(nv, ne, timeBA,timeBB,intersections,countFaster, ratioBAWins, timeMem,timeList,graphName)
+		prettyPrint(nv, ne, timeBA,timeBB,intersections,countFaster, ratioBAWins, graphName)
 	else:
 		benchMarkAllSynthetic(sizeSyn,inputfile)
 

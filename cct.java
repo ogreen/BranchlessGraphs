@@ -135,6 +135,7 @@ public class cct
 			ka+= (comp<=0)?1:0;
 			kb+= (comp>=0)?1:0;
 			out+= (comp==0)?1:0;							
+
 		}
 		return out;
 	}
@@ -299,15 +300,17 @@ public class cct
 		
 		printStr = printStr + String.format("%.5f, ", printStats.cctTimers[eCCTimers.CCT_TT_BB.ordinal()]) ;
 		printStr = printStr + String.format("%.5f, ", printStats.cctTimers[eCCTimers.CCT_TT_BA.ordinal()]) ;
+		printStr = printStr + String.format("%.5f, ", 0.0) ;
 		printStr = printStr + String.format("%.5f, ", printStats.ratioBAWins) ;
+		printStr = printStr + String.format("%.5f, ", 0.0) ;
 
-		double baseTime=printStats.cctTimers[eCCTimers.CCT_TT_INC.ordinal()]-printStats.cctTimers[eCCTimers.CCT_TT_MEM_ONLY.ordinal()];
-		double memTime=printStats.cctTimers[eCCTimers.CCT_TT_MEM_ONLY.ordinal()];
+		// double baseTime=printStats.cctTimers[eCCTimers.CCT_TT_INC.ordinal()]-printStats.cctTimers[eCCTimers.CCT_TT_MEM_ONLY.ordinal()];
+		// double memTime=printStats.cctTimers[eCCTimers.CCT_TT_MEM_ONLY.ordinal()];
 
-		for (int t=eCCTimers.CCT_TT_INC.ordinal(); t<eCCTimers.CCT_TT_LAST.ordinal(); t++){
-			double normalizedTime=(printStats.cctTimers[t]-memTime)/baseTime;
-			printStr = printStr + String.format("%.5f, ", normalizedTime);
-		}
+		// for (int t=eCCTimers.CCT_TT_INC.ordinal(); t<eCCTimers.CCT_TT_LAST.ordinal(); t++){
+			// double normalizedTime=(printStats.cctTimers[t]-memTime)/baseTime;
+			// printStr = printStr + String.format("%.5f, ", normalizedTime);
+		// }
 		
 		System.out.println(printStr);
 	
@@ -499,7 +502,7 @@ public class cct
 		if(benchMark==0){
 			cctBenchMark.readGraphDIMACS(args[0]);
 			cctBenchMark.triangleCount(cctBenchMark.nv, cctBenchMark.ne, cctBenchMark.off,cctBenchMark.ind,cctStats);	
-			cctBenchMark.benchMarkCCT(cctBenchMark.nv, cctBenchMark.ne, cctBenchMark.off,cctBenchMark.ind,cctStats,0,0);
+//			cctBenchMark.benchMarkCCT(cctBenchMark.nv, cctBenchMark.ne, cctBenchMark.off,cctBenchMark.ind,cctStats,0,0);
 			cctBenchMark.prettyPrint(cctStats,args[1]);
 		}
 		else{

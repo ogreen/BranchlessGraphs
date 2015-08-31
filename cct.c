@@ -11,6 +11,7 @@
 typedef enum{
 	CCT_TT_BB,
 	CCT_TT_BA,
+	CCT_TT_BAC,	
 	CCT_TT_MEM_ONLY,
 	CCT_TT_INC,
 	CCT_TT_ADD_1M,
@@ -26,7 +27,8 @@ typedef struct{
 	double cctTimers[CCT_TT_LAST];
 	int32_t numberIntersections;
 	int32_t numberBAWins;
-	double ratioBAWins;		// BA over BA
+	double ratioBAWins;		// BA over BB
+	double ratioBACWins;	// BC over BB
 	int32_t nv,ne;
 } stats;
 
@@ -43,20 +45,22 @@ void prettyPrint(stats printStats,char* graphName){
 	printf("%8d, ",printStats.numberBAWins);
 	printf("%.5lf, ", printStats.cctTimers[CCT_TT_BB]);
 	printf("%.5lf, ", printStats.cctTimers[CCT_TT_BA]);
+	printf("%.5lf, ", printStats.cctTimers[CCT_TT_BAC]);
 	printf("%.5lf, ",printStats.ratioBAWins);
+	printf("%.5lf, ",printStats.ratioBACWins);
 
-	if (printStats.cctTimers[CCT_TT_BA]==0){
-		printf("Normalizing time unsucessful due to short baseTime - Graph probably too small\n");
-		return;
-	}
+	// if (printStats.cctTimers[CCT_TT_BA]==0){
+		// printf("Normalizing time unsucessful due to short baseTime - Graph probably too small\n");
+		// return;
+	// }
 
-	double memTime=printStats.cctTimers[CCT_TT_MEM_ONLY];
-	double baseTime=printStats.cctTimers[CCT_TT_INC]-memTime;
+	// double memTime=printStats.cctTimers[CCT_TT_MEM_ONLY];
+	// double baseTime=printStats.cctTimers[CCT_TT_INC]-memTime;
 
-	for(eCCTimers norm=CCT_TT_INC; norm<CCT_TT_LAST; norm++)
-	{
-		printf("%.5lf, ", ((printStats.cctTimers[norm]-memTime)/baseTime));
-	}
+	// for(eCCTimers norm=CCT_TT_INC; norm<CCT_TT_LAST; norm++)
+	// {
+		// printf("%.5lf, ", ((printStats.cctTimers[norm]-memTime)/baseTime));
+	// }
 
 	printf("\n");
 }
@@ -265,15 +269,19 @@ void benchMarkCCT(const int32_t nv, const int32_t ne, const int32_t * off,   con
 	triBA=triBB=0;
 	whenFaster=totalBB=totalBA=iterBB=iterBA=0.0;
 	int32_t countFaster=0;
+#if defined( ARMASM)
+	double totalBAC=0.0,iterBAC=0.0;
+	int32_t countFasterBAC=0;
+#endif	
 
-	int32_t memOpsCounter=0;
+	
     for (int src = 0; src < nv; src++){
 		int srcLen=off[src+1]-off[src];
 		for(int iter=off[src]; iter<off[src+1]; iter++){
 			tic();
 			int dest=ind[iter];
 			int destLen=off[dest+1]-off[dest];	
-			triBA+=temp=intersectionBranchAvoidingArmAsm(srcLen, ind+off[src], destLen, ind+off[dest]);
+			triBA+=temp=intersectionBranchAvoiding(srcLen, ind+off[src], destLen, ind+off[dest]);
 			iterBA=toc();
 			totalBA+=iterBA;			
 
@@ -284,12 +292,26 @@ void benchMarkCCT(const int32_t nv, const int32_t ne, const int32_t * off,   con
 			iterBB=toc();
 			totalBB+=iterBB;
 
-			memOpsCounter+=intersectionCountMemOps   (srcLen, ind+off[src], destLen, ind+off[dest]);
-
 			if(iterBA<iterBB){
 				countFaster++;
 				whenFaster+=(iterBB-iterBA);
 			}
+
+			
+#if defined( ARMASM)
+			tic();
+			dest=ind[iter];
+			destLen=off[dest+1]-off[dest];	
+			temp=intersectionBranchAvoidingArmAsm(srcLen, ind+off[src], destLen, ind+off[dest]);
+			iterBAC=toc();
+			totalBAC+=iterBAC;
+
+			if(iterBAC<iterBB){
+				countFasterBAC++;
+			}			
+			
+#endif	
+			
 			sum+=triNE[edge++];
 			verTriangle+=temp;
 			
@@ -311,6 +333,7 @@ void benchMarkCCT(const int32_t nv, const int32_t ne, const int32_t * off,   con
     stats cctStats;
     cctStats.cctTimers[CCT_TT_BB]=totalBB;
     cctStats.cctTimers[CCT_TT_BA]=totalBA;
+    cctStats.cctTimers[CCT_TT_BAC]=totalBAC;
 
     cctStats.nv=nv;
     cctStats.ne=ne;
@@ -319,33 +342,53 @@ void benchMarkCCT(const int32_t nv, const int32_t ne, const int32_t * off,   con
     cctStats.numberBAWins=countFaster;
     cctStats.ratioBAWins=(double)countFaster/(double)edge;
 
-	int32_t* logMem = (int32_t*)malloc(sizeof(int32_t)*(memOpsCounter+1)); 
-	
-	int pos=0;
-    for (int src = 0; src < nv; src++)
-    {
-		int srcLen=off[src+1]-off[src];
-		for(int iter=off[src]; iter<off[src+1]; iter++)
-		{
-			int dest=ind[iter];
-			int destLen=off[dest+1]-off[dest];	
-		    pos=intersectionLogMemOps(srcLen, ind+off[src], destLen, ind+off[dest], logMem, off[src], off[dest],pos);	
-			//printf("%d, ", pos);
-		}
-	}
+	cctStats.ratioBACWins=0;
+#if defined( ARMASM)
+    cctStats.ratioBACWins=(double)countFasterBAC/(double)edge;
+#endif
 
     //	printf("CC: %lf, Fraction: %lf\n",cc, (double)triBA/(double)openTotal);
 
     if(benchMarkSyn==1){
+		int32_t memOpsCounter=0;
+		for (int src = 0; src < nv; src++){
+			int srcLen=off[src+1]-off[src];
+			for(int iter=off[src]; iter<off[src+1]; iter++){
+				int dest=ind[iter];
+				int destLen=off[dest+1]-off[dest];	
+				memOpsCounter+=intersectionCountMemOps (srcLen, ind+off[src], destLen, ind+off[dest]);	
+			}
+		}
+		int32_t* logMem = (int32_t*)malloc(sizeof(int32_t)*(memOpsCounter+1)); 
+		
+		int pos=0;
+		for (int src = 0; src < nv; src++)
+		{
+			int srcLen=off[src+1]-off[src];
+			for(int iter=off[src]; iter<off[src+1]; iter++)
+			{
+				int dest=ind[iter];
+				int destLen=off[dest+1]-off[dest];	
+				pos=intersectionLogMemOps(srcLen, ind+off[src], destLen, ind+off[dest], logMem, off[src], off[dest],pos);	
+				//printf("%d, ", pos);
+			}
+		}
+		
+		   
+		benchMarkMemoryAccess(logMem,memOpsCounter,ne,&cctStats, nv/2);
+		free(logMem);		
+
+		
     	benchMarkMemoryAccess(logMem,synSize,ne,&cctStats, nv/2);
     	prettyPrintSynthetic(cctStats,"Mix",synSize);
-        }
+    }
     else{
-		benchMarkMemoryAccess(logMem,memOpsCounter,ne,&cctStats, nv/2);
+
 		prettyPrint(cctStats,graphName);
+		
     }
 
-    free(logMem);
+ 
 
 	*allTriangles=sum;
 }
