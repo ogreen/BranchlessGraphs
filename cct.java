@@ -76,7 +76,7 @@ public class cct
 					ind[edges]=Integer.parseInt(uStr);
 					countEdges++;
 					edges++;
-				}
+				}                                          
 				off[v+1]=off[v]+countEdges;
 				v++;
 			}
@@ -200,7 +200,7 @@ public class cct
 			}
 		}
 	
-		return memCounter;
+		return memCounter;               
 	}
 	
 	
@@ -238,20 +238,20 @@ public class cct
 			int srcLen=off[src+1]-off[src];
 			for (int iter = off[src];  iter<off[src+1]; iter++){
 				start=System.nanoTime();
-				int dest=ind[iter];
+				int dest=ind[iter];     
 				int destLen=off[dest+1]-off[dest];	
 				sumBB+=intersectionBranchBased (srcLen, off[src],destLen, off[dest] ,ind);
 				end=System.nanoTime();
 				currBB=end-start;
-				totalBB+=(end-start)/(double)10e9;
+				totalBB+=(end-start);
 				
 				start=System.nanoTime();
 				dest=ind[iter];
 				destLen=off[dest+1]-off[dest];	
 				sumBA+=intersectionBranchAvoiding (srcLen, off[src],destLen, off[dest] ,ind);
-				end=System.nanoTime();
+				end=System.nanoTime();    
 				currBA=end-start;
-				totalBA+=(end-start)/(double)10e9;				
+				totalBA+=(end-start);				
 
 				if(currBA<currBB)
 					countBAFaster++;
@@ -259,6 +259,10 @@ public class cct
 				intersections++;
 			}			
 		}
+		totalBB/=(double)1e9;				
+		totalBA/=(double)1e9;				
+
+
 
 		cctStats.cctTimers[eCCTimers.CCT_TT_BA.ordinal()]=totalBA;
 		cctStats.cctTimers[eCCTimers.CCT_TT_BB.ordinal()]=totalBB;
@@ -418,7 +422,7 @@ public class cct
 		  (output[input[m]]<=0?1:0)+ (output[input[m]]>=0?1:0);
 		}
 		
-		timeAdd3Cond=(System.nanoTime()-start)/10e9;
+		timeAdd3Cond=(System.nanoTime()-start)/1e9;
  
 		ResetOutput(output,outputLen);
     	start=System.nanoTime();
@@ -426,7 +430,7 @@ public class cct
 		  int a=(output[input[m]]==0?1:0);
 		  output[input[m]]+=a;
 		}
-		timeAddCondEq=(System.nanoTime()-start)/10e9;
+		timeAddCondEq=(System.nanoTime()-start)/1e9;
 
 		ResetOutput(output,outputLen);
     	start=System.nanoTime();
@@ -434,7 +438,7 @@ public class cct
 		  int a=(output[input[m]]>=0?1:0);
 		  output[input[m]]+=a;
 		}
-		timeAddCondGEq=(System.nanoTime()-start)/10e9;
+		timeAddCondGEq=(System.nanoTime()-start)/1e9;
 
 		ResetOutput(output,outputLen);
     	start=System.nanoTime();
@@ -444,20 +448,20 @@ public class cct
 			else 
 				output[input[m]]+=1;
 		}
-		timeAddBranch=(System.nanoTime()-start)/10e9;	
+		timeAddBranch=(System.nanoTime()-start)/1e9;	
  
 		ResetOutput(output,outputLen);
 		start=System.nanoTime();
   		for (int m=0; m<inputLen; m++)
 			output[input[m]]+=temp;	
-		timeAddVar=(System.nanoTime()-start)/10e9;
+		timeAddVar=(System.nanoTime()-start)/1e9;
 				
  
 		ResetOutput(output,outputLen);
 		start=System.nanoTime();
  		for (int m=0; m<inputLen; m++)
 			output[input[m]]+=1000000;	
-		timeAdd1M=(System.nanoTime()-start)/10e9;
+		timeAdd1M=(System.nanoTime()-start)/1e9;
         
        // start=System.nanoTime();
  		for (int m=0; m<inputLen; m++)
@@ -470,13 +474,13 @@ public class cct
 		start=System.nanoTime();
   		for (int m=0; m<inputLen; m++)
 			output[input[m]]=0;	
-		timeSet=(System.nanoTime()-start)/10e9;
+		timeSet=(System.nanoTime()-start)/1e9;
         temp++;
 		ResetOutput(output,outputLen);
 		start=System.nanoTime();
   		for (int m=0; m<inputLen; m++)
 			output[input[m]]++;	
-		timeInc1=(System.nanoTime()-start)/10e9;
+		timeInc1=(System.nanoTime()-start)/1e9;
 
 
 
