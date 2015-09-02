@@ -16,7 +16,7 @@ ifeq ($(AMD_FAMILY15_COUNTERS),1)
 endif
 
 ifeq ($(ARCH),arm)
-CFLAGS=-marm
+CFLAGS=-marm -DARMASM
 
 graph.o: graph_arm.py
 	python $<
@@ -34,7 +34,8 @@ bfs: main.c timer.c bfs.c bfsBU.c graph.o Makefile
 sv: main.c timer.c sv.c graph.o Makefile
 	$(CC) -g -O3 -std=gnu99 $(CFLAGS) $(DEFINES) -Wno-unused-result -DBENCHMARK_SV -o $@ main.c timer.c sv.c graph.o $(LDFLAGS) -lrt
 cct: main.c timer.c cct.c Makefile
-	$(CC) -g -O3 -std=gnu99 $(CFLAGS) $(DEFINES) -Wno-unused-result -DBENCHMARK_CCT -DARMASM -o $@  main.c timer.c cct.c $(LDFLAGS) -lrt
+	$(CC) -g -O3 -std=gnu99 $(CFLAGS) $(DEFINES) -Wno-unused-result -DBENCHMARK_CCT -o $@  main.c timer.c cct.c $(LDFLAGS) -lrt
+	#$(CC) -g -O3 -std=gnu99 $(CFLAGS) $(DEFINES) -Wno-unused-result -DBENCHMARK_CCT -DARMASM -o $@  main.c timer.c cct.c $(LDFLAGS) -lrt
 
 
 bench-bfs: bfs

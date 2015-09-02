@@ -269,10 +269,8 @@ void benchMarkCCT(const int32_t nv, const int32_t ne, const int32_t * off,   con
 	triBA=triBB=0;
 	whenFaster=totalBB=totalBA=iterBB=iterBA=0.0;
 	int32_t countFaster=0;
-#if defined( ARMASM)
 	double totalBAC=0.0,iterBAC=0.0;
 	int32_t countFasterBAC=0;
-#endif	
 
 	
     for (int src = 0; src < nv; src++){
@@ -374,13 +372,9 @@ void benchMarkCCT(const int32_t nv, const int32_t ne, const int32_t * off,   con
 			}
 		}
 		
-		   
-		benchMarkMemoryAccess(logMem,memOpsCounter,ne,&cctStats, nv/2);
-		free(logMem);		
-
-		
     	benchMarkMemoryAccess(logMem,synSize,ne,&cctStats, nv/2);
     	prettyPrintSynthetic(cctStats,"Mix",synSize);
+		free(logMem);		
     }
     else{
 
