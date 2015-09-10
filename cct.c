@@ -100,8 +100,7 @@ int32_t intersectionBranchBased ( const int32_t alen, const int32_t * a,
     return 0;
 
 
-  while (1) {
-    if (ka >= alen || kb >= blen) break;
+	while (ka < alen && kb < blen){
 
 	if(a[ka]==b[kb]){
 		ka++,kb++, out++;
@@ -126,10 +125,7 @@ int32_t intersectionBranchAvoiding ( const int32_t alen, const int32_t * a,  con
 		return 0;
 	int comp;
 
-	while (1){
-		if(ka>=alen || kb>=blen){
-			break;				
-		}
+	while (ka < alen && kb < blen){
 		comp   = (a[ka]-b[kb]);
 		ka+= (comp<=0)?1:0;
 		kb+= (comp>=0)?1:0;
@@ -200,8 +196,7 @@ int32_t intersectionCountMemOps ( const int32_t alen, const int32_t * a,
   if (!alen || !blen || a[alen-1] < b[0] || b[blen-1] < a[0])
     return 0;
 
-  while (1) {
-    if (ka >= alen || kb >= blen) break;
+	while (ka < alen && kb < blen){
 
 	if(a[ka]==b[kb]){
 		countMemOps+=2;
