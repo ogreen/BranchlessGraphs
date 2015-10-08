@@ -88,6 +88,7 @@ void prettyPrintSynthetic(stats printStats,char* benchmark,int length){
 	printf("\n");
 }
 
+#if defined(X86)
 
 int32_t intersectionBranchBased ( const int32_t alen, const int32_t * a,
 						  const int32_t blen, const int32_t * b)
@@ -99,25 +100,25 @@ int32_t intersectionBranchBased ( const int32_t alen, const int32_t * a,
   if (!alen || !blen || a[alen-1] < b[0] || b[blen-1] < a[0])
     return 0;
 
+	const int32_t *aptr=a, *aend=a+alen;
+	const int32_t *bptr=b, *bend=b+blen;
 
-  while (1) {
-    if (ka >= alen || kb >= blen) break;
-
-	if(a[ka]==b[kb]){
-		ka++,kb++, out++;
-	}
-	else if(a[ka]<b[kb]){
-		ka++;	
-	}
-	else {
-		kb++;	
-	}
-  }
-
+	while(aptr< aend && bptr<bend){
+		if(*aptr==*bptr){
+			aptr++, bptr++, out++;
+		}
+		else if(*aptr<*bptr){
+			aptr++;
+		}
+		else {
+			bptr++;
+		}
+  }  
+  
 	return out;
 }
 
-int32_t intersectionBranchAvoiding ( const int32_t alen, const int32_t * a,  const int32_t blen, const int32_t * b)
+int32_t intersectionBranchAvoiding ( const int32_t alen, const int32_t * a,  const int32_t blen, const  int32_t * b)
 {
 	int32_t ka = 0, kb = 0;
 	int32_t out = 0;
@@ -126,19 +127,76 @@ int32_t intersectionBranchAvoiding ( const int32_t alen, const int32_t * a,  con
 		return 0;
 	int comp;
 
-	while (1){
-		if(ka>=alen || kb>=blen){
-			break;				
+	const int32_t *aptr=a, *aend=a+alen;
+	const int32_t *bptr=b, *bend=b+blen;
+
+	while(aptr< aend && bptr<bend){
+		comp   = (*aptr-*bptr);
+		aptr+= (comp<=0)?1:0;
+		bptr+= (comp>=0)?1:0;
+		out+= (comp==0)?1:0;		
+	}
+
+	
+	return out;	
+}
+
+
+
+#endif
+
+
+
+#if defined( ARMASM)
+
+int32_t intersectionBranchBased ( const int32_t alen, const int32_t * a,
+						  const int32_t blen, const int32_t * b)
+{
+  int32_t ka = 0, kb = 0;
+  int32_t out = 0;
+
+  
+  if (!alen || !blen || a[alen-1] < b[0] || b[blen-1] < a[0])
+    return 0;
+
+	const int32_t *aptr=a, *aend=a+alen;
+	const int32_t *bptr=b, *bend=b+blen;
+
+	while(aptr< aend && bptr<bend){
+		if(*aptr==*bptr){
+			aptr++, bptr++, out++;
 		}
+		else if(*aptr<*bptr){
+			aptr++;
+		}
+		else {
+			bptr++;
+		}
+  }  
+  
+	return out;
+}
+
+int32_t intersectionBranchAvoiding ( const int32_t alen, const int32_t * a,  const int32_t blen, const  int32_t * b)
+{
+	int32_t ka = 0, kb = 0;
+	int32_t out = 0;
+
+	if (!alen || !blen || a[alen-1] < b[0] || b[blen-1] < a[0])
+		return 0;
+	int comp;
+
+	while (ka < alen && kb < blen){
 		comp   = (a[ka]-b[kb]);
 		ka+= (comp<=0)?1:0;
 		kb+= (comp>=0)?1:0;
 		out+= (comp==0)?1:0;		
 	}
+
 	return out;	
 }
 
-#if defined( ARMASM)
+
 int32_t intersectionBranchAvoidingArmAsm (const int32_t alen, const int32_t * a,
 						  const int32_t blen, const int32_t * b)   {
   int32_t ka = 0, kb = 0;
@@ -165,23 +223,6 @@ int32_t intersectionBranchAvoidingArmAsm (const int32_t alen, const int32_t * a,
 			: [vala] "r" (vala), [valb] "r" (valb)
 		);
 
-		
-		
-
-//		if(vala==valb)
-//		  printf("*");
-		//printf("%d, %d, %d, %d, %d, %d, %d\n", alen,ka, blen,kb,out,vala, valb);
-		
-			//"CMP %0,%1\n" : : "r" (vala), "r" (valb));
-		//__asm__ ("ADDEQ %[out], %[out], #1;": [out] "+r" (out) ) ;
-	//	__asm__ ("ADDLS %[ka], %[ka], #1;": [ka] "+r" (ka) ) ;
-		//__asm__ ("ADDHS %[kb], %[kb], #1;": [kb] "+r" (kb) ) ;
-	//   ka+= (comp<=0)?1:0;
-	//   kb+= (comp>=0)?1:0;
-		 //out+= (comp==0)?1:0;
-
- 
-
 	}
 	return out;	
 	
@@ -200,8 +241,7 @@ int32_t intersectionCountMemOps ( const int32_t alen, const int32_t * a,
   if (!alen || !blen || a[alen-1] < b[0] || b[blen-1] < a[0])
     return 0;
 
-  while (1) {
-    if (ka >= alen || kb >= blen) break;
+	while (ka < alen && kb < blen){
 
 	if(a[ka]==b[kb]){
 		countMemOps+=2;
@@ -264,9 +304,9 @@ void benchMarkCCT(const int32_t nv, const int32_t ne, const int32_t * off,   con
 	int32_t sum=0;
 
 	double totalBB, totalBA,iterBB, iterBA, whenFaster,cc=0;
-	int32_t triBB,triBA, verTriangle=0, openTotal,temp;
+	int32_t triBB,triBA, triBAC,verTriangle=0, openTotal,temp;
 
-	triBA=triBB=0;
+	triBA=triBB=triBAC=0;
 	whenFaster=totalBB=totalBA=iterBB=iterBA=0.0;
 	int32_t countFaster=0;
 	double totalBAC=0.0,iterBAC=0.0;
@@ -286,7 +326,7 @@ void benchMarkCCT(const int32_t nv, const int32_t ne, const int32_t * off,   con
 			tic();		
 			dest=ind[iter];
 			destLen=off[dest+1]-off[dest];
-			triBB= intersectionBranchBased (srcLen, ind+off[src], destLen, ind+off[dest]);			
+			triBB+= intersectionBranchBased (srcLen, ind+off[src], destLen, ind+off[dest]);			
 			iterBB=toc();
 			totalBB+=iterBB;
 
@@ -300,21 +340,23 @@ void benchMarkCCT(const int32_t nv, const int32_t ne, const int32_t * off,   con
 			tic();
 			dest=ind[iter];
 			destLen=off[dest+1]-off[dest];	
-			temp=intersectionBranchAvoidingArmAsm(srcLen, ind+off[src], destLen, ind+off[dest]);
+			triBAC+=intersectionBranchAvoidingArmAsm(srcLen, ind+off[src], destLen, ind+off[dest]);
 			iterBAC=toc();
 			totalBAC+=iterBAC;
 
 			if(iterBAC<iterBB){
 				countFasterBAC++;
 			}			
+			if(triBA!=triBAC)
+				printf("#");
 			
 #endif	
 			
 			sum+=triNE[edge++];
 			verTriangle+=temp;
 			
-			//if(temp!=triBB)
-			//	printf("*");
+			if(triBA!=triBB)
+				printf("*");
 		}
 
 		if(srcLen>1){
