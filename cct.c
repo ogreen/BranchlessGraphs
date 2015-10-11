@@ -227,7 +227,7 @@ int32_t intersectionBranchBased ( const int32_t alen, const int32_t * a,
 
 int32_t intersectionBranchAvoiding ( const int32_t alen, const int32_t * a,  const int32_t blen, const  int32_t * b)
 {
-	int32_t ka = 0, kb = 0;
+  	int32_t ka = 0, kb = 0;
 	int32_t out = 0;
 
 	if (!alen || !blen || a[alen-1] < b[0] || b[blen-1] < a[0])
@@ -236,16 +236,18 @@ int32_t intersectionBranchAvoiding ( const int32_t alen, const int32_t * a,  con
 
 	while (ka < alen && kb < blen){
 		comp   = (a[ka]-b[kb]);
-//		aptr+= (comp<=0)?1:0;
-//		bptr+= (comp>=0)?1:0;
+//		ka+= (comp<=0)?1:0;
+//		kb+= (comp>=0)?1:0;
 //		out+= (comp==0)?1:0;		
-   
-		aptr+= (comp<=0);
-		bptr+= (comp>=0);
+
+		ka+= (comp<=0);
+		kb+= (comp>=0);
 		out+= (comp==0);		
+
 	}
 
-	return out;	
+	return out;	  
+
 }
 
 
