@@ -69,7 +69,7 @@ void prettyPrintSynthetic(stats printStats,char* benchmark,int length){
 
 	printf("%8s, ", benchmark);
 	printf("%8s, ", "C");
-
+   
 
 	double memTime=printStats.cctTimers[CCT_TT_MEM_ONLY];
 	double baseTime=printStats.cctTimers[CCT_TT_INC]-memTime;
@@ -84,6 +84,15 @@ void prettyPrintSynthetic(stats printStats,char* benchmark,int length){
 
 	}
 	printf("%10d, ",length);
+
+	for(eCCTimers norm=CCT_TT_INC; norm<CCT_TT_LAST; norm++)
+	{
+		printf("%.5lf, ", ((printStats.cctTimers[norm])));
+		//printf("%.5lf, ", ((printStats.cctTimers[norm]-memTime)));
+		//printf("%.5lf, ", ((printStats.cctTimers[norm])));
+
+	}
+
 
 	printf("\n");
 }
@@ -117,7 +126,7 @@ int32_t intersectionBranchBased ( const int32_t alen, const int32_t * a,
   
 	return out;
 }
-
+/*
 int32_t intersectionBranchAvoiding ( const int32_t alen, const int32_t * a,  const int32_t blen, const  int32_t * b)
 {
 	int32_t ka = 0, kb = 0;
@@ -132,16 +141,55 @@ int32_t intersectionBranchAvoiding ( const int32_t alen, const int32_t * a,  con
 
 	while(aptr< aend && bptr<bend){
 		comp   = (*aptr-*bptr);
-		aptr+= (comp<=0)?1:0;
-		bptr+= (comp>=0)?1:0;
-		out+= (comp==0)?1:0;		
+//		aptr+= (comp<=0)?1:0;
+//		bptr+= (comp>=0)?1:0;
+//		out+= (comp==0)?1:0;		
+   
+		aptr+= (comp<=0);
+		bptr+= (comp>=0);
+		out+= (comp==0);		
+   
 	}
 
 	
 	return out;	
 }
+*/
+int32_t intersectionBranchAvoiding ( const int32_t alen, const int32_t * a,  const int32_t blen, const  int32_t * b)
+{
+	int32_t ka = 0, kb = 0;
+	int32_t out = 0;
 
+	if (!alen || !blen || a[alen-1] < b[0] || b[blen-1] < a[0])
+		return 0;
+	uint32_t comp,comp2;
 
+	const int32_t *aptr=a, *aend=a+alen;
+	const int32_t *bptr=b, *bend=b+blen;
+    int32_t asmaller,bsmaller;
+	while(aptr< aend && bptr<bend){
+		comp   = (*aptr-*bptr);
+		comp2  = (*bptr-*aptr);
+		asmaller= comp2>>31;
+		bsmaller= comp>>31;
+		aptr+=1-asmaller;
+		bptr+=1-bsmaller;
+		out+=1-asmaller-bsmaller;
+//		printf("%d", asmaller);
+//		aptr+= (comp<=0)?1:0;
+//		bptr+= (comp>=0)?1:0;
+//		out+= (comp==0)?1:0;		
+   
+//		aptr+= (comp<=0);
+//		bptr+= (comp>=0);
+//		out+= (comp==0);		
+   
+	}
+
+	
+	return out;	
+}
+ 
 
 #endif
 
@@ -188,9 +236,13 @@ int32_t intersectionBranchAvoiding ( const int32_t alen, const int32_t * a,  con
 
 	while (ka < alen && kb < blen){
 		comp   = (a[ka]-b[kb]);
-		ka+= (comp<=0)?1:0;
-		kb+= (comp>=0)?1:0;
-		out+= (comp==0)?1:0;		
+//		aptr+= (comp<=0)?1:0;
+//		bptr+= (comp>=0)?1:0;
+//		out+= (comp==0)?1:0;		
+   
+		aptr+= (comp<=0);
+		bptr+= (comp>=0);
+		out+= (comp==0);		
 	}
 
 	return out;	
@@ -414,7 +466,7 @@ void benchMarkCCT(const int32_t nv, const int32_t ne, const int32_t * off,   con
 			}
 		}
 		
-    	benchMarkMemoryAccess(logMem,synSize,ne,&cctStats, nv/2);
+    	benchMarkMemoryAccess(logMem,synSize,ne,&cctStats, nv/4);
     	prettyPrintSynthetic(cctStats,"Mix",synSize);
 		free(logMem);		
     }
@@ -490,6 +542,17 @@ int32_t benchMarkMemoryAccess(int32_t* inPattern, int32_t sizeInPattern , int32_
 //	printf("\n");
 
 	int sum=0;
+     for(int m=0; m<sizeInPattern;m++)
+    	outArray[inPattern[m]]=0;
+    cctStats->cctTimers[CCT_TT_MEM_ONLY]=toc();
+     for(int m=sizeInPattern; m>0;m--)
+    	outArray[inPattern[m]]=0;
+    cctStats->cctTimers[CCT_TT_MEM_ONLY]=toc();
+     for(int m=0; m<sizeInPattern;m++)
+    	outArray[inPattern[m]]=0;
+    cctStats->cctTimers[CCT_TT_MEM_ONLY]=toc();
+
+ 
     resetOutput(outArray,sizeOut);
 	tic();
     for(int m=0; m<sizeInPattern;m++)
@@ -524,7 +587,7 @@ int32_t benchMarkMemoryAccess(int32_t* inPattern, int32_t sizeInPattern , int32_
     resetOutput(outArray,sizeOut);
     tic();
     for(int m=0; m<sizeInPattern;m++)
-    	outArray[inPattern[m]]+=(inPattern[m]<=0);
+    	outArray[inPattern[m]]+=(inPattern[m]<=branchVal   );
     cctStats->cctTimers[CCT_TT_ADD_COND_GEQ]=toc();
 	
 	
@@ -532,7 +595,7 @@ int32_t benchMarkMemoryAccess(int32_t* inPattern, int32_t sizeInPattern , int32_
     resetOutput(outArray,sizeOut);
     tic();
     for(int m=0; m<sizeInPattern;m++)
-    	outArray[inPattern[m]]+=(inPattern[m]==0);
+    	outArray[inPattern[m]]+=(inPattern[m]==branchVal);
     cctStats->cctTimers[CCT_TT_ADD_COND_EQ]=toc();
 
 	
@@ -540,7 +603,7 @@ int32_t benchMarkMemoryAccess(int32_t* inPattern, int32_t sizeInPattern , int32_
     resetOutput(outArray,sizeOut);
     tic();
     for(int m=0; m<sizeInPattern;m++) {
-    	outArray[inPattern[m]]+=(inPattern[m]==0)+(inPattern[m]>=0)+(inPattern[m]<=0);
+    	outArray[inPattern[m]]+=(inPattern[m]==branchVal)+(inPattern[m]>=branchVal)+2*(inPattern[m]<branchVal);
 	}
     cctStats->cctTimers[CCT_TT_ADD_COND_3]=toc();
 

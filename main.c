@@ -383,8 +383,13 @@ int main (const int argc, char *argv[]) {
         };
         
         PrintHeader(precolumns, perfCounters, COUNTOF(perfCounters), postcolumns);
-		//Benchmark_TriangleCounting("CCT", "Branch-based", perfCounters, COUNTOF(perfCounters), intersectionBranchBased, nv, ne,off, ind);
+		Benchmark_TriangleCounting("CCT", "Branch-based", perfCounters, COUNTOF(perfCounters), intersectionBranchBased, nv, ne,off, ind);
 		Benchmark_TriangleCounting("CCT", "Branch-avoiding", perfCounters, COUNTOF(perfCounters), intersectionBranchAvoiding, nv, ne,off, ind);
+
+#if defined(ARMASM)
+
+		Benchmark_TriangleCounting("CCT", "Branch-avoiding-conditional", perfCounters, COUNTOF(perfCounters), intersectionBranchAvoidingArmAsm, nv, ne,off, ind);
+#endif 
 
   
   }
@@ -841,7 +846,8 @@ void ConnectedComponentsSVHybridIterationSelector(const char* algorithm_name, co
                         
             close(perf_counter_fd);
         }
-            int edgeCounter=0;           
+        if(0){
+		int edgeCounter=0;           
             for (int src = 0; src < numVertices; src++){
           		for(int iter=off[src]; iter<off[src+1]; iter++){
                 printf("%s\t%s\t%"PRIu32"\t%"PRIu32, algorithm_name, implementation_name,numVertices,numEdges);
@@ -855,6 +861,39 @@ void ConnectedComponentsSVHybridIterationSelector(const char* algorithm_name, co
               edgeCounter++;
             }
           }
+		}
+		else
+		{
+
+			int edgeCounter=0;
+            printf("%s\t%s\t%"PRIu32"\t%"PRIu32, algorithm_name, implementation_name,numVertices,numEdges);
+			for (size_t performanceCounterIndex = 0; performanceCounterIndex < performanceCounterCount; performanceCounterIndex++) {
+	           if (!performanceCounters[performanceCounterIndex].supported)
+                 continue;
+              edgeCounter=0;
+			  int64_t val=0;
+			  for (int src = 0; src < numVertices; src++){
+          		for(int iter=off[src]; iter<off[src+1]; iter++){
+                   val+= perf_events[numEdges * performanceCounterIndex + edgeCounter];
+                }
+			  printf("%ld\t", val);
+              edgeCounter++;
+            }
+          }
+		  edgeCounter=0;
+		  int64_t tri=0,inter=0;
+            for (int src = 0; src < numVertices; src++){
+          		for(int iter=off[src]; iter<off[src+1]; iter++){
+			       tri+= triangles[edgeCounter];
+				   inter+=intersectOps[edgeCounter];
+				  edgeCounter++;
+				}
+			}   
+ 			  printf("%ld\t", tri);
+			  printf("%ld\t", inter);
+			  printf("\n");
+                             
+ 		}
 		free(triangles);
 		free(intersectOps);
 		free(perf_events);
