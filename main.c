@@ -36,6 +36,12 @@ void CheckPerformanceCounters(struct PerformanceCounter performanceCounters[], s
 void Benchmark_BFS_TopDown(const char* algorithm_name, const char* implementation_name,
 	const struct PerformanceCounter performanceCounters[], size_t performanceCountersCount,
 	BFS_TopDown_Function bfs_function, uint32_t numVertices, uint32_t* off, uint32_t* ind, uint32_t* edgesTraversed);
+void Benchmark_BFS_TopDown_Trace(const char* algorithm_name, const char* implementation_name,
+	const struct PerformanceCounter performanceCounters[], size_t performanceCountersCount,
+	BFS_TopDown_Function bfs_function, uint32_t numVertices, uint32_t* off, uint32_t* ind, uint32_t* edgesTraversed, 
+	uint32_t* queueStartPosition,uint32_t* level,uint32_t*queue);
+
+
 void Benchmark_BFS_BottomUp(const char* algorithm_name, const char* implementation_name, BFS_BottomUp_Function bfs_function, uint32_t numVertices, uint32_t* off, uint32_t* ind);
 void Benchmark_ConnectedComponents_SV(const char* algorithm_name, const char* implementation_name,
 	const struct PerformanceCounter performanceCounters[], size_t performanceCountersCount,
@@ -250,22 +256,6 @@ int main (const int argc, char *argv[]) {
   CheckPerformanceCounters(perfCounters, COUNTOF(perfCounters));
 
 #if defined(BENCHMARK_BFS)	
-  uint32_t* edgesTraversed = (uint32_t*)memalign(64, nv * sizeof(uint32_t));
-  memset(edgesTraversed, 0, nv * sizeof(uint32_t));
-  {
-	uint32_t* queue = (uint32_t*)memalign(64, nv * sizeof(uint32_t));
-	uint32_t* level = (uint32_t*)memalign(64, nv * sizeof(uint32_t));
-	uint32_t* queueStartPosition = (uint32_t*)memalign(64, nv * sizeof(uint32_t));
-	for (size_t i = 0; i < nv; i++) {
-	  level[i] = INT32_MAX;
-	}
-
-	BFS_TopDown_Branchy_LevelInformation(off, ind, queue, level, 1, edgesTraversed, queueStartPosition);
-
-	free(queueStartPosition);
-	free(level);
-	free(queue);
-  }
 
   const char* precolumns[] = {
 	"Algorithm",
@@ -278,10 +268,38 @@ int main (const int argc, char *argv[]) {
 	"Edges",
 	NULL
   };
+
   PrintHeader(precolumns, perfCounters, COUNTOF(perfCounters), postcolumns);
-  Benchmark_BFS_TopDown("BFS/TD", "Branch-based", perfCounters, COUNTOF(perfCounters), BFS_TopDown_Branchy_PeachPy, nv, off, ind, edgesTraversed);
-  Benchmark_BFS_TopDown("BFS/TD", "Branch-avoiding", perfCounters, COUNTOF(perfCounters), BFS_TopDown_Branchless_PeachPy, nv, off, ind, edgesTraversed);
-  //Benchmark_BFS_TopDown("BFS/TD", "Branch-lessless", BFS_TopDown_Branchlessless_PeachPy, nv, off, ind, edgesTraversed);
+
+  uint32_t* edgesTraversed = (uint32_t*)memalign(64, nv * sizeof(uint32_t));
+  memset(edgesTraversed, 0, nv * sizeof(uint32_t));
+  {
+	uint32_t* queue = (uint32_t*)memalign(64, nv * sizeof(uint32_t));
+	uint32_t* level = (uint32_t*)memalign(64, nv * sizeof(uint32_t));
+	uint32_t* queueStartPosition = (uint32_t*)memalign(64, nv * sizeof(uint32_t));
+	for (size_t i = 0; i < nv; i++) {
+	  level[i] = INT32_MAX;
+	  queueStartPosition[i]=INT32_MAX;
+	}
+	BFS_TopDown_Branchy_LevelInformation(off, ind, queue, level, 1, edgesTraversed, queueStartPosition);
+	// for (size_t i = 0; i < nv; i++) {
+	// 	if(queueStartPosition[i] != INT32_MAX)
+	// 		printf("%d,",queueStartPosition[i]);
+	// }
+	// printf("\n" );
+
+	Benchmark_BFS_TopDown_Trace("BFS/TD", "Branch-avd-Trace", perfCounters, COUNTOF(perfCounters), BFS_TopDown_Branchless_Trace_PeachPy, nv, off, ind, edgesTraversed,queueStartPosition,level,queue);
+
+
+	free(queueStartPosition);
+	free(level);
+	free(queue);
+  }
+
+  Benchmark_BFS_TopDown("BFS/TD", "Branch-based     ", perfCounters, COUNTOF(perfCounters), BFS_TopDown_Branchy_PeachPy, nv, off, ind, edgesTraversed);
+  Benchmark_BFS_TopDown("BFS/TD", "Branch-avoiding  ", perfCounters, COUNTOF(perfCounters), BFS_TopDown_Branchless_PeachPy, nv, off, ind, edgesTraversed);
+  
+   //Benchmark_BFS_TopDown("BFS/TD", "Branch-lessless", BFS_TopDown_Branchlessless_PeachPy, nv, off, ind, edgesTraversed);
 #ifdef __SSE4_1__
   Benchmark_BFS_TopDown("BFS/TD", "Branch-avoiding (SSE 4.1)", BFS_TopDown_Branchless_SSE4_1, nv, off, ind, edgesTraversed);
 #endif
@@ -353,7 +371,7 @@ int main (const int argc, char *argv[]) {
 
 #if defined(BENCHMARK_CCT)
 
-  if(0){
+  if(1){
 	int32_t * triNE = (int32_t *) malloc ((ne ) * sizeof (int32_t));	
 	int32_t allTrianglesCPU=0;
 	//	tic();
@@ -403,6 +421,111 @@ int main (const int argc, char *argv[]) {
 }
 
 #if defined(BENCHMARK_BFS)
+ void Benchmark_BFS_TopDown_Trace(const char* algorithm_name, const char* implementation_name, const struct PerformanceCounter performanceCounters[], size_t performanceCounterCount, BFS_TopDown_Function bfs_function, uint32_t numVertices, uint32_t* off, uint32_t* ind, uint32_t* edgesTraversed, 
+ 		uint32_t* queueStartPosition,uint32_t* prelevel,uint32_t*prequeue) {
+  struct perf_event_attr perf_counter;
+
+  uint32_t* queue = (uint32_t*)memalign(64, numVertices * sizeof(uint32_t));
+  uint32_t* level = (uint32_t*)memalign(64, numVertices * sizeof(uint32_t));
+  uint64_t* perf_events = (uint64_t*)malloc(numVertices * sizeof(uint64_t));
+  uint32_t* vertices = (uint32_t*)malloc(numVertices * sizeof(uint32_t));
+
+ 
+	uint32_t levelCount = 0;
+
+
+  levelCount = 0;
+  for (size_t performanceCounterIndex = 0; performanceCounterIndex < performanceCounterCount; performanceCounterIndex++) {
+	if (!performanceCounters[performanceCounterIndex].supported)
+	  continue;
+	int perf_counter_fd = -1;
+	if (performanceCounters[performanceCounterIndex].type != PERF_TYPE_TIME) {
+	  memset(&perf_counter, 0, sizeof(struct perf_event_attr));
+	  perf_counter.type = performanceCounters[performanceCounterIndex].type;
+	  perf_counter.size = sizeof(struct perf_event_attr);
+	  perf_counter.config = performanceCounters[performanceCounterIndex].subtype;
+	  perf_counter.disabled = 1;
+	  perf_counter.exclude_kernel = 1;
+	  perf_counter.exclude_hv = 1;
+
+	  perf_counter_fd = perf_event_open(&perf_counter, 0, -1, -1, 0);
+	  if (perf_counter_fd == -1) {
+		fprintf(stderr, "Error opening counter %s\n", performanceCounters[performanceCounterIndex].name);
+		exit(EXIT_FAILURE);
+	  }
+	}
+
+	/* Initialize level array */
+	for (size_t i = 0; i < numVertices; i++) {
+//	  level[i] = INT32_MAX;
+//	  queue[i] = 0;
+	}
+
+	const uint32_t rootVertex = 1;
+	uint32_t currentLevel = 0;
+	level[rootVertex] = currentLevel++;
+	uint32_t* queuePosition = prequeue;
+	queue[0] = rootVertex;
+
+	uint32_t outputVertices = 1;
+	do {
+	  // const uint32_t inputVertices = outputVertices;
+		const uint32_t inputVertices = queueStartPosition[currentLevel]-queueStartPosition[currentLevel-1];
+	  if (levelCount == 0) {
+		vertices[currentLevel-1] = inputVertices;
+	  }
+
+	  struct timespec startTime;
+	  if (performanceCounters[performanceCounterIndex].type == PERF_TYPE_TIME) {
+		assert(clock_gettime(CLOCK_MONOTONIC, &startTime) == 0);
+	  } else {
+		assert(ioctl(perf_counter_fd, PERF_EVENT_IOC_RESET, 0) == 0);
+		assert(ioctl(perf_counter_fd, PERF_EVENT_IOC_ENABLE, 0) == 0);
+	  }
+
+	  // outputVertices = bfs_function(off, ind, queuePosition, inputVertices, queuePosition + inputVertices, level, currentLevel);
+	  // queuePosition += inputVertices;
+
+
+		outputVertices = bfs_function(off, ind, queuePosition, inputVertices, queuePosition + inputVertices, prelevel, currentLevel);
+		queuePosition += inputVertices;
+
+
+	  if (performanceCounters[performanceCounterIndex].type == PERF_TYPE_TIME) {
+		struct timespec endTime;
+		assert(clock_gettime(CLOCK_MONOTONIC, &endTime) == 0);
+		perf_events[levelCount * performanceCounterIndex + (currentLevel-1)] =
+		  (1000000000ll * endTime.tv_sec + endTime.tv_nsec) - 
+		  (1000000000ll * startTime.tv_sec + startTime.tv_nsec);
+	  } else {
+		assert(ioctl(perf_counter_fd, PERF_EVENT_IOC_DISABLE, 0) == 0);
+		assert(read(perf_counter_fd, &perf_events[levelCount * performanceCounterIndex + (currentLevel-1)], sizeof(uint64_t)) == sizeof(uint64_t));
+	  }
+	  currentLevel += 1;
+	} while (queueStartPosition[currentLevel] != INT32_MAX);	  
+	// } while (outputVertices != 0);
+	if (levelCount == 0) {
+	  levelCount = currentLevel - 1;
+	  perf_events = realloc(perf_events, numVertices * sizeof(uint64_t) * levelCount);
+	}
+	close(perf_counter_fd);
+  }
+  for (uint32_t level = 0; level < levelCount; level++) {
+	printf("%s\t%s\t%"PRIu32, algorithm_name, implementation_name, level);
+	for (size_t performanceCounterIndex = 0; performanceCounterIndex < performanceCounterCount; performanceCounterIndex++) {
+	  if (!performanceCounters[performanceCounterIndex].supported)
+		continue;
+	  printf("\t%"PRIu64, perf_events[levelCount * performanceCounterIndex + level]);
+	}
+	printf("\t%"PRIu32"\t%"PRIu32"\n", vertices[level], edgesTraversed[level]);
+  }
+  free(queue);
+  free(level);
+  free(perf_events);
+  free(vertices);
+}
+ 
+
 void Benchmark_BFS_TopDown(const char* algorithm_name, const char* implementation_name, const struct PerformanceCounter performanceCounters[], size_t performanceCounterCount, BFS_TopDown_Function bfs_function, uint32_t numVertices, uint32_t* off, uint32_t* ind, uint32_t* edgesTraversed) {
   struct perf_event_attr perf_counter;
 
