@@ -282,13 +282,6 @@ int main (const int argc, char *argv[]) {
 	  queueStartPosition[i]=INT32_MAX;
 	}
 	BFS_TopDown_Branchy_LevelInformation(off, ind, queue, level, 1, edgesTraversed, queueStartPosition);
-	// for (size_t i = 0; i < nv; i++) {
-	// 	if(queueStartPosition[i] != INT32_MAX)
-	// 		printf("%d,",queueStartPosition[i]);
-	// }
-	// printf("\n" );
-
-	Benchmark_BFS_TopDown_Trace("BFS/TD", "Branch-avd-Trace", perfCounters, COUNTOF(perfCounters), BFS_TopDown_Branchless_Trace_PeachPy, nv, off, ind, edgesTraversed,queueStartPosition,level,queue);
 
 
 	free(queueStartPosition);
@@ -312,6 +305,26 @@ int main (const int argc, char *argv[]) {
   //~ Benchmark_BFS_BottomUp("BFS/BU", "Branch-based", BFS_BottomUp_Branchy, nv, off, ind);
   //~ Benchmark_BFS_BottomUp("BFS/BU", "Branch-avoiding (C)", BFS_BottomUp_Branchless, nv, off, ind);
   //~ Benchmark_BFS_BottomUp("BFS/BU", "Branch-avoiding (CMOV)", BFS_BottomUp_Branchless_CMOV, nv, off, ind);
+  memset(edgesTraversed, 0, nv * sizeof(uint32_t));
+  {
+	uint32_t* queue = (uint32_t*)memalign(64, nv * sizeof(uint32_t));
+	uint32_t* level = (uint32_t*)memalign(64, nv * sizeof(uint32_t));
+	uint32_t* queueStartPosition = (uint32_t*)memalign(64, nv * sizeof(uint32_t));
+	for (size_t i = 0; i < nv; i++) {
+	  level[i] = INT32_MAX;
+	  queueStartPosition[i]=INT32_MAX;
+	}
+	BFS_TopDown_Branchy_LevelInformation(off, ind, queue, level, 1, edgesTraversed, queueStartPosition);
+
+	Benchmark_BFS_TopDown_Trace("BFS/TD", "Branch-avd-Trace", perfCounters, COUNTOF(perfCounters), BFS_TopDown_Branchless_Trace_PeachPy, nv, off, ind, edgesTraversed,queueStartPosition,level,queue);
+
+
+	free(queueStartPosition);
+	free(level);
+	free(queue);
+  }
+
+
 
   free(edgesTraversed);
 #endif
