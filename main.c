@@ -341,15 +341,14 @@ int main (const int argc, char *argv[]) {
 	  level[i] = INT32_MAX;
 	  queueStartPosition[i]=INT32_MAX;
 	}
-	// BFS_TopDown_Branchy_LevelInformation(off, ind, queue, level, 1, edgesTraversed, queueStartPosition);
-
+	BFS_TopDown_Branchy_LevelInformation(off, ind, queue, level, 1, edgesTraversed, queueStartPosition);
 
 	free(queueStartPosition);
 	free(level);
 	free(queue);
   }
 
-//  Benchmark_BC("BC", "Branch-based     ", perfCounters, COUNTOF(perfCounters), BFS_TopDown_Branchy_PeachPy, nv, off, ind, edgesTraversed);
+	Benchmark_BC("BC", "Branch-based     ", perfCounters, COUNTOF(perfCounters), NULL, nv, off, ind, edgesTraversed);
   
 
 
