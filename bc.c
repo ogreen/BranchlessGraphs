@@ -18,10 +18,12 @@ void Benchmark_BC(const char* algorithm_name, const char* implementation_name, c
   struct perf_event_attr perf_counter;
 
   uint32_t* queue = (uint32_t*)memalign(64, numVertices * sizeof(uint32_t));
+  uint32_t* stack = (uint32_t*)memalign(64, numVertices * sizeof(uint32_t));
   uint32_t* level = (uint32_t*)memalign(64, numVertices * sizeof(uint32_t));
   uint32_t* sigma = (uint32_t*)memalign(64, numVertices * sizeof(uint32_t));
-  uint32_t* delta = (uint32_t*)memalign(64, numVertices * sizeof(uint32_t));
-  uint64_t* perf_events = (uint64_t*)malloc(numVertices * sizeof(uint64_t));
+  float*    delta = (float*)memalign(64, numVertices * sizeof(float));
+  float*    totalBC = (float*)memalign(64, numVertices * sizeof(float));
+  uint32_t* perf_events = (uint32_t*)malloc(numVertices * sizeof(uint32_t));
   uint32_t* vertices = (uint32_t*)malloc(numVertices * sizeof(uint32_t));
 
   uint32_t levelCount = 0;
@@ -48,6 +50,8 @@ void Benchmark_BC(const char* algorithm_name, const char* implementation_name, c
 	/* Initialize level array */
 	for (size_t i = 0; i < numVertices; i++) {
 	  level[i] = INT32_MAX;
+	  sigma[i] = 0;
+	  delta[i] = 0;
 	  queue[i] = 0;
 	}
 
@@ -72,7 +76,7 @@ void Benchmark_BC(const char* algorithm_name, const char* implementation_name, c
 		assert(ioctl(perf_counter_fd, PERF_EVENT_IOC_ENABLE, 0) == 0);
 	  }
 
-	  outputVertices = bfs_function(off, ind, queuePosition, inputVertices, queuePosition + inputVertices, level, currentLevel);
+//	  outputVertices = bfs_function(off, ind, queuePosition, inputVertices, queuePosition + inputVertices, level, currentLevel);
 	  queuePosition += inputVertices;
 
 	  if (performanceCounters[performanceCounterIndex].type == PERF_TYPE_TIME) {
@@ -83,13 +87,13 @@ void Benchmark_BC(const char* algorithm_name, const char* implementation_name, c
 		  (1000000000ll * startTime.tv_sec + startTime.tv_nsec);
 	  } else {
 		assert(ioctl(perf_counter_fd, PERF_EVENT_IOC_DISABLE, 0) == 0);
-		assert(read(perf_counter_fd, &perf_events[levelCount * performanceCounterIndex + (currentLevel-1)], sizeof(uint64_t)) == sizeof(uint64_t));
+		assert(read(perf_counter_fd, &perf_events[levelCount * performanceCounterIndex + (currentLevel-1)], sizeof(uint32_t)) == sizeof(uint32_t));
 	  }
 	  currentLevel += 1;
 	} while (outputVertices != 0);
 	if (levelCount == 0) {
 	  levelCount = currentLevel - 1;
-	  perf_events = realloc(perf_events, numVertices * sizeof(uint64_t) * levelCount);
+	  perf_events = realloc(perf_events, numVertices * sizeof(uint32_t) * levelCount);
 	}
 	close(perf_counter_fd);
   }
@@ -98,14 +102,16 @@ void Benchmark_BC(const char* algorithm_name, const char* implementation_name, c
 	for (size_t performanceCounterIndex = 0; performanceCounterIndex < performanceCounterCount; performanceCounterIndex++) {
 	  if (!performanceCounters[performanceCounterIndex].supported)
 		continue;
-	  printf("\t%"PRIu64, perf_events[levelCount * performanceCounterIndex + level]);
+	  printf("\t%"PRIu32, perf_events[levelCount * performanceCounterIndex + level]);
 	}
 	printf("\t%"PRIu32"\t%"PRIu32"\n", vertices[level], edgesTraversed[level]);
   }
   free(queue);
+  free(stack);
   free(level);
   free(sigma);
   free(delta);
+  free(totalBC);
   free(perf_events);
   free(vertices);
 
@@ -115,77 +121,78 @@ void Benchmark_BC(const char* algorithm_name, const char* implementation_name, c
 #endif
 
 
-// uint64_t bcTreeBranchBased(bcForest* forest, struct stinger* sStinger,
-// 		uint64_t currRoot, bc_t* totalBC,extraArraysPerThread* eAPT){
-// 	bcTree* tree = forest->forest[currRoot];
+uint32_t bcTreeBranchBased(uint32_t numVertices, uint32_t* off, uint32_t* ind,
+	uint32_t currRoot,
+	uint32_t* queue, 
+	uint32_t* stack,
+	uint32_t* level,
+	uint32_t* sigma,
+	float*delta,
+	float* totalBC){
+	level[currRoot] = 0;
+	sigma[currRoot] = 1;
 
-// 	for(uint64_t j = 0; j < tree->NV; j++){
-// 		tree->vArr[j].level = INFINITY_MY;
-// 		tree->vArr[j].sigma = INFINITY_MY;
-// 		tree->vArr[j].delta = 0;
-// 	}
-// 	tree->vArr[currRoot].level = 0;
-// 	tree->vArr[currRoot].sigma = 1;
+	queue[0] = currRoot;
+	int32_t qStart=0,qEnd=1;
+	int32_t sStart=0;
+	int32_t k;
+	// While queue is not empty
+	while(qStart!=qEnd)	{
+		uint32_t currElement = queue[qStart];
+		stack[sStart] = currElement;
+		sStart++;
+		qStart++;
 
-// 	uint64_t* Stack= eAPT->Stack;
-// 	uint64_t* Queue = eAPT->QueueDown;
+		uint32_t startEdge = off[currElement];
+		uint32_t stopEdge = off[currElement+1];
+		// uint32_t nextLevel = level[currElement] + 1;		
+		for (uint32_t j = startEdge; startEdge < stopEdge; startEdge++) {
+			uint32_t k = ind[startEdge];
+			// If this is a neighbor and has not been found
+			if(level[k] > level[currElement]){
+				// Checking if "k" has been found.
+				if(level[k]==INT32_MAX){
+					level[k] = level[currElement]+1;
+					queue[qEnd++] = k;
+					delta[k]=0;
+				}
 
-// 	Queue[0] = currRoot;
-// 	int64_t qStart=0,qEnd=1;
-// 	int64_t sStart=0;
-// 	int64_t k;
-// 	// While queue is not empty
-// 	while(qStart!=qEnd)	{
-// 		uint64_t currElement = Queue[qStart];
-// 		Stack[sStart] = currElement;
-// 		sStart++;
-// 		qStart++;
+				if(sigma[k] == INT32_MAX){
+					// k has not been found and therefore its paths to the roots are through its parent.
+					sigma[k] = sigma[currElement];
+				}
+				else{
+					// k has been found and has multiple paths to the root as it has multiple parents.
+					sigma[k] += sigma[currElement];
+				}
+			}
+		}
 
-// 		STINGER_FORALL_EDGES_OF_VTX_BEGIN(sStinger,currElement){
-// 			k = STINGER_EDGE_DEST;
-// 			// If this is a neighbor and has not been found
-// 			if(tree->vArr[k].level > tree->vArr[currElement].level){
-// 				// Checking if "k" has been found.
-// 				if(tree->vArr[k].level==INFINITY_MY){
-// 					tree->vArr[k].level = tree->vArr[currElement].level+1;
-// 					Queue[qEnd++] = k;
-// 					tree->vArr[k].delta=0;
-// 				}
+	}
 
-// 				if(tree->vArr[k].sigma == INFINITY_MY){
-// 					// k has not been found and therefore its paths to the roots are through its parent.
-// 					tree->vArr[k].sigma = tree->vArr[currElement].sigma;
-// 				}
-// 				else{
-// 					// k has been found and has multiple paths to the root as it has multiple parents.
-// 					tree->vArr[k].sigma += tree->vArr[currElement].sigma;
-// 				}
-// 			}
-// 		}
-// 		STINGER_FORALL_EDGES_OF_VTX_END();
-// 	}
+	// Using Brandes algorithm to compute BC for a specific tree.
+	// Essentially, use the stack which the elements are placed in depth-reverse order, to "climb" back
+	// up the tree, all the way to the root.
+	int32_t sEnd = sStart-1;
+	while(sEnd>=0){
+		uint32_t currElement = stack[sEnd];
 
-// 	// Using Brandes algorithm to compute BC for a specific tree.
-// 	// Essentially, use the stack which the elements are placed in depth-reverse order, to "climb" back
-// 	// up the tree, all the way to the root.
-// 	int64_t sEnd = sStart-1;
-// 	while(sEnd>=0){
-// 		uint64_t currElement = Stack[sEnd];
+		uint32_t startEdge = off[currElement];
+		uint32_t stopEdge = off[currElement+1];
+		for (uint32_t j = startEdge; startEdge < stopEdge; startEdge++) {
+			uint32_t k = ind[startEdge];
+			// If this is a neighbor and has not been found
+			if((level[k] == (level[currElement]-1))){
+				delta[k] +=
+					((float)sigma[k]/(float)sigma[currElement])*
+					(float)(delta[currElement]+1);
+			}
+		}
+		if(currElement!=currRoot){
+			totalBC[currElement]+=delta[currElement];
+		}
+		sEnd--;
+	}
+	return -1;
+}
 
-// 		STINGER_FORALL_EDGES_OF_VTX_BEGIN(sStinger,currElement){
-// 			k = STINGER_EDGE_DEST;
-// 			// If this is a neighbor and has not been found
-// 			if((tree->vArr[k].level == (tree->vArr[currElement].level-1))){
-// 				tree->vArr[k].delta +=
-// 					((bc_t)tree->vArr[k].sigma/(bc_t)tree->vArr[currElement].sigma)*
-// 					(bc_t)(tree->vArr[currElement].delta+1);
-// 			}
-// 		}
-// 		STINGER_FORALL_EDGES_OF_VTX_END();
-// 		if(currElement!=currRoot){
-// 			eAPT->sV[currElement].totalBC+=tree->vArr[currElement].delta;
-// 		}
-// 		sEnd--;
-// 	}
-// 	return -1;
-// }

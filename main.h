@@ -41,6 +41,15 @@ void BFS_TopDown_Branchless_AVX2(uint32_t* off, uint32_t* ind, uint32_t* queue, 
 void BFS_TopDown_Branchless_MIC(uint32_t* off, uint32_t* ind, uint32_t* queue, uint32_t* level, uint32_t currRoot);
 
 //---------------------
+// BC
+//---------------------
+
+
+// typedef uint32_t (*BC_Function)(uint32_t* off, uint32_t* ind, const uint32_t* inputQueue, uint32_t inputVerteces, uint32_t* outputQueue, uint32_t* level, uint32_t currentLevel);
+
+
+
+//---------------------
 // Connected Components
 //---------------------
 
