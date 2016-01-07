@@ -415,17 +415,20 @@ public class cct
 		ResetOutput(output,outputLen);
 		start=System.nanoTime();
   		for (int m=0; m<inputLen; m++)
-			output[input[m]]=0;	
+			output[input[m]]=branchVal;	
 		timeSet=(double)(System.nanoTime()-start)/(double)1e9;
-	        temp++;
+             temp++;
        	
-		ResetOutput(output,outputLen);
-		start=System.nanoTime();
-  		for (int m=0; m<inputLen; m++)
-			output[input[m]]=1;	
-		timeSet=(double)(System.nanoTime()-start)/(double)1e9;
-	        temp++;
-  
+         ResetOutput(output,outputLen);
+	        start=System.nanoTime();
+  		for (int m=0; m<inputLen; m++){
+			if (input[m]>=branchVal)
+				output[input[m]]+=branchVal;
+			else 
+				output[input[m]]+=1;
+		}
+		timeAddBranch=(double)(System.nanoTime()-start)/(double)1e9;	
+ 
                                                             
   
        
@@ -473,17 +476,14 @@ public class cct
 		timeAdd3Cond=((double)System.nanoTime()-start)/(double)1e9;
  
  
- 		ResetOutput(output,outputLen);
-	        start=System.nanoTime();
-  		for (int m=0; m<inputLen; m++){
-			if (input[m]>=branchVal)
-				output[input[m]]+=branchVal;
-			else 
-				output[input[m]]+=1;
-		}
-		timeAddBranch=(double)(System.nanoTime()-start)/(double)1e9;	
- 
+
        			
+ 		ResetOutput(output,outputLen);
+		start=System.nanoTime();
+  		for (int m=0; m<inputLen; m++)
+			output[input[m]]=0;	
+		timeSet=(double)(System.nanoTime()-start)/(double)1e9;
+	        temp++;
  
 
 		cctStats.cctTimers[eCCTimers.CCT_TT_MEM_ONLY.ordinal()]=timeSet;
