@@ -16,6 +16,8 @@
 
 void CheckPerformanceCounters(struct PerformanceCounter performanceCounters[], size_t performanceCountersCount);
 
+//-------------------------------------------------
+// BFS
 void Benchmark_BFS_TopDown(const char* algorithm_name, const char* implementation_name,
 	const struct PerformanceCounter performanceCounters[], size_t performanceCountersCount,
 	BFS_TopDown_Function bfs_function, uint32_t numVertices, uint32_t* off, uint32_t* ind, uint32_t* edgesTraversed);
@@ -23,9 +25,15 @@ void Benchmark_BFS_TopDown_Trace(const char* algorithm_name, const char* impleme
 	const struct PerformanceCounter performanceCounters[], size_t performanceCountersCount,
 	BFS_TopDown_Function bfs_function, uint32_t numVertices, uint32_t* off, uint32_t* ind, uint32_t* edgesTraversed, 
 	uint32_t* queueStartPosition,uint32_t* level,uint32_t*queue);
-
-
 void Benchmark_BFS_BottomUp(const char* algorithm_name, const char* implementation_name, BFS_BottomUp_Function bfs_function, uint32_t numVertices, uint32_t* off, uint32_t* ind);
+
+//-------------------------------------------------
+// BC
+void Benchmark_BC(const char* algorithm_name, const char* implementation_name, const struct PerformanceCounter performanceCounters[], size_t performanceCounterCount, BFS_TopDown_Function bfs_function, uint32_t numVertices, uint32_t* off, uint32_t* ind, uint32_t* edgesTraversed);
+
+
+//-------------------------------------------------
+// Connected Components
 void Benchmark_ConnectedComponents_SV(const char* algorithm_name, const char* implementation_name,
 	const struct PerformanceCounter performanceCounters[], size_t performanceCountersCount,
 	ConnectedComponents_SV_Function* sv_function, eSV_Alg* algPerIteration, size_t numVertices, size_t numEdges, uint32_t* off, uint32_t* ind);
@@ -34,7 +42,8 @@ void ConnectedComponentsSVHybridIterationSelector(const char* algorithm_name, co
 	const struct PerformanceCounter performanceCounters[], size_t performanceCounterCount, 
 	ConnectedComponents_SV_Function* sv_function, eSV_Alg* algPerIteration,svControlParams svCP,size_t numVertices, size_t numEdges, uint32_t* off, uint32_t* ind);
 
-
+//-------------------------------------------------
+// Triangle Counting
 void Benchmark_TriangleCounting(const char* algorithm_name, const char* implementation_name, const struct PerformanceCounter performanceCounters[], size_t performanceCounterCount, CCT_Function cct_function, uint32_t numVertices, uint32_t numEdges,uint32_t* off, uint32_t* ind);
 
 
@@ -305,6 +314,49 @@ int main (const int argc, char *argv[]) {
 
   free(edgesTraversed);
 #endif
+
+#if defined(BENCHMARK_BC)	
+
+  const char* precolumns[] = {
+	"Algorithm",
+	"Implementation",
+	"Iteration",
+	NULL
+  };
+  const char* postcolumns[] = {
+	"Vertices",
+	"Edges",
+	NULL
+  };
+
+  PrintHeader(precolumns, perfCounters, COUNTOF(perfCounters), postcolumns);
+
+  uint32_t* edgesTraversed = (uint32_t*)memalign(64, nv * sizeof(uint32_t));
+  memset(edgesTraversed, 0, nv * sizeof(uint32_t));
+  {
+	uint32_t* queue = (uint32_t*)memalign(64, nv * sizeof(uint32_t));
+	uint32_t* level = (uint32_t*)memalign(64, nv * sizeof(uint32_t));
+	uint32_t* queueStartPosition = (uint32_t*)memalign(64, nv * sizeof(uint32_t));
+	for (size_t i = 0; i < nv; i++) {
+	  level[i] = INT32_MAX;
+	  queueStartPosition[i]=INT32_MAX;
+	}
+	// BFS_TopDown_Branchy_LevelInformation(off, ind, queue, level, 1, edgesTraversed, queueStartPosition);
+
+
+	free(queueStartPosition);
+	free(level);
+	free(queue);
+  }
+
+//  Benchmark_BC("BC", "Branch-based     ", perfCounters, COUNTOF(perfCounters), BFS_TopDown_Branchy_PeachPy, nv, off, ind, edgesTraversed);
+  
+
+
+  free(edgesTraversed);
+#endif
+
+
 
 #if defined(BENCHMARK_SV)
   const char* precolumns[] = {
