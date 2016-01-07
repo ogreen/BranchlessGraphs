@@ -29,7 +29,7 @@ void Benchmark_BFS_BottomUp(const char* algorithm_name, const char* implementati
 
 //-------------------------------------------------
 // BC
-void Benchmark_BC(const char* algorithm_name, const char* implementation_name, const struct PerformanceCounter performanceCounters[], size_t performanceCounterCount, BFS_TopDown_Function bfs_function, uint32_t numVertices, uint32_t* off, uint32_t* ind, uint32_t* edgesTraversed);
+void Benchmark_BC(const char* algorithm_name, const char* implementation_name, const struct PerformanceCounter performanceCounters[], size_t performanceCounterCount, BC_Function bc_function, uint32_t numVertices, uint32_t* off, uint32_t* ind, uint32_t* edgesTraversed);
 
 
 //-------------------------------------------------
@@ -347,10 +347,8 @@ int main (const int argc, char *argv[]) {
 	free(level);
 	free(queue);
   }
-
-	Benchmark_BC("BC", "Branch-based     ", perfCounters, COUNTOF(perfCounters), NULL, nv, off, ind, edgesTraversed);
-  
-
+	Benchmark_BC("BC", "Branch-based     ", perfCounters, COUNTOF(perfCounters), bcTreeBranchBased    , nv, off, ind, edgesTraversed);
+	Benchmark_BC("BC", "Branch-avoiding  ", perfCounters, COUNTOF(perfCounters), bcTreeBranchAvoiding , nv, off, ind, edgesTraversed);
 
   free(edgesTraversed);
 #endif

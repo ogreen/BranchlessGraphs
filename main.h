@@ -45,9 +45,13 @@ void BFS_TopDown_Branchless_MIC(uint32_t* off, uint32_t* ind, uint32_t* queue, u
 //---------------------
 
 
-// typedef uint32_t (*BC_Function)(uint32_t* off, uint32_t* ind, const uint32_t* inputQueue, uint32_t inputVerteces, uint32_t* outputQueue, uint32_t* level, uint32_t currentLevel);
+typedef uint32_t (*BC_Function)(uint32_t* off, uint32_t* ind, uint32_t* queue, uint32_t inputStart, uint32_t inputNum, 
+		uint32_t outputStart, uint32_t* level,uint32_t* sigma, float*delta, float* totalBC,uint32_t* stack, uint32_t stackPos);
 
-
+uint32_t bcTreeBranchBased(uint32_t* off, uint32_t* ind, uint32_t* queue, uint32_t inputStart, uint32_t inputNum, 
+		uint32_t outputStart, uint32_t* level,uint32_t* sigma, float*delta, float* totalBC,uint32_t* stack, uint32_t stackPos);
+uint32_t bcTreeBranchAvoiding(uint32_t* off, uint32_t* ind, uint32_t* queue, uint32_t inputStart, uint32_t inputNum, 
+		uint32_t outputStart, uint32_t* level,uint32_t* sigma, float*delta, float* totalBC,uint32_t* stack, uint32_t stackPos);
 
 //---------------------
 // Connected Components
