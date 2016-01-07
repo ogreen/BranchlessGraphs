@@ -44,25 +44,19 @@ uint32_t bcTreeBranchBased(
 
 		uint32_t startEdge = off[currElement];
 		uint32_t stopEdge = off[currElement+1];
+		uint32_t nextLevel = level[currElement]+1;
 		for (uint32_t j = startEdge; startEdge < stopEdge; startEdge++) {
 			uint32_t k = ind[startEdge];
-			// If this is a neighbor and has not been found
-			if(level[k] > level[currElement]){
-				// Checking if "k" has been found.
-				if(level[k]==INT32_MAX){
-					level[k] = level[currElement]+1;
-					outputQueue[qOut++] = k;
-					delta[k]=0;
-				}
-				if(sigma[k] == 0){
-					// k has not been found and therefore its paths to the roots are through its parent.
-					sigma[k] = sigma[currElement];
-				}
-				else{
-					// k has been found and has multiple paths to the root as it has multiple parents.
-					sigma[k] += sigma[currElement];
-				}
+			// Checking if "k" has been found.
+			if(level[k]==INT32_MAX){
+				level[k] = nextLevel;
+				outputQueue[qOut++] = k;
+				delta[k]=0;
 			}
+			if(level[k]==(level[currElement]+1)){
+				sigma[k] += sigma[currElement];
+			}
+					// sigma[k] += ((nextLevel-level[k])>0)*sigma[currElement];
 		}
 
 	}
