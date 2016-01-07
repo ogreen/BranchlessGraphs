@@ -1,7 +1,152 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <malloc.h>
+#include <inttypes.h>
+#include <assert.h>
 #include <time.h>
+#include <math.h>
+
+
+#if defined(__x86_64__)
+	#include <x86intrin.h>
+#endif
+
+#include "main.h"
+
+
+#if defined(BENCHMARK_CCT)
+void Benchmark_TriangleCounting(const char* algorithm_name, const char* implementation_name, const struct PerformanceCounter performanceCounters[], size_t performanceCounterCount, CCT_Function cct_function, uint32_t numVertices, uint32_t numEdges,uint32_t* off, uint32_t* ind) {
+  struct perf_event_attr perf_counter;
+
+
+  uint32_t* triangles = (uint32_t*)memalign(64, numEdges * sizeof(uint32_t));
+  uint32_t* intersectOps = (uint32_t*)memalign(64, numEdges * sizeof(uint32_t));        
+  //        uint32_t* level = (uint32_t*)memalign(64, numVertices * sizeof(uint32_t));
+  uint64_t* perf_events = (uint64_t*)malloc(numEdges * sizeof(uint64_t)*(performanceCounterCount));
+
+  //printf("%d\n", performanceCounterCount);
+  //return;
+
+  uint32_t levelCount = 0;
+  for (size_t performanceCounterIndex = 0; performanceCounterIndex < performanceCounterCount; performanceCounterIndex++) {
+	if (!performanceCounters[performanceCounterIndex].supported)
+	  continue;
+	int perf_counter_fd = -1;
+	if (performanceCounters[performanceCounterIndex].type != PERF_TYPE_TIME) {
+	  memset(&perf_counter, 0, sizeof(struct perf_event_attr));
+	  perf_counter.type = performanceCounters[performanceCounterIndex].type;
+	  perf_counter.size = sizeof(struct perf_event_attr);
+	  perf_counter.config = performanceCounters[performanceCounterIndex].subtype;
+	  perf_counter.disabled = 1;
+	  perf_counter.exclude_kernel = 1;
+	  perf_counter.exclude_hv = 1;
+
+	  perf_counter_fd = perf_event_open(&perf_counter, 0, -1, -1, 0);
+	  if (perf_counter_fd == -1) {
+		fprintf(stderr, "Error opening counter %s\n", performanceCounters[performanceCounterIndex].name);
+		exit(EXIT_FAILURE);
+	  }
+	}
+
+	/* Initialize level array */
+	for (size_t i = 0; i < numEdges; i++) {
+	  triangles[i] = 0;
+	  intersectOps[i] = 0;
+	}
+
+	int edgeCounter=0;           
+	for (int src = 0; src < numVertices; src++){
+	  int srcLen=off[src+1]-off[src];
+	  for(int iter=off[src]; iter<off[src+1]; iter++){
+		int dest=ind[iter];
+		int destLen=off[dest+1]-off[dest];	
+
+		struct timespec startTime;
+		if (performanceCounters[performanceCounterIndex].type == PERF_TYPE_TIME) {
+		  assert(clock_gettime(CLOCK_MONOTONIC, &startTime) == 0);
+		} else {
+		  assert(ioctl(perf_counter_fd, PERF_EVENT_IOC_RESET, 0) == 0);
+		  assert(ioctl(perf_counter_fd, PERF_EVENT_IOC_ENABLE, 0) == 0);
+		}
+
+		triangles[edgeCounter]=cct_function(srcLen, ind+off[src], destLen, ind+off[dest]);
+		intersectOps[edgeCounter]=srcLen+destLen;
+
+
+		if (performanceCounters[performanceCounterIndex].type == PERF_TYPE_TIME) {
+		  struct timespec endTime;
+		  assert(clock_gettime(CLOCK_MONOTONIC, &endTime) == 0);
+		  //                      printf("%d, ",numEdges * performanceCounterIndex + (edgeCounter)); fflush(stdout);
+		  perf_events[numEdges * performanceCounterIndex + (edgeCounter)] =
+			(1000000000ll * endTime.tv_sec + endTime.tv_nsec) - 
+			(1000000000ll * startTime.tv_sec + startTime.tv_nsec);
+		} else {
+		  assert(ioctl(perf_counter_fd, PERF_EVENT_IOC_DISABLE, 0) == 0);
+		  assert(read(perf_counter_fd, &perf_events[numEdges * performanceCounterIndex + (edgeCounter)], sizeof(uint64_t)) == sizeof(uint64_t));
+		}
+		edgeCounter++;
+
+	  }
+	}
+
+	close(perf_counter_fd);
+  }
+  if(0){
+	int edgeCounter=0;           
+	for (int src = 0; src < numVertices; src++){
+	  for(int iter=off[src]; iter<off[src+1]; iter++){
+		printf("%s\t%s\t%"PRIu32"\t%"PRIu32, algorithm_name, implementation_name,numVertices,numEdges);
+		for (size_t performanceCounterIndex = 0; performanceCounterIndex < performanceCounterCount; performanceCounterIndex++) {
+		  if (!performanceCounters[performanceCounterIndex].supported)
+			continue;
+		  printf("\t%"PRIu64, perf_events[numEdges * performanceCounterIndex + edgeCounter]);
+		}
+		printf("\t%"PRIu32"\t%"PRIu32"\n", triangles[edgeCounter], intersectOps[edgeCounter]);
+		//printf("\n");
+		edgeCounter++;
+	  }
+	}
+  }
+  else
+  {
+
+	int edgeCounter=0;
+	printf("%s\t%s\t%"PRIu32"\t%"PRIu32, algorithm_name, implementation_name,numVertices,numEdges);
+	for (size_t performanceCounterIndex = 0; performanceCounterIndex < performanceCounterCount; performanceCounterIndex++) {
+	  if (!performanceCounters[performanceCounterIndex].supported)
+		continue;
+	  edgeCounter=0;
+	  int64_t val=0;
+	  for (int src = 0; src < numVertices; src++){
+		for(int iter=off[src]; iter<off[src+1]; iter++){
+		  val+= perf_events[numEdges * performanceCounterIndex + edgeCounter];
+		}
+		edgeCounter++;
+	  }
+	  printf("\t%ld", val);
+	}
+	edgeCounter=0;
+	int64_t tri=0,inter=0;
+	for (int src = 0; src < numVertices; src++){
+	  for(int iter=off[src]; iter<off[src+1]; iter++){
+		tri+= triangles[edgeCounter];
+		inter+=intersectOps[edgeCounter];
+		edgeCounter++;
+	  }
+	}   
+	printf("\t%ld", tri);
+	printf("\t%ld", inter);
+	printf("\n");
+
+  }
+  free(triangles);
+  free(intersectOps);
+  free(perf_events);
+
+}
+
+#endif
 
 
 

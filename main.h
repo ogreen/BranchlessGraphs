@@ -3,6 +3,25 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+#include <unistd.h>
+#include <sys/ioctl.h>
+#include <linux/perf_event.h>
+#include <asm/unistd.h>
+
+#include "timer.h"
+
+#define PERF_TYPE_TIME PERF_TYPE_MAX
+
+struct PerformanceCounter {
+  const char* name;
+  uint32_t type;
+  uint32_t subtype;
+  bool supported;
+};
+
+int perf_event_open(struct perf_event_attr *hw_event, pid_t pid, int cpu, int group_fd, unsigned long flags);
+
+
 
 //---------------------
 // BFS
@@ -24,6 +43,19 @@ void BFS_TopDown_Branchless_MIC(uint32_t* off, uint32_t* ind, uint32_t* queue, u
 //---------------------
 // Connected Components
 //---------------------
+
+typedef enum{
+  SV_ALG_BRANCH_BASED=0,
+  SV_ALG_BRANCH_AVOIDING,
+  SV_NUMBER_OF_ALGS
+} eSV_Alg;
+
+typedef struct {
+  int32_t iterationSwap;  
+  float   toleranceGradient;
+  float	  toleranceSteadyState;
+} svControlParams;
+
 
 
 typedef bool (*ConnectedComponents_SV_Function)(size_t vertexCount, uint32_t* componentMap, uint32_t* vertexEdges, uint32_t* neighbors);
