@@ -340,7 +340,7 @@ int32_t intersectionBranchAvoiding ( const int32_t alen, const int32_t * a,  con
 
 
 
-#if defined( ARMASM)
+#if defined(ARMASM)
 
 int32_t intersectionBranchBased ( const int32_t alen, const int32_t * a,
 						  const int32_t blen, const int32_t * b)

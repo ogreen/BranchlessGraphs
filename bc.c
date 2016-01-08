@@ -27,10 +27,11 @@ uint32_t bcTreeBranchBased(uint32_t* off, uint32_t* ind, uint32_t* queue, uint32
 		uint32_t currElement = queue[qPrevStart++];
 		// stack[stackPos] = currElement;
 		// stackPos++;
+		uint32_t currentLevel= level[currElement];
+		uint32_t nextLevel = level[currElement]+1;
 
 		uint32_t startEdge = off[currElement];
 		uint32_t stopEdge = off[currElement+1];
-		uint32_t nextLevel = level[currElement]+1;
 		for (uint32_t j = startEdge; startEdge < stopEdge; startEdge++) {
 			uint32_t k = ind[startEdge];
 			// Checking if "k" has been found.
@@ -88,10 +89,12 @@ uint32_t bcTreeBranchAvoiding(uint32_t* off, uint32_t* ind, uint32_t* queue, uin
 		uint32_t currElement = queue[qPrevStart++];
 		// stack[stackPos] = currElement;
 		// stackPos++;
+		uint32_t currentLevel= level[currElement];
+		uint32_t nextLevel = level[currElement]+1;
 
 		uint32_t startEdge = off[currElement];
 		uint32_t stopEdge = off[currElement+1];
-		uint32_t nextLevel = level[currElement]+1;
+
 		for (uint32_t j = startEdge; startEdge < stopEdge; startEdge++) {
 			uint32_t k = ind[startEdge];
 			// Checking if "k" has been found.
@@ -101,7 +104,34 @@ uint32_t bcTreeBranchAvoiding(uint32_t* off, uint32_t* ind, uint32_t* queue, uin
 				delta[k]=0;
 			}
 
-			sigma[k] += ((nextLevel-level[k])>0)*sigma[currElement];
+//			sigma[k] += ((level[k]-currentLevel)>0)*sigma[currElement];
+
+#if defined(X86)
+			int sigmacurr=sigma[currElement];
+			int levelk=level[k];
+			int tempVal=0;
+			__asm__ __volatile__ (
+				"CMP %[levelk], %[nextLevel];"
+				"CMOVG %[tempVal], %[sigmacurr];"
+				: [tempVal] "+r" (tempVal)
+				: [levelk] "r" (levelk), [nextLevel] "r" (nextLevel),[sigmacurr] "r" (sigmacurr)
+			);
+			sigma[k]+=tempVal;
+#endif
+
+#if defined(ARMASM)
+			int sigmak=sigma[k];
+			int sigmacurr=sigma[currElement];
+			int levelk=level[k];
+			__asm__ __volatile__ (
+				"CMP %[levelk], %[nextLevel];"
+				"CADDHI %[sigmak], %[sigmacurr];"
+				: [sigmak] "+r" (sigmak)
+				: [levelk] "r" (levelk), [nextLevel] "r" (nextLevel),[sigmacurr] "r" (sigmacurr)
+			);
+#endif
+
+
 			// sigma[k] += sigma[currElement];
 		}
 
