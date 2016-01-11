@@ -23,8 +23,9 @@ graph.o: graph_arm.py
 	$(CC) -c graph_arm.s -o graph.o
 		
 else
-CFLAGS=-DX86
-
+#march=native
+CFLAGS=-DX86 -march=core-avx2 -fverbose-asm -Wimplicit-function-declaration
+CC=clang
 graph.o: graph_x86_64.py
 	python $<
 	nasm -f elf64 -o graph.o graph_x86_64.s

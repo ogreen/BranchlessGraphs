@@ -9,7 +9,10 @@
 
 #ifdef __x86_64__
 	#include <x86intrin.h>
+	#include <xmmintrin.h>
+	#include <immintrin.h>
 #endif
+
 
 #include "main.h"
 
@@ -142,7 +145,6 @@ void bcDependencyBranchBased(uint32_t currRoot,uint32_t* off, uint32_t* ind, uin
 		}
 		leftOver--;
 	}
-
 }
 
 void bcDependencyBranchAvoiding(uint32_t currRoot,uint32_t* off, uint32_t* ind, uint32_t* queue, uint32_t reverseStart, uint32_t numElements, 
@@ -169,9 +171,23 @@ void bcDependencyBranchAvoiding(uint32_t currRoot,uint32_t* off, uint32_t* ind, 
 			// if(level[k] == prevLevel){
 			// 	delta[k] += ((float)sigma[k]/(float)sigma[currElement])*(float)(delta[currElement]+1);
 			// }
-			// delta[k] += ((currLevel-level[k])>0)*((float)sigma[k]/(float)sigma[currElement])*(float)(delta[currElement]+1);			
 //			delta[k] += ((currLevel-level[k])>0)*((float)sigma[k]/(float)sigmadivdelta);			
-			delta[k] += 1.0;		
+
+#if defined(X86)
+
+			float sigmak=sigma[k];
+			__m128 mmSDD = _mm_load_ps1 (&sigmadivdelta);
+			__m128 deltak = _mm_load_ps1 (delta+k);
+			__m128 mmsigmak = _mm_load_ps1 (&sigmak);
+
+			__m128 temp=_mm_add_ps(deltak,_mm_mul_ps(mmSDD,mmsigmak));
+			float temp_float[4]={0,0,0,0}; _mm_store_ps1 (temp_float,temp);
+			delta[k]+=temp_float[0];
+
+#endif
+
+
+
 		}
 		if(currElement!=currRoot){
 			totalBC[currElement]+=delta[currElement];
@@ -423,5 +439,7 @@ void Benchmark_BC(const char* algorithm_name, const char* implementation_name, c
 ### (level array uint32_t* levels, )
 (current levell == uint32_t currentLevel);)
 */
+
+
 
 
