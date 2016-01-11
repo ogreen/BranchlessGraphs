@@ -100,7 +100,7 @@ uint32_t bcTreeBranchAvoiding(uint32_t* off, uint32_t* ind, uint32_t* queue, uin
 			int levelk=level[k];
 			__asm__ __volatile__ (
 				"CMP %[levelk], %[nextLevel];"
-				"CADDHI %[sigmak], %[sigmacurr];"
+				"ADDHI %[sigmak], %[sigmacurr];"
 				: [sigmak] "+r" (sigmak)
 				: [levelk] "r" (levelk), [nextLevel] "r" (nextLevel),[sigmacurr] "r" (sigmacurr)
 			);
