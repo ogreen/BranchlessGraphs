@@ -45,13 +45,22 @@ void BFS_TopDown_Branchless_MIC(uint32_t* off, uint32_t* ind, uint32_t* queue, u
 //---------------------
 
 
-typedef uint32_t (*BC_Function)(uint32_t* off, uint32_t* ind, uint32_t* queue, uint32_t inputStart, uint32_t inputNum, 
-		uint32_t outputStart, uint32_t* level,uint32_t* sigma, float*delta, float* totalBC,uint32_t* stack, uint32_t stackPos);
+typedef uint32_t (*BC_TRAV_Function)(uint32_t* off, uint32_t* ind, uint32_t* queue, uint32_t inputStart, uint32_t inputNum, 
+		uint32_t outputStart, uint32_t* level,uint32_t* sigma, float*delta);
 
 uint32_t bcTreeBranchBased(uint32_t* off, uint32_t* ind, uint32_t* queue, uint32_t inputStart, uint32_t inputNum, 
-		uint32_t outputStart, uint32_t* level,uint32_t* sigma, float*delta, float* totalBC,uint32_t* stack, uint32_t stackPos);
+		uint32_t outputStart, uint32_t* level,uint32_t* sigma, float*delta);
 uint32_t bcTreeBranchAvoiding(uint32_t* off, uint32_t* ind, uint32_t* queue, uint32_t inputStart, uint32_t inputNum, 
-		uint32_t outputStart, uint32_t* level,uint32_t* sigma, float*delta, float* totalBC,uint32_t* stack, uint32_t stackPos);
+		uint32_t outputStart, uint32_t* level,uint32_t* sigma, float*delta);
+
+
+typedef void (*BC_DEP_Function)(uint32_t currRoot,uint32_t* off, uint32_t* ind, uint32_t* queue, uint32_t reverseStart, uint32_t numElements, 
+		uint32_t* level,uint32_t* sigma, float*delta, float* totalBC);
+
+void bcDependencyBranchBased(uint32_t currRoot,uint32_t* off, uint32_t* ind, uint32_t* queue, uint32_t reverseStart, uint32_t numElements, 
+		uint32_t* level,uint32_t* sigma, float*delta, float* totalBC);
+void bcDependencyBranchAvoiding(uint32_t currRoot,uint32_t* off, uint32_t* ind, uint32_t* queue, uint32_t reverseStart, uint32_t numElements, 
+		uint32_t* level,uint32_t* sigma, float*delta, float* totalBC);
 
 //---------------------
 // Connected Components

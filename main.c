@@ -29,7 +29,7 @@ void Benchmark_BFS_BottomUp(const char* algorithm_name, const char* implementati
 
 //-------------------------------------------------
 // BC
-void Benchmark_BC(const char* algorithm_name, const char* implementation_name, const struct PerformanceCounter performanceCounters[], size_t performanceCounterCount, BC_Function bc_function, uint32_t numVertices, uint32_t* off, uint32_t* ind, uint32_t* edgesTraversed);
+void Benchmark_BC(const char* algorithm_name, const char* implementation_name, const struct PerformanceCounter performanceCounters[], size_t performanceCounterCount, BC_TRAV_Function bc_trav_function,  BC_DEP_Function bc_dep_function, uint32_t numVertices, uint32_t* off, uint32_t* ind, uint32_t* edgesTraversed);
 
 
 //-------------------------------------------------
@@ -142,8 +142,8 @@ void readGraphDIMACS(char* filePath, uint32_t** prmoff, uint32_t** prmind, uint3
   //	printf ( "%ld %ld\n", nv, ne);		
 
   free(line);
-  int32_t * off = (int32_t *) malloc ((nv + 2) * sizeof (int32_t));
-  int32_t * ind = (int32_t *) malloc ((ne * 2) * sizeof (int32_t));
+  uint32_t * off = (uint32_t *) malloc ((nv + 2) * sizeof (uint32_t));
+  uint32_t * ind = (uint32_t *) malloc ((ne * 2) * sizeof (uint32_t));
   off[0] = 0;
   off[1] = 0;
   int32_t counter = 0;
@@ -191,7 +191,7 @@ void readGraphDIMACS(char* filePath, uint32_t** prmoff, uint32_t** prmind, uint3
   *prmnv=nv;
   *prmne=ne;
   *prmind=ind;
-  *prmoff=off;
+  *prmoff=off; 
 }
 
 int main (const int argc, char *argv[]) {
@@ -347,8 +347,8 @@ int main (const int argc, char *argv[]) {
 	free(level);
 	free(queue);
   }
-	Benchmark_BC("BC", "Branch-based     ", perfCounters, COUNTOF(perfCounters), bcTreeBranchBased    , nv, off, ind, edgesTraversed);
-	Benchmark_BC("BC", "Branch-avoiding  ", perfCounters, COUNTOF(perfCounters), bcTreeBranchAvoiding , nv, off, ind, edgesTraversed);
+	Benchmark_BC("BC", "Branch-based     ", perfCounters, COUNTOF(perfCounters), bcTreeBranchBased, 	bcDependencyBranchBased,   nv, off, ind, edgesTraversed);
+	Benchmark_BC("BC", "Branch-avoiding  ", perfCounters, COUNTOF(perfCounters), bcTreeBranchAvoiding,	bcDependencyBranchAvoiding, nv, off, ind, edgesTraversed);
 
   free(edgesTraversed);
 #endif
