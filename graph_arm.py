@@ -122,6 +122,67 @@ with Function("BFS_TopDown_Branchless_PeachPy",
 
     RETURN()
 
+with Function("BFS_TopDown_Branchless_Trace_PeachPy",
+        (vertexEdgesArgument, neighborsArgument, inputQueueArgument, inputVerticesArgument,
+        outputQueueArgument, levelsArgument, currentLevelArgument),
+        abi=ABI.GnuEABI) as bfs_trace:
+
+    (vertexEdges, neighbors, inputQueue, inputVertices, outputQueue, levels, currentLevel) = LOAD.ARGUMENTS()
+
+    outputQueueStart = GeneralPurposeRegister()
+    MOV( outputQueueStart, outputQueue )
+
+    skip_neighbor = Label("skip_neighbor")
+    next_vertex = Label("next_vertex")
+
+    with Loop() as per_vertex_loop:
+        currentVertex = GeneralPurposeRegister()
+        LDR( currentVertex, [inputQueue], 4 )
+
+        currentEdgeAddress = GeneralPurposeRegister()
+        ADD( currentEdgeAddress, vertexEdges, currentVertex.LSL(2) )
+        startEdge = GeneralPurposeRegister()
+        LDR( startEdge, [currentEdgeAddress], 4 )
+        endEdge = GeneralPurposeRegister()
+        LDR( endEdge, [currentEdgeAddress] )
+        currentEdgeIndex = GeneralPurposeRegister()
+        SUBS( currentEdgeIndex, startEdge, endEdge )
+        neighborsEnd = GeneralPurposeRegister()
+        ADD( neighborsEnd, neighbors, endEdge.LSL(2) )
+
+        per_edge_loop = Loop()
+        BEQ( per_edge_loop.end )
+
+        with per_edge_loop:
+            neighborVertex = GeneralPurposeRegister()
+            LDR( neighborVertex, [neighborsEnd, currentEdgeIndex.LSL(2)] )
+            
+            neighborLevel = GeneralPurposeRegister()
+            LDR( neighborLevel, [levels, neighborVertex.LSL(2)] )
+
+            STR( neighborVertex, [outputQueue] )
+
+            CMP( neighborLevel, currentLevel )
+            MOVHI( neighborLevel, currentLevel )
+            ADDHI( outputQueue, 4 )
+
+            STR( neighborLevel, [levels, neighborVertex.LSL(2)] )
+
+            ADDS( currentEdgeIndex, 1 )
+            BNE( per_edge_loop.begin )
+
+        SUBS( inputVertices, 1 )
+        BNE( per_vertex_loop.begin )
+
+    SUB( r0, outputQueue, outputQueueStart )
+    LSR( r0, 2 )
+
+    RETURN()
+ 
+
+
+
+
 vertexCountArgument = Argument(size_t)
 componentMapArgument = Argument(ptr(uint32_t))
 vertexEdgesArgument = Argument(ptr(uint32_t))
@@ -262,6 +323,7 @@ with open("graph_arm.s", "w") as bfs_file:
     bfs_file.write(epilog)
     bfs_file.write(bfs_branchy.assembly)
     bfs_file.write(bfs_branchless.assembly)
+    bfs_file.write(bfs_trace.assembly)
     bfs_file.write(sv_branchy.assembly)
     bfs_file.write(sv_branchless.assembly)
 
