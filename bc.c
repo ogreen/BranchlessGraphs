@@ -183,10 +183,42 @@ void bcDependencyBranchAvoiding(uint32_t currRoot,uint32_t* off, uint32_t* ind, 
 			__m128 temp=_mm_add_ps(deltak,_mm_mul_ps(mmSDD,mmsigmak));
 			float temp_float[4]={0,0,0,0}; _mm_store_ps1 (temp_float,temp);
 			delta[k]+=temp_float[0];
-
+            // Conditional store still needs to be applied.
 #endif
 
 
+#if defined(ARMASM)
+/*			int levelk=level[k];
+			float sigmak=sigma[k];
+			float deltak=delta[k];
+			//float temp1=0;// temp2=1, temp3=0;
+			
+			__asm__ __volatile__ ( ""
+				"CMP %[currLevel], %[levelk];"
+				"VMLAHI.F32 %[deltak], %[sigmak], %[sigmadivdelta];"
+
+//			    "VMULHI.F32 %[temp1], %[sigmak], %[sigmadivdelta];"
+//			    "VADDHI.F32 %[deltak], %[deltak], %[temp1];"
+//				: [temp1] "+w" (temp1) , [deltak] "+w" (deltak)
+				: [deltak] "+w" (deltak)
+				: [levelk] "r" (levelk), [currLevel] "r" (currLevel), [sigmak] "w" (sigmak), [sigmadivdelta] "w" (sigmadivdelta) 
+			);
+*/
+
+ 			int levelk=level[k];
+//			float sigmak=sigma[k];
+//			float deltak=delta[k];
+//			int tempval = delta+k;			
+			__asm__ __volatile__ ( ""
+				"CMP %[currLevel], %[levelk];"
+//				"VMLAHI.F32 %[deltak], %[sigmak], %[sigmadivdelta];"
+ 				:// [deltak] "+w" (deltak)
+				: [levelk] "r" (levelk), [currLevel] "r" (currLevel)//, [sigmak] "w" (sigmak), [sigmadivdelta] "w" (sigmadivdelta) 
+			);
+ 
+
+#endif
+ 
 
 		}
 		if(currElement!=currRoot){
