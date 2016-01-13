@@ -206,14 +206,21 @@ void bcDependencyBranchAvoiding(uint32_t currRoot,uint32_t* off, uint32_t* ind, 
 */
 
  			int levelk=level[k];
-//			float sigmak=sigma[k];
+//     		float sigmak=sigma[k];
+     		int* sigmakpos=sigma+k;
 //			float deltak=delta[k];
-//			int tempval = delta+k;			
+			int* deltakpos = (int*) delta+k;
+//            int *deltakpos,*sigmakpos;
+			float deltak,sigmak,temp;
 			__asm__ __volatile__ ( ""
-				"CMP %[currLevel], %[levelk];"
-//				"VMLAHI.F32 %[deltak], %[sigmak], %[sigmadivdelta];"
- 				:// [deltak] "+w" (deltak)
-				: [levelk] "r" (levelk), [currLevel] "r" (currLevel)//, [sigmak] "w" (sigmak), [sigmadivdelta] "w" (sigmadivdelta) 
+				"CMP %[currLevel], %[levelk]          ;\n\t"
+				"VLDRHI %[deltak], [%[deltakpos]]     ;\n\t"
+				"VLDRHI %[sigmak], [%[sigmakpos]] ;   \n\t"
+//				"VMLAHI.F32 %[deltak], %[sigmak], %[sigmadivdelta]; \n\t"
+				"VMULHI.F32 %[temp], %[sigmak], %[sigmadivdelta]; \n\t"
+				"VADDHI.F32 %[deltak], %[deltak], %[temp]; \n\t"
+ 				: [deltak] "+w" (deltak) , [sigmak] "+w" (sigmak), [temp] "+w" (temp)
+				: [levelk] "r" (levelk), [currLevel] "r" (currLevel), [deltakpos] "r" (deltakpos), [sigmakpos] "r" (sigmakpos) , [sigmadivdelta] "w" (sigmadivdelta) 
 			);
  
 
