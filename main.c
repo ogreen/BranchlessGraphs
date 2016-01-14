@@ -279,15 +279,15 @@ int main (const int argc, char *argv[]) {
   Benchmark_BFS_TopDown("BFS/TD", "Branch-avoiding  ", perfCounters, COUNTOF(perfCounters), BFS_TopDown_Branchless_PeachPy, nv, off, ind, edgesTraversed);
   
    //Benchmark_BFS_TopDown("BFS/TD", "Branch-lessless", BFS_TopDown_Branchlessless_PeachPy, nv, off, ind, edgesTraversed);
-#ifdef __SSE4_1__
-  Benchmark_BFS_TopDown("BFS/TD", "Branch-avoiding (SSE 4.1)", BFS_TopDown_Branchless_SSE4_1, nv, off, ind, edgesTraversed);
-#endif
-#ifdef __AVX2__
-  Benchmark_BFS_TopDown("BFS/TD", "Branch-avoiding (AVX 2)", BFS_TopDown_Branchless_AVX2, nv, off, ind, edgesTraversed);
-#endif
-#ifdef __MIC__
-  Benchmark_BFS_TopDown("BFS/TD", "Branch-avoiding (MIC)", BFS_TopDown_Branchless_MIC, nv, off, ind, edgesTraversed);
-#endif
+// #ifdef __SSE4_1__
+//   Benchmark_BFS_TopDown("BFS/TD", "Branch-avoiding (SSE 4.1)", BFS_TopDown_Branchless_SSE4_1, nv, off, ind, edgesTraversed);
+// #endif
+// #ifdef __AVX2__
+//   Benchmark_BFS_TopDown("BFS/TD", "Branch-avoiding (AVX 2)", BFS_TopDown_Branchless_AVX2, nv, off, ind, edgesTraversed);
+// #endif
+// #ifdef __MIC__
+//   Benchmark_BFS_TopDown("BFS/TD", "Branch-avoiding (MIC)", BFS_TopDown_Branchless_MIC, nv, off, ind, edgesTraversed);
+// #endif
   //~ Benchmark_BFS_BottomUp("BFS/BU", "Branch-based", BFS_BottomUp_Branchy, nv, off, ind);
   //~ Benchmark_BFS_BottomUp("BFS/BU", "Branch-avoiding (C)", BFS_BottomUp_Branchless, nv, off, ind);
   //~ Benchmark_BFS_BottomUp("BFS/BU", "Branch-avoiding (CMOV)", BFS_BottomUp_Branchless_CMOV, nv, off, ind);

@@ -133,11 +133,17 @@ void bcDependencyBranchBased(uint32_t currRoot,uint32_t* off, uint32_t* ind, uin
 		uint32_t startEdge = off[currElement];
 		uint32_t stopEdge = off[currElement+1];
 		uint32_t prevLevel = level[currElement]-1;
+		float deltadivsigma = (float)(float)(delta[currElement]+1)/(sigma[currElement]);
+
 		for (uint32_t j = startEdge; startEdge < stopEdge; startEdge++) {
 			uint32_t k = ind[startEdge];
 			// If this is a neighbor and has not been found
 			if(level[k] == prevLevel){
-				delta[k] += ((float)sigma[k]/(float)sigma[currElement])*(float)(delta[currElement]+1);
+//				delta[k] += ((float)sigma[k]/(float)sigma[currElement])*(float)(delta[currElement]+1);
+
+				delta[k] += ((float)sigma[k]*deltadivsigma);
+
+				
 			}
 		}
 		if(currElement!=currRoot){
@@ -154,6 +160,9 @@ void bcDependencyBranchAvoiding(uint32_t currRoot,uint32_t* off, uint32_t* ind, 
 	uint32_t* reverseQueue=queue;
 	int32_t startPos=reverseStart,leftOver=numElements;
 
+	float ones = 0x111111111111b;
+	__m128 mmones = _mm_load_ss (&ones);
+
 	// Using Brandes algorithm to compute BC for a specific tree.
 	// Essentially, use the stack which the elements are placed in depth-reverse order, to "climb" back
 	// up the tree, all the way to the root.
@@ -164,7 +173,14 @@ void bcDependencyBranchAvoiding(uint32_t currRoot,uint32_t* off, uint32_t* ind, 
 		uint32_t startEdge = off[currElement];
 		uint32_t stopEdge = off[currElement+1];
 		uint32_t currLevel = level[currElement]; 
-		float sigmadivdelta = (float)(sigma[currElement])/(float)(delta[currElement]+1);
+
+		float deltadivsigma = (float)(delta[currElement]+1)/(float)(sigma[currElement]);
+#if defined(X86)
+		float currLevelf = currLevel;
+		__m128 mmiCurrLevel = _mm_load_ss(&currLevelf);
+		__m128 mmDDS        = _mm_load_ss (&deltadivsigma);
+#endif
+
 		for (uint32_t j = startEdge; startEdge < stopEdge; startEdge++) {
 			uint32_t k = ind[startEdge];
 			// If this is a neighbor and has not been found
@@ -175,15 +191,15 @@ void bcDependencyBranchAvoiding(uint32_t currRoot,uint32_t* off, uint32_t* ind, 
 
 #if defined(X86)
 
-			float sigmak=sigma[k];
-			__m128 mmSDD = _mm_load_ps1 (&sigmadivdelta);
-			__m128 deltak = _mm_load_ps1 (delta+k);
-			__m128 mmsigmak = _mm_load_ps1 (&sigmak);
-
-			__m128 temp=_mm_add_ps(deltak,_mm_mul_ps(mmSDD,mmsigmak));
-			float temp_float[4]={0,0,0,0}; _mm_store_ps1 (temp_float,temp);
-			delta[k]+=temp_float[0];
-            // Conditional store still needs to be applied.
+			float levelkf=level[k];
+			float sigmakf=sigma[k];
+			__m128 mmsigmak     = _mm_load_ss  (&sigmakf);
+			__m128 mmdeltak     = _mm_load_ss  (delta+k);
+			__m128 mmiLevelk    = _mm_load_ss  (&levelkf);
+			__m128 mmCmpGT      = _mm_cmpgt_ss (mmiCurrLevel, mmiLevelk);
+			mmdeltak            = _mm_fmadd_ss (mmDDS,mmsigmak,mmdeltak);
+			mmdeltak            = _mm_and_si128(mmdeltak,mmCmpGT);
+			_mm_store_ss(delta+k,mmdeltak);
 #endif
 
 

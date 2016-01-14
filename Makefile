@@ -24,7 +24,7 @@ graph.o: graph_arm.py
 		
 else
 #march=native
-CFLAGS=-DX86 -march=core-avx2 -fverbose-asm -Wimplicit-function-declaration
+CFLAGS=-DX86 -march=core-avx2 -fverbose-asm -Wimplicit-function-declaration -mavx2 -mfma -ffp-contract=fast
 CC=clang
 graph.o: graph_x86_64.py
 	python $<
