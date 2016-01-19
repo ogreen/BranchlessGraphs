@@ -14,6 +14,10 @@
 #endif
 
 
+#if defined(ARMASM)
+  #include <arm_neon.h>
+#endif
+
 #include "main.h"
 
 uint32_t bcTreeBranchBased(uint32_t* off, uint32_t* ind, uint32_t* queue, uint32_t inputStart, uint32_t inputNum, 
@@ -30,7 +34,6 @@ uint32_t bcTreeBranchBased(uint32_t* off, uint32_t* ind, uint32_t* queue, uint32
 		uint32_t currElement = queue[qPrevStart++];
 		// stack[stackPos] = currElement;
 		// stackPos++;
-		uint32_t currentLevel= level[currElement];
 		uint32_t nextLevel = level[currElement]+1;
 
 		uint32_t startEdge = off[currElement];
@@ -43,18 +46,15 @@ uint32_t bcTreeBranchBased(uint32_t* off, uint32_t* ind, uint32_t* queue, uint32
 				outputQueue[qOut++] = k;
 				delta[k]=0;
 			}
-			if(level[k]==(level[currElement]+1)){
+			if(level[k]==(nextLevel))
 				sigma[k] += sigma[currElement];
-			}
 		}
-
 	}
 	return 	qOut;
 }
 
 
-uint32_t bcTreeBranchAvoiding(uint32_t* off, uint32_t* ind, uint32_t* queue, uint32_t inputStart, uint32_t inputNum, 
-		uint32_t outputStart, uint32_t* level,uint32_t* sigma, float*delta)
+uint32_t bcTreeBranchAvoiding(uint32_t* off, uint32_t* ind, uint32_t* queue, uint32_t inputStart, uint32_t inputNum, uint32_t outputStart, uint32_t* level,uint32_t* sigma, float*delta)
 {
 	uint32_t* outputQueue=queue+outputStart;
 	int32_t qPrevStart=inputStart,qPrevEnd=inputStart+inputNum;
@@ -98,26 +98,33 @@ uint32_t bcTreeBranchAvoiding(uint32_t* off, uint32_t* ind, uint32_t* queue, uin
 #endif
 
 #if defined(ARMASM)
-			int sigmak=sigma[k];
-			int sigmacurr=sigma[currElement];
+			int sigmak;//=sigma[k];
+			int sigmacurr;//=sigma[currElement];
 			int levelk=level[k];
 			__asm__ __volatile__ (
-				"CMP %[levelk], %[nextLevel];"
-				"ADDHI %[sigmak], %[sigmacurr];"
-				: [sigmak] "+r" (sigmak)
-				: [levelk] "r" (levelk), [nextLevel] "r" (nextLevel),[sigmacurr] "r" (sigmacurr)
+				"CMP %[nextLevel], %[levelk];                \n\t"
+				"LDREQ %[sigmak], [%[sigma], %[k], LSL #2];  \n\t"
+				"LDREQ %[sigmacurr], [%[sigma], %[currElement], LSL #2];  \n\t"
+				"ADDEQ %[sigmak],%[sigmak], %[sigmacurr];              \n\t"
+				"STREQ %[sigmak], [%[sigma], %[k], LSL #2];  \n\t"
+				: 
+				[sigmak] "+r" (sigmak),
+				[sigmacurr] "+r" (sigmacurr)
+				: 
+				[levelk] "r" (levelk), 
+				[nextLevel] "r" (nextLevel),				
+				[sigma] "r" (sigma),
+				[currElement] "r" (currElement),
+				[k] "r" (k)
 			);
 #endif
-
 		}
-
 	}
 	return 	qOut;
 }
 
 
-void bcDependencyBranchBased(uint32_t currRoot,uint32_t* off, uint32_t* ind, uint32_t* queue, uint32_t reverseStart, uint32_t numElements, 
-		uint32_t* level,uint32_t* sigma, float*delta, float* totalBC)
+void bcDependencyBranchBased(uint32_t currRoot,uint32_t* off, uint32_t* ind, uint32_t* queue, uint32_t reverseStart, uint32_t numElements, uint32_t* level,uint32_t* sigma, float*delta, float* totalBC)
 {
 
 	uint32_t* reverseQueue=queue;
@@ -129,22 +136,21 @@ void bcDependencyBranchBased(uint32_t currRoot,uint32_t* off, uint32_t* ind, uin
 	// int32_t sEnd = stackPos-1;
 	while(leftOver>=0){
 		uint32_t currElement = reverseQueue[leftOver];
-
 		uint32_t startEdge = off[currElement];
 		uint32_t stopEdge = off[currElement+1];
 		uint32_t prevLevel = level[currElement]-1;
-		float deltadivsigma = (float)(float)(delta[currElement]+1)/(sigma[currElement]);
-
+		float deltadivsigma = (float)(delta[currElement]+1)/(float)(sigma[currElement]);
+		
 		for (uint32_t j = startEdge; startEdge < stopEdge; startEdge++) {
 			uint32_t k = ind[startEdge];
 			// If this is a neighbor and has not been found
-			if(level[k] == prevLevel){
-//				delta[k] += ((float)sigma[k]/(float)sigma[currElement])*(float)(delta[currElement]+1);
-
-				delta[k] += ((float)sigma[k]*deltadivsigma);
-
-				
+//			if(level[k] == prevLevel){
+//				delta[k] += ((float)sigma[k]*deltadivsigma);
+//			}
+			if(level[k] == (level[currElement]-1)){
+				delta[k] += (deltadivsigma*(float)sigma[k]);
 			}
+			
 		}
 		if(currElement!=currRoot){
 			totalBC[currElement]+=delta[currElement];
@@ -153,15 +159,10 @@ void bcDependencyBranchBased(uint32_t currRoot,uint32_t* off, uint32_t* ind, uin
 	}
 }
 
-void bcDependencyBranchAvoiding(uint32_t currRoot,uint32_t* off, uint32_t* ind, uint32_t* queue, uint32_t reverseStart, uint32_t numElements, 
-		uint32_t* level,uint32_t* sigma, float*delta, float* totalBC)
+void bcDependencyBranchAvoiding(uint32_t currRoot,uint32_t* off, uint32_t* ind, uint32_t* queue, uint32_t reverseStart, uint32_t numElements, uint32_t* level,uint32_t* sigma, float*delta, float* totalBC)
 {
-
 	uint32_t* reverseQueue=queue;
 	int32_t startPos=reverseStart,leftOver=numElements;
-
-	float ones = 0x111111111111b;
-	__m128 mmones = _mm_load_ss (&ones);
 
 	// Using Brandes algorithm to compute BC for a specific tree.
 	// Essentially, use the stack which the elements are placed in depth-reverse order, to "climb" back
@@ -172,7 +173,9 @@ void bcDependencyBranchAvoiding(uint32_t currRoot,uint32_t* off, uint32_t* ind, 
 
 		uint32_t startEdge = off[currElement];
 		uint32_t stopEdge = off[currElement+1];
-		uint32_t currLevel = level[currElement]; 
+//		uint32_t currLevel = level[currElement]; 
+		uint32_t prevLevel = level[currElement]-1;
+
 
 		float deltadivsigma = (float)(delta[currElement]+1)/(float)(sigma[currElement]);
 #if defined(X86)
@@ -204,23 +207,35 @@ void bcDependencyBranchAvoiding(uint32_t currRoot,uint32_t* off, uint32_t* ind, 
 
 
 #if defined(ARMASM)
-/*			int levelk=level[k];
-			float sigmak=sigma[k];
-			float deltak=delta[k];
-			//float temp1=0;// temp2=1, temp3=0;
-			
+
+			int levelk=level[k],sigmak, k4=k<<2;
+     		float sigmakf,deltak;//delta[k];
+			int deltakpos,sigmakpos;
 			__asm__ __volatile__ ( ""
-				"CMP %[currLevel], %[levelk];"
-				"VMLAHI.F32 %[deltak], %[sigmak], %[sigmadivdelta];"
-
-//			    "VMULHI.F32 %[temp1], %[sigmak], %[sigmadivdelta];"
-//			    "VADDHI.F32 %[deltak], %[deltak], %[temp1];"
-//				: [temp1] "+w" (temp1) , [deltak] "+w" (deltak)
-				: [deltak] "+w" (deltak)
-				: [levelk] "r" (levelk), [currLevel] "r" (currLevel), [sigmak] "w" (sigmak), [sigmadivdelta] "w" (sigmadivdelta) 
+				"CMP %[prevLevel], %[levelk]          	   ;\n\t"
+				"ADDEQ %[deltakpos], %[delta],%[k4]       ; \n\t"
+				"VLDREQ.32 %[deltak], [%[deltakpos],#0]	  ; \n\t"
+				"ADDEQ %[sigmakpos], %[sigma],%[k4] ;       \n\t"
+				"VLDREQ.32 %[sigmak], [%[sigmakpos],#0]	  ; \n\t"
+				"VCVTREQ.F32.S32 %[sigmakf],%[sigmak]; \n\t"
+				"VFMAEQ.F32 %[deltak], %[sigmakf], %[deltadivsigma]; \n\t"
+				"VSTREQ.32 %[deltak], [%[deltakpos],#0]	  ; \n\t"
+ 				:
+				[deltak] "+w" (deltak) , 
+				[sigmakf] "+w" (sigmakf),
+				[deltakpos] "+r" (deltakpos),
+				[sigmakpos] "+r" (sigmakpos)
+				:
+				[sigmak] "w" (sigmak),
+				[levelk] "r" (levelk), 
+				[prevLevel] "r" (prevLevel),
+				[delta] "r" (delta), 
+				[sigma] "r" (sigma) , 
+				[deltadivsigma] "w" (deltadivsigma), 
+				[k4] "r" (k4) 
 			);
-*/
-
+//			delta[k]=deltak;
+/*
  			int levelk=level[k];
 //     		float sigmak=sigma[k];
      		int* sigmakpos=sigma+k;
@@ -233,13 +248,12 @@ void bcDependencyBranchAvoiding(uint32_t currRoot,uint32_t* off, uint32_t* ind, 
 				"VLDRHI %[deltak], [%[deltakpos]]     ;\n\t"
 				"VLDRHI %[sigmak], [%[sigmakpos]] ;   \n\t"
 //				"VMLAHI.F32 %[deltak], %[sigmak], %[sigmadivdelta]; \n\t"
-				"VMULHI.F32 %[temp], %[sigmak], %[sigmadivdelta]; \n\t"
+				"VMULHI.F32 %[temp], %[sigmak], %[deltadivsigma]; \n\t"
 				"VADDHI.F32 %[deltak], %[deltak], %[temp]; \n\t"
- 				: [deltak] "+w" (deltak) , [sigmak] "+w" (sigmak), [temp] "+w" (temp)
-				: [levelk] "r" (levelk), [currLevel] "r" (currLevel), [deltakpos] "r" (deltakpos), [sigmakpos] "r" (sigmakpos) , [sigmadivdelta] "w" (sigmadivdelta) 
+ 				: [deltak] "+w" (deltak) , [sigmak] "+w" (sigmak), [temp] "+w" (temp)                                               
+				: [levelk] "r" (levelk), [currLevel] "r" (currLevel), [deltakpos] "r" (deltakpos), [sigmakpos] "r" (sigmakpos) , [deltadivsigma] "w" (deltadivsigma) 
 			);
- 
-
+*/
 #endif
  
 
@@ -251,8 +265,6 @@ void bcDependencyBranchAvoiding(uint32_t currRoot,uint32_t* off, uint32_t* ind, 
 	}
 
 }
-
-
 
 
 #if defined(BENCHMARK_BC)
@@ -482,19 +494,141 @@ void Benchmark_BC(const char* algorithm_name, const char* implementation_name, c
 	free(totalBC);
 	free(vertices);
 	free(verticesPrefixSum);
+
 }
 
 
-#endif
+void testBC(BC_TRAV_Function bc_trav_function,  BC_DEP_Function bc_dep_function, uint32_t numVertices, uint32_t* off, uint32_t* ind, uint32_t* level,uint32_t* sigma,float* delta,float* totalBC) {
+	struct perf_event_attr perf_counter;
+
+	const uint32_t rootVertex = 1;
+
+	uint32_t* queue = (uint32_t*)memalign(64, numVertices * sizeof(uint32_t));
+	uint32_t* stack = (uint32_t*)memalign(64, numVertices * sizeof(uint32_t));
+	uint32_t* vertices = (uint32_t*)malloc(numVertices * sizeof(uint32_t));
+	uint32_t* verticesPrefixSum = (uint32_t*)malloc(numVertices * sizeof(uint32_t));
+
+	int32_t levelCount = 0;
+	uint32_t totalVertices = 0;
+		/* Initialize level array */
+		for (size_t i = 0; i < numVertices; i++) {
+			level[i] = INT32_MAX;
+			sigma[i] = 0;
+			delta[i] = 0;
+			queue[i] = 0;
+			totalBC[i]=0;
+		}
+
+		int32_t currentLevel = 0;
+		uint32_t queuePosition=0;
+
+		level[rootVertex] = currentLevel;
+		sigma[rootVertex] = 1;
+		queue[0] = rootVertex;
+
+		currentLevel++;
+
+		uint32_t outputVertices = 1;
+		do {
+			const uint32_t inputVertices = outputVertices;
+				vertices[currentLevel-1] = inputVertices;
+				totalVertices+=inputVertices;
+
+			outputVertices = bc_trav_function(
+				off, 
+				ind,
+				queue,
+				queuePosition,
+				outputVertices,
+				queuePosition+outputVertices,
+				level,
+				sigma,
+				delta
+			);
+
+			queuePosition += inputVertices;
+			currentLevel += 1;
+		} while (outputVertices != 0);
+	
+
+		currentLevel=currentLevel-1;
+		do {
+			bc_dep_function(
+				rootVertex,
+				off, 
+				ind,
+				queue,
+				verticesPrefixSum[currentLevel],
+				vertices[currentLevel],
+				level,
+				sigma,
+				delta,
+				totalBC
+			);
+			currentLevel--;
+		} while (currentLevel>=0);
+
+
+
+	free(queue);
+	free(stack);
+	free(vertices);
+	free(verticesPrefixSum);
+}
+
+
+void compareImplementations(uint32_t numVertices, uint32_t* off, uint32_t* ind, BC_TRAV_Function bb_bc_trav_function,  BC_DEP_Function bb_bc_dep_function, BC_TRAV_Function ba_bc_trav_function,  BC_DEP_Function ba_bc_dep_function ){
+	uint32_t* BAlevel = (uint32_t*)memalign(64, numVertices * sizeof(uint32_t));
+	uint32_t* BAsigma = (uint32_t*)memalign(64, numVertices * sizeof(uint32_t));
+	float*    BAdelta = (float*)memalign(64, numVertices * sizeof(float));
+	float*    BAtotalBC = (float*)memalign(64, numVertices * sizeof(float));
+	uint32_t* BBlevel = (uint32_t*)memalign(64, numVertices * sizeof(uint32_t));
+	uint32_t* BBsigma = (uint32_t*)memalign(64, numVertices * sizeof(uint32_t));
+	float*    BBdelta = (float*)memalign(64, numVertices * sizeof(float));
+	float*    BBtotalBC = (float*)memalign(64, numVertices * sizeof(float));
+
+	testBC(bb_bc_trav_function,  bb_bc_dep_function,numVertices, off, ind, BBlevel,BBsigma, BBdelta,BBtotalBC);
+	testBC(ba_bc_trav_function,  ba_bc_dep_function,numVertices, off, ind, BAlevel,BAsigma, BAdelta,BAtotalBC);
+
+	printf("Starting testing\n");
+
+	for (int i=0; i<numVertices; i++){
+		if (BAlevel[i] != BBlevel[i]){
+			printf("Levels are not the same\n");
+			break;
+		}
+		if (BAsigma[i] != BBsigma[i]){
+			printf("Sigmas are not the same\n");
+			break;
+		}
+		if (abs(BAdelta[i] - BBdelta[i]) > 0.000000001){
+			printf("Deltas are not the same %d\n",i);
+			break;
+		}
+		if (i<100)
+		printf("(%f, %f),  ", BBdelta[i],BAdelta[i]);
+		
+	}
+	printf("Stopping testing\n");
+
+	
+	free(BBlevel);
+	free(BBsigma);
+	free(BBdelta);
+	free(BBtotalBC);	
+	free(BAlevel);
+	free(BAsigma);
+	free(BAdelta);
+	free(BAtotalBC);
+}
 
 /*
-(position of input queue == const uint32_t* inputQueue, )
-(number of input vertices == uint32_t inputVertices, )
-(position of outout queue == uint32_t* outputQueue, )
-### (level array uint32_t* levels, )
-(current levell == uint32_t currentLevel);)
+	free(level);
+	free(sigma);
+	free(delta);
+	free(totalBC);
 */
 
 
-
+#endif
 

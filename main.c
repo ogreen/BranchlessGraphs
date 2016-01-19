@@ -350,6 +350,9 @@ int main (const int argc, char *argv[]) {
 	Benchmark_BC("BC", "Branch-based     ", perfCounters, COUNTOF(perfCounters), bcTreeBranchBased, 	bcDependencyBranchBased,   nv, off, ind, edgesTraversed);
 	Benchmark_BC("BC", "Branch-avoiding  ", perfCounters, COUNTOF(perfCounters), bcTreeBranchAvoiding,	bcDependencyBranchAvoiding, nv, off, ind, edgesTraversed);
 
+void compareImplementations(uint32_t numVertices, uint32_t* off, uint32_t* ind, BC_TRAV_Function bb_bc_trav_function,  BC_DEP_Function bb_bc_dep_function, BC_TRAV_Function ba_bc_trav_function,  BC_DEP_Function ba_bc_dep_function );
+compareImplementations(nv, off, ind, bcTreeBranchBased,  bcDependencyBranchBased, bcTreeBranchAvoiding,  bcDependencyBranchAvoiding );	
+	
   free(edgesTraversed);
 #endif
 
