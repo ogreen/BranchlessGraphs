@@ -16,7 +16,7 @@ ifeq ($(AMD_FAMILY15_COUNTERS),1)
 endif
 
 ifeq ($(ARCH),arm)
-CFLAGS=-marm -DARMASM -mfpu=neon-vfpv4 -march=armv7-a
+CFLAGS=-marm -DARMASM -march=armv7-a -mfpu=neon-vfpv4 
 #CC=clang
 graph.o: graph_arm.py
 	python $<

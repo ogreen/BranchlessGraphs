@@ -7,7 +7,6 @@
 #include <time.h>
 #include <math.h>
 
-
 #if defined(__x86_64__)
 	#include <x86intrin.h>
 #endif

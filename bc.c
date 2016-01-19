@@ -185,13 +185,7 @@ void bcDependencyBranchAvoiding(uint32_t currRoot,uint32_t* off, uint32_t* ind, 
 #endif
 
 		for (uint32_t j = startEdge; startEdge < stopEdge; startEdge++) {
-			uint32_t k = ind[startEdge];
-			// If this is a neighbor and has not been found
-			// if(level[k] == prevLevel){
-			// 	delta[k] += ((float)sigma[k]/(float)sigma[currElement])*(float)(delta[currElement]+1);
-			// }
-//			delta[k] += ((currLevel-level[k])>0)*((float)sigma[k]/(float)sigmadivdelta);			
-
+			uint32_t k = ind[startEdge];	
 #if defined(X86)
 
 			float levelkf=level[k];
@@ -209,7 +203,7 @@ void bcDependencyBranchAvoiding(uint32_t currRoot,uint32_t* off, uint32_t* ind, 
 #if defined(ARMASM)
 
 			int levelk=level[k],sigmak, k4=k<<2;
-     		float sigmakf,deltak;//delta[k];
+     		float sigmakf,deltak;//=delta[k];
 			int deltakpos,sigmakpos;
 			__asm__ __volatile__ ( ""
 				"CMP %[prevLevel], %[levelk]          	   ;\n\t"
@@ -235,25 +229,7 @@ void bcDependencyBranchAvoiding(uint32_t currRoot,uint32_t* off, uint32_t* ind, 
 				[k4] "r" (k4) 
 			);
 //			delta[k]=deltak;
-/*
- 			int levelk=level[k];
-//     		float sigmak=sigma[k];
-     		int* sigmakpos=sigma+k;
-//			float deltak=delta[k];
-			int* deltakpos = (int*) delta+k;
-//            int *deltakpos,*sigmakpos;
-			float deltak,sigmak,temp;
-			__asm__ __volatile__ ( ""
-				"CMP %[currLevel], %[levelk]          ;\n\t"
-				"VLDRHI %[deltak], [%[deltakpos]]     ;\n\t"
-				"VLDRHI %[sigmak], [%[sigmakpos]] ;   \n\t"
-//				"VMLAHI.F32 %[deltak], %[sigmak], %[sigmadivdelta]; \n\t"
-				"VMULHI.F32 %[temp], %[sigmak], %[deltadivsigma]; \n\t"
-				"VADDHI.F32 %[deltak], %[deltak], %[temp]; \n\t"
- 				: [deltak] "+w" (deltak) , [sigmak] "+w" (sigmak), [temp] "+w" (temp)                                               
-				: [levelk] "r" (levelk), [currLevel] "r" (currLevel), [deltakpos] "r" (deltakpos), [sigmakpos] "r" (sigmakpos) , [deltadivsigma] "w" (deltadivsigma) 
-			);
-*/
+
 #endif
  
 
