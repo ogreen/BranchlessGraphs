@@ -26,14 +26,10 @@ uint32_t bcTreeBranchBased(uint32_t* off, uint32_t* ind, uint32_t* queue, uint32
 	uint32_t* outputQueue=queue+outputStart;
 	int32_t qPrevStart=inputStart,qPrevEnd=inputStart+inputNum;
 	int32_t qOut=0;
-	// int32_t stackPos=0;
 	int32_t k;
-	// printf("%d %d\n", qPrevStart, qPrevEnd);
 	// While queue is not empty
 	while(qPrevStart!=qPrevEnd)	{
 		uint32_t currElement = queue[qPrevStart++];
-		// stack[stackPos] = currElement;
-		// stackPos++;
 		uint32_t nextLevel = level[currElement]+1;
 
 		uint32_t startEdge = off[currElement];
@@ -59,16 +55,11 @@ uint32_t bcTreeBranchAvoiding(uint32_t* off, uint32_t* ind, uint32_t* queue, uin
 	uint32_t* outputQueue=queue+outputStart;
 	int32_t qPrevStart=inputStart,qPrevEnd=inputStart+inputNum;
 	int32_t qOut=0;
-	// int32_t stackPos=0;
 	int32_t k;
-	// printf("%d %d\n", qPrevStart, qPrevEnd);
 	// While queue is not empty
 	while(qPrevStart!=qPrevEnd)	{
 		uint32_t currElement = queue[qPrevStart++];
-		// stack[stackPos] = currElement;
-		// stackPos++;
-		uint32_t currentLevel= level[currElement];
-		uint32_t nextLevel = level[currElement]+1;
+		int32_t nextLevel = level[currElement]+1;
 
 		uint32_t startEdge = off[currElement];
 		uint32_t stopEdge = off[currElement+1];
@@ -82,19 +73,28 @@ uint32_t bcTreeBranchAvoiding(uint32_t* off, uint32_t* ind, uint32_t* queue, uin
 				delta[k]=0;
 			}
 
-//			sigma[k] += ((level[k]-currentLevel)>0)*sigma[currElement];
-
+	   // 	sigma[k] += ((level[k]-nextLevel)==0)*sigma[currElement];
 #if defined(X86)
-			int sigmacurr=sigma[currElement];
-			int levelk=level[k];
-			int tempVal=0;
-			__asm__ __volatile__ (
-				"CMP %[levelk], %[nextLevel];"
-				"CMOVG %[tempVal], %[sigmacurr];"
-				: [tempVal] "+r" (tempVal)
-				: [levelk] "r" (levelk), [nextLevel] "r" (nextLevel),[sigmacurr] "r" (sigmacurr)
+            int32_t levelk=level[k];
+			int32_t sigmaCurr = sigma[currElement];
+			int32_t tempVal=0;
+   		__asm__ __volatile__ (
+				"CMP %[levelk], %[nextLevel];      \n\t"
+//#### 				//"CMOVE %[levelk], %[tempVal];   \n\t"
+				"CMOVE %[sigmaCurr], %[tempVal];   \n\t"
+				//"MOV  byte 0x01f, %[tempVal];   \n\t"
+		    	: [tempVal] "+r" (tempVal)
+				: [levelk] "r" (levelk), 
+				  [nextLevel] "r" (nextLevel),
+				  [sigmaCurr] "r" (sigmaCurr)
 			);
-			sigma[k]+=tempVal;
+//		if (tempVal)
+//		{
+//   	  printf("%d,", tempVal);
+		 
+		   sigma[k]+=tempVal;
+//		}
+		
 #endif
 
 #if defined(ARMASM)
@@ -179,24 +179,34 @@ void bcDependencyBranchAvoiding(uint32_t currRoot,uint32_t* off, uint32_t* ind, 
 
 		float deltadivsigma = (float)(delta[currElement]+1)/(float)(sigma[currElement]);
 #if defined(X86)
-		float currLevelf = currLevel;
-		__m128 mmiCurrLevel = _mm_load_ss(&currLevelf);
+		__m128 tempstupid;		
+		// float prevLevelf = prevLevel;
+		// __m128 mmprevLevel = _mm_load_ss(&prevLevelf);
+		__m128 mmprevLevel = _mm_cvt_si2ss(tempstupid,prevLevel);
+
 		__m128 mmDDS        = _mm_load_ss (&deltadivsigma);
+
+
 #endif
 
 		for (uint32_t j = startEdge; startEdge < stopEdge; startEdge++) {
 			uint32_t k = ind[startEdge];	
 #if defined(X86)
-
-			float levelkf=level[k];
-			float sigmakf=sigma[k];
-			__m128 mmsigmak     = _mm_load_ss  (&sigmakf);
+//			float levelkf=level[k];
+//			float sigmakf=sigma[k];
+			__m128 mmiLevelk    = _mm_cvt_si2ss(tempstupid,level[k]);
+			__m128 mmsigmak     = _mm_cvt_si2ss(tempstupid,sigma[k]);
+//			__m128 mmiLevelk    = _mm_load_ss  (&levelkf);
+//			__m128 mmsigmak     = _mm_load_ss  (&sigmakf);
 			__m128 mmdeltak     = _mm_load_ss  (delta+k);
-			__m128 mmiLevelk    = _mm_load_ss  (&levelkf);
-			__m128 mmCmpGT      = _mm_cmpgt_ss (mmiCurrLevel, mmiLevelk);
+			
+			__m128 mmCmpEq      = _mm_cmpeq_ss (mmprevLevel, mmiLevelk);
+			mmsigmak            = _mm_and_ps(mmsigmak,mmCmpEq);
 			mmdeltak            = _mm_fmadd_ss (mmDDS,mmsigmak,mmdeltak);
-			mmdeltak            = _mm_and_si128(mmdeltak,mmCmpGT);
-			_mm_store_ss(delta+k,mmdeltak);
+		   _mm_store_ss(delta+k, mmdeltak);
+
+
+
 #endif
 
 
@@ -573,17 +583,20 @@ void compareImplementations(uint32_t numVertices, uint32_t* off, uint32_t* ind, 
 			printf("Levels are not the same\n");
 			break;
 		}
+	}
+	for (int i=0; i<numVertices; i++){
 		if (BAsigma[i] != BBsigma[i]){
 			printf("Sigmas are not the same\n");
 			break;
 		}
-		if (abs(BAdelta[i] - BBdelta[i]) > 0.000000001){
+	}
+	for (int i=0; i<numVertices; i++){
+		if (fabsf(BAdelta[i] - BBdelta[i]) > 0.000000001){
 			printf("Deltas are not the same %d\n",i);
 			break;
 		}
 		if (i<100)
 		printf("(%f, %f),  ", BBdelta[i],BAdelta[i]);
-		
 	}
 	printf("Stopping testing\n");
 
@@ -597,13 +610,6 @@ void compareImplementations(uint32_t numVertices, uint32_t* off, uint32_t* ind, 
 	free(BAdelta);
 	free(BAtotalBC);
 }
-
-/*
-	free(level);
-	free(sigma);
-	free(delta);
-	free(totalBC);
-*/
 
 
 #endif
