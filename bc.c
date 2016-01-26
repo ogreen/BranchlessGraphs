@@ -173,45 +173,30 @@ void bcDependencyBranchAvoiding(uint32_t currRoot,uint32_t* off, uint32_t* ind, 
 
 		uint32_t startEdge = off[currElement];
 		uint32_t stopEdge = off[currElement+1];
-//		uint32_t currLevel = level[currElement]; 
 		uint32_t prevLevel = level[currElement]-1;
 
 
 		float deltadivsigma = (float)(delta[currElement]+1)/(float)(sigma[currElement]);
 #if defined(X86)
 		__m128 tempstupid;		
-		// float prevLevelf = prevLevel;
-		// __m128 mmprevLevel = _mm_load_ss(&prevLevelf);
 		__m128 mmprevLevel = _mm_cvt_si2ss(tempstupid,prevLevel);
-
 		__m128 mmDDS        = _mm_load_ss (&deltadivsigma);
-
-
 #endif
 
 		for (uint32_t j = startEdge; startEdge < stopEdge; startEdge++) {
 			uint32_t k = ind[startEdge];	
 #if defined(X86)
-//			float levelkf=level[k];
-//			float sigmakf=sigma[k];
 			__m128 mmiLevelk    = _mm_cvt_si2ss(tempstupid,level[k]);
 			__m128 mmsigmak     = _mm_cvt_si2ss(tempstupid,sigma[k]);
-//			__m128 mmiLevelk    = _mm_load_ss  (&levelkf);
-//			__m128 mmsigmak     = _mm_load_ss  (&sigmakf);
 			__m128 mmdeltak     = _mm_load_ss  (delta+k);
-			
 			__m128 mmCmpEq      = _mm_cmpeq_ss (mmprevLevel, mmiLevelk);
 			mmsigmak            = _mm_and_ps(mmsigmak,mmCmpEq);
 			mmdeltak            = _mm_fmadd_ss (mmDDS,mmsigmak,mmdeltak);
 		   _mm_store_ss(delta+k, mmdeltak);
 
-
-
 #endif
 
-
 #if defined(ARMASM)
-
 			int levelk=level[k],sigmak, k4=k<<2;
      		float sigmakf,deltak;//=delta[k];
 			int deltakpos,sigmakpos;
@@ -238,11 +223,7 @@ void bcDependencyBranchAvoiding(uint32_t currRoot,uint32_t* off, uint32_t* ind, 
 				[deltadivsigma] "w" (deltadivsigma), 
 				[k4] "r" (k4) 
 			);
-//			delta[k]=deltak;
-
 #endif
- 
-
 		}
 		if(currElement!=currRoot){
 			totalBC[currElement]+=delta[currElement];
