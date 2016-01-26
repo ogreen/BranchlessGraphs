@@ -73,27 +73,19 @@ uint32_t bcTreeBranchAvoiding(uint32_t* off, uint32_t* ind, uint32_t* queue, uin
 				delta[k]=0;
 			}
 
-	   // 	sigma[k] += ((level[k]-nextLevel)==0)*sigma[currElement];
 #if defined(X86)
             int32_t levelk=level[k];
 			int32_t sigmaCurr = sigma[currElement];
 			int32_t tempVal=0;
    		__asm__ __volatile__ (
 				"CMP %[levelk], %[nextLevel];      \n\t"
-//#### 				//"CMOVE %[levelk], %[tempVal];   \n\t"
 				"CMOVE %[sigmaCurr], %[tempVal];   \n\t"
-				//"MOV  byte 0x01f, %[tempVal];   \n\t"
 		    	: [tempVal] "+r" (tempVal)
 				: [levelk] "r" (levelk), 
 				  [nextLevel] "r" (nextLevel),
 				  [sigmaCurr] "r" (sigmaCurr)
 			);
-//		if (tempVal)
-//		{
-//   	  printf("%d,", tempVal);
-		 
 		   sigma[k]+=tempVal;
-//		}
 		
 #endif
 
@@ -144,9 +136,6 @@ void bcDependencyBranchBased(uint32_t currRoot,uint32_t* off, uint32_t* ind, uin
 		for (uint32_t j = startEdge; startEdge < stopEdge; startEdge++) {
 			uint32_t k = ind[startEdge];
 			// If this is a neighbor and has not been found
-//			if(level[k] == prevLevel){
-//				delta[k] += ((float)sigma[k]*deltadivsigma);
-//			}
 			if(level[k] == (level[currElement]-1)){
 				delta[k] += (deltadivsigma*(float)sigma[k]);
 			}
@@ -177,20 +166,22 @@ void bcDependencyBranchAvoiding(uint32_t currRoot,uint32_t* off, uint32_t* ind, 
 
 		float deltadivsigma = (float)(delta[currElement]+1)/(float)(sigma[currElement]);
 #if defined(X86)
-		__m128 tempstupid;		
-		__m128i mmiprevLevel = _mm_load_si128((__m128i*)&prevLevel);
+		__m128 tempstupid;				
+		__m128i mmiprevLevel = _mm_cvtsi32_si128(prevLevel);
 		__m128 mmDDS        = _mm_load_ss (&deltadivsigma);
 #endif
 
 		for (uint32_t j = startEdge; startEdge < stopEdge; startEdge++) {
 			uint32_t k = ind[startEdge];	
 #if defined(X86)
-			__m128i mmiiLevelk   = _mm_load_si128((__m128i*)(level+k));
-			__m128 mmdeltak     = _mm_load_ss  (delta+k);
-			__m128 mmsigmak     = _mm_cvt_si2ss(tempstupid,sigma[k]);
-			__m128i mmiCmpEq      = _mm_cmpeq_epi32 (mmiprevLevel, mmiiLevelk);
-			mmsigmak            = _mm_and_si128(mmsigmak,mmiCmpEq);
-			mmdeltak            = _mm_fmadd_ss (mmDDS,mmsigmak,mmdeltak);
+
+			__m128i mmiiLevelk   = _mm_cvtsi32_si128(level[k]);		
+			__m128 mmsigmak      = _mm_cvtsi32_ss(tempstupid,sigma[k]);
+			__m128 mmdeltak      = _mm_load_ss  (delta+k);
+	
+			__m128i mmiCmpEq     = _mm_cmpeq_epi32 (mmiprevLevel, mmiiLevelk);
+			mmsigmak             = _mm_and_si128(mmsigmak,mmiCmpEq);
+			mmdeltak             = _mm_fmadd_ss (mmDDS,mmsigmak,mmdeltak);
 		   _mm_store_ss(delta+k, mmdeltak);
 
 #endif
