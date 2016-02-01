@@ -209,12 +209,14 @@ int main (const int argc, char *argv[]) {
 	{ "Time", PERF_TYPE_TIME },
 	{ "Cycles", PERF_TYPE_HARDWARE, PERF_COUNT_HW_CPU_CYCLES},
 	{ "Instructions", PERF_TYPE_HARDWARE, PERF_COUNT_HW_INSTRUCTIONS},
-#if defined(HAVE_INTEL_HASWELL_COUNTERS) || defined(HAVE_INTEL_IVYBRIDGE_COUNTERS)
+#if defined(HAVE_INTEL_BROADWELL_COUNTERS)|| defined(HAVE_INTEL_HASWELL_COUNTERS) || defined(HAVE_INTEL_IVYBRIDGE_COUNTERS)
 	{ "Loads.Retired", PERF_TYPE_RAW, 0x81D0 }, // D0H 01H MEM_UOPS_RETIRED.LOADS
 	{ "Stores.Retired", PERF_TYPE_RAW, 0x82D0 }, // D0H 01H MEM_UOPS_RETIRED.STORES
+//	{ "Stall.LB", PERF_TYPE_RAW, 0x02A2 }, // A2H 02H RESOURCE_STALLS.LB Cycles Allocator is stalled due to Load Buffer full .
 	{ "Stall.RS", PERF_TYPE_RAW, 0x04A2 }, // A2H 04H RESOURCE_STALLS.RS Cycles stalled due to no eligible RS entry available. 
-	{ "Stall.SB", PERF_TYPE_RAW, 0x08A2 }, // A2H 08H RESOURCE_STALLS.SB Cycles stalled due to no store buffers available (not including draining form sync).
-	{ "Stall.ROB", PERF_TYPE_RAW, 0x10A2 }, // A2H 10H RESOURCE_STALLS.ROB
+//	{ "Stall.SB", PERF_TYPE_RAW, 0x08A2 }, // A2H 08H RESOURCE_STALLS.SB Cycles stalled due to no store buffers available (not including draining form sync).
+//	{ "Stall.ROB", PERF_TYPE_RAW, 0x10A2 }, // A2H 10H RESOURCE_STALLS.ROB
+	{ "Stall.ooo_rsrc", PERF_TYPE_RAW, 0x0EA2 }, // A2H F0H Resource stalls due to Rob being full, FCSW, MXCSR and OTHER 
 #endif
 #if defined(HAVE_INTEL_SILVERMONT_COUNTERS)
 	{ "Stall.ROB", PERF_TYPE_RAW, 0x01CA }, // CAH 01H NO_ALLOC_CYCLES.ROB_FULL Counts the number of cycles when no uops are allocated and the ROB is full (less than 2 entries available)
@@ -233,6 +235,11 @@ int main (const int argc, char *argv[]) {
 	{ "Stores.Dispatched", PERF_TYPE_RAW, 0x0229 },
 	{ "Stall.LDQ", PERF_TYPE_RAW, 0x01D8 }, // Dispatch Stall for LDQ Full
 #endif
+#if defined(HAVE_ARM_CORTEX_A7)
+	{ "READS", PERF_TYPE_RAW, ARMV7_PERFCTR_MEM_READ }, // The number of cycles that the store buffer is full.
+	{ "WRITES", PERF_TYPE_RAW, ARMV7_PERFCTR_MEM_WRITE }, // The number of cycles that the load buffer is full.
+#endif
+
 	{ "Cache references", PERF_TYPE_HARDWARE, PERF_COUNT_HW_CACHE_REFERENCES},
 	{ "Cache misses", PERF_TYPE_HARDWARE, PERF_COUNT_HW_CACHE_MISSES},
 	{ "Branches", PERF_TYPE_HARDWARE, PERF_COUNT_HW_BRANCH_INSTRUCTIONS},

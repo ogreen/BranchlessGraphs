@@ -334,7 +334,7 @@ void Benchmark_BC(const char* algorithm_name, const char* implementation_name, c
 		for (size_t performanceCounterIndex = 0; performanceCounterIndex < performanceCounterCount; performanceCounterIndex++) {
 		 	if (!performanceCounters[performanceCounterIndex].supported)
 				continue;
-	  		printf("\t%"PRIu32, perf_events[levelCount * performanceCounterIndex + level]);
+	  		printf("%11"PRIu32, perf_events[levelCount * performanceCounterIndex + level]);
 		}
 		printf("\t%"PRIu32"\t%"PRIu32"\n", vertices[level], edgesTraversed[level]);
 	}
@@ -434,7 +434,7 @@ void Benchmark_BC(const char* algorithm_name, const char* implementation_name, c
 		for (size_t performanceCounterIndex = 0; performanceCounterIndex < performanceCounterCount; performanceCounterIndex++) {
 		 	if (!performanceCounters[performanceCounterIndex].supported)
 				continue;
-	  		printf("\t%"PRIu32, perf_events[levelCount * performanceCounterIndex + level]);
+	  		printf("%11"PRIu32, perf_events[levelCount * performanceCounterIndex + level]);
 		}
 		printf("\t%"PRIu32"\t%"PRIu32"\n", vertices[level], edgesTraversed[level]);
 	}
@@ -547,7 +547,7 @@ void compareImplementations(uint32_t numVertices, uint32_t* off, uint32_t* ind, 
 	testBC(bb_bc_trav_function,  bb_bc_dep_function,numVertices, off, ind, BBlevel,BBsigma, BBdelta,BBtotalBC);
 	testBC(ba_bc_trav_function,  ba_bc_dep_function,numVertices, off, ind, BAlevel,BAsigma, BAdelta,BAtotalBC);
 
-	printf("Starting testing\n");
+//	printf("Starting testing\n");
 
 	for (int i=0; i<numVertices; i++){
 		if (BAlevel[i] != BBlevel[i]){
@@ -566,10 +566,10 @@ void compareImplementations(uint32_t numVertices, uint32_t* off, uint32_t* ind, 
 			printf("Deltas are not the same %d\n",i);
 			break;
 		}
-		if (i<100)
-		printf("(%f, %f),  ", BBdelta[i],BAdelta[i]);
+//		if (i<100)
+//		printf("(%f, %f),  ", BBdelta[i],BAdelta[i]);
 	}
-	printf("Stopping testing\n");
+//	printf("Stopping testing\n");
 
 	
 	free(BBlevel);
