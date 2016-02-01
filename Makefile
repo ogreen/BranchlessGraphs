@@ -17,7 +17,10 @@ endif
 ifeq ($(AMD_FAMILY15_COUNTERS),1)
 	DEFINES += -DHAVE_AMD_FAMILY15_COUNTERS
 endif
-
+ifeq ($(ARM_COUNTERS),1)
+	DEFINES += -DHAVE_ARM_COUNTERS
+endif
+ 
 ifeq ($(ARCH),arm)
 CFLAGS=-marm -DARMASM -march=armv7-a -mfpu=neon-vfpv4 
 #CC=clang

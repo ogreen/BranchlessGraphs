@@ -12,8 +12,6 @@
 
 #include "cct.h"
 
-
-
 void CheckPerformanceCounters(struct PerformanceCounter performanceCounters[], size_t performanceCountersCount);
 
 //-------------------------------------------------
@@ -235,17 +233,15 @@ int main (const int argc, char *argv[]) {
 	{ "Stores.Dispatched", PERF_TYPE_RAW, 0x0229 },
 	{ "Stall.LDQ", PERF_TYPE_RAW, 0x01D8 }, // Dispatch Stall for LDQ Full
 #endif
-#if defined(HAVE_ARM_CORTEX_A7)
-	{ "READS", PERF_TYPE_RAW, ARMV7_PERFCTR_MEM_READ }, // The number of cycles that the store buffer is full.
-	{ "WRITES", PERF_TYPE_RAW, ARMV7_PERFCTR_MEM_WRITE }, // The number of cycles that the load buffer is full.
+#if defined(HAVE_ARM_COUNTERS)
 #endif
-
+	{ "READS", PERF_TYPE_HW_CACHE, PERF_COUNT_HW_CACHE_LL }, // The number of cycles that the store buffer is full.
+	{ "STALLS", PERF_TYPE_HARDWARE, PERF_COUNT_HW_BUS_CYCLES},
 	{ "Cache references", PERF_TYPE_HARDWARE, PERF_COUNT_HW_CACHE_REFERENCES},
 	{ "Cache misses", PERF_TYPE_HARDWARE, PERF_COUNT_HW_CACHE_MISSES},
 	{ "Branches", PERF_TYPE_HARDWARE, PERF_COUNT_HW_BRANCH_INSTRUCTIONS},
 	{ "Mispredictions", PERF_TYPE_HARDWARE, PERF_COUNT_HW_BRANCH_MISSES}
   };
-
   CheckPerformanceCounters(perfCounters, COUNTOF(perfCounters));
 
 #if defined(BENCHMARK_BFS)	
