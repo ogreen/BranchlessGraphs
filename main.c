@@ -27,7 +27,7 @@ void Benchmark_BFS_BottomUp(const char* algorithm_name, const char* implementati
 
 //-------------------------------------------------
 // BC
-void Benchmark_BC(const char* algorithm_name, const char* implementation_name, const struct PerformanceCounter performanceCounters[], size_t performanceCounterCount, BC_TRAV_Function bc_trav_function,  BC_DEP_Function bc_dep_function, uint32_t numVertices, uint32_t* off, uint32_t* ind, uint32_t* edgesTraversed);
+void Benchmark_BC(const char* algorithm_name, const char* implementation_name, const struct PerformanceCounter performanceCounters[], size_t performanceCounterCount, BC_TRAV_Function bc_trav_function,  BC_DEP_Function bc_dep_function, uint32_t numVertices, uint32_t* off, uint32_t* ind, uint32_t* edgesTraversed,int isSOA);
 
 
 //-------------------------------------------------
@@ -350,11 +350,16 @@ int main (const int argc, char *argv[]) {
 	free(level);
 	free(queue);
   }
-	Benchmark_BC("BC", "Branch-based     ", perfCounters, COUNTOF(perfCounters), bcTreeBranchBased, 	bcDependencyBranchBased,   nv, off, ind, edgesTraversed);
-	Benchmark_BC("BC", "Branch-avoiding  ", perfCounters, COUNTOF(perfCounters), bcTreeBranchAvoiding,	bcDependencyBranchAvoiding, nv, off, ind, edgesTraversed);
+	Benchmark_BC("BC-SOA", "Branch-based     ", perfCounters, COUNTOF(perfCounters), bcTreeBranchBasedSOA, 	bcDependencyBranchBasedSOA,   nv, off, ind, edgesTraversed,1);
+	Benchmark_BC("BC-SOA", "Branch-avoiding  ", perfCounters, COUNTOF(perfCounters), bcTreeBranchAvoidingSOA,	bcDependencyBranchAvoidingSOA, nv, off, ind, edgesTraversed,1);
 
-void compareImplementations(uint32_t numVertices, uint32_t* off, uint32_t* ind, BC_TRAV_Function bb_bc_trav_function,  BC_DEP_Function bb_bc_dep_function, BC_TRAV_Function ba_bc_trav_function,  BC_DEP_Function ba_bc_dep_function );
-compareImplementations(nv, off, ind, bcTreeBranchBased,  bcDependencyBranchBased, bcTreeBranchAvoiding,  bcDependencyBranchAvoiding );	
+	Benchmark_BC("BC-AOS", "Branch-based     ", perfCounters, COUNTOF(perfCounters), bcTreeBranchBasedAOS, 	bcDependencyBranchBasedAOS,   nv, off, ind, edgesTraversed,0);
+	Benchmark_BC("BC-AOS", "Branch-avoiding  ", perfCounters, COUNTOF(perfCounters), bcTreeBranchAvoidingAOS,	bcDependencyBranchAvoidingAOS, nv, off, ind, edgesTraversed,0);
+
+
+	void compareImplementations(uint32_t numVertices, uint32_t* off, uint32_t* ind, BC_TRAV_Function bb_bc_trav_function,  BC_DEP_Function bb_bc_dep_function, BC_TRAV_Function ba_bc_trav_function,  BC_DEP_Function ba_bc_dep_function, int isSOA);
+	compareImplementations(nv, off, ind, bcTreeBranchBasedSOA,  bcDependencyBranchBasedSOA, bcTreeBranchAvoidingSOA,  bcDependencyBranchAvoidingSOA,1);	
+	compareImplementations(nv, off, ind, bcTreeBranchBasedAOS,  bcDependencyBranchBasedAOS, bcTreeBranchAvoidingAOS,  bcDependencyBranchAvoidingAOS,0);	
 	
   free(edgesTraversed);
 #endif

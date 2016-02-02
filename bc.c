@@ -20,9 +20,13 @@
 
 #include "main.h"
 
-uint32_t bcTreeBranchBased(uint32_t* off, uint32_t* ind, uint32_t* queue, uint32_t inputStart, uint32_t inputNum, 
-		uint32_t outputStart, uint32_t* level,uint32_t* sigma, float*delta)
+uint32_t bcTreeBranchBasedSOA(uint32_t* off, uint32_t* ind, uint32_t* queue, uint32_t inputStart, uint32_t inputNum, 
+		uint32_t outputStart, void* bcSOAStruct)//uint32_t* level,uint32_t* sigma, float*delta);
 {
+	uint32_t* level = ((bcSOA*)bcSOAStruct)->level;
+	uint32_t* sigma = ((bcSOA*)bcSOAStruct)->sigma;
+	float* delta = ((bcSOA*)bcSOAStruct)->delta;
+
 	uint32_t* outputQueue=queue+outputStart;
 	int32_t qPrevStart=inputStart,qPrevEnd=inputStart+inputNum;
 	int32_t qOut=0;
@@ -50,8 +54,13 @@ uint32_t bcTreeBranchBased(uint32_t* off, uint32_t* ind, uint32_t* queue, uint32
 }
 
 
-uint32_t bcTreeBranchAvoiding(uint32_t* off, uint32_t* ind, uint32_t* queue, uint32_t inputStart, uint32_t inputNum, uint32_t outputStart, uint32_t* level,uint32_t* sigma, float*delta)
+uint32_t bcTreeBranchAvoidingSOA(uint32_t* off, uint32_t* ind, uint32_t* queue, uint32_t inputStart, uint32_t inputNum, 
+		uint32_t outputStart, void* bcSOAStruct)//uint32_t* level,uint32_t* sigma, float*delta);
 {
+	uint32_t* level = ((bcSOA*)bcSOAStruct)->level;
+	uint32_t* sigma = ((bcSOA*)bcSOAStruct)->sigma;
+	float* delta = ((bcSOA*)bcSOAStruct)->delta;
+
 	uint32_t* outputQueue=queue+outputStart;
 	int32_t qPrevStart=inputStart,qPrevEnd=inputStart+inputNum;
 	int32_t qOut=0;
@@ -85,8 +94,7 @@ uint32_t bcTreeBranchAvoiding(uint32_t* off, uint32_t* ind, uint32_t* queue, uin
 				  [nextLevel] "r" (nextLevel),
 				  [sigmaCurr] "r" (sigmaCurr)
 			);
-		   sigma[k]+=tempVal;
-		
+		   sigma[k]+=tempVal;		
 #endif
 
 #if defined(ARMASM)
@@ -116,8 +124,13 @@ uint32_t bcTreeBranchAvoiding(uint32_t* off, uint32_t* ind, uint32_t* queue, uin
 }
 
 
-void bcDependencyBranchBased(uint32_t currRoot,uint32_t* off, uint32_t* ind, uint32_t* queue, uint32_t reverseStart, uint32_t numElements, uint32_t* level,uint32_t* sigma, float*delta, float* totalBC)
+void bcDependencyBranchBasedSOA(uint32_t currRoot,uint32_t* off, uint32_t* ind, uint32_t* queue, uint32_t reverseStart, uint32_t numElements, 
+void* bcSOAStruct, float* totalBC) //	uint32_t* level,uint32_t* sigma, float*delta, float* totalBC)
 {
+	uint32_t* level = ((bcSOA*)bcSOAStruct)->level;
+	uint32_t* sigma = ((bcSOA*)bcSOAStruct)->sigma;
+	float* delta = ((bcSOA*)bcSOAStruct)->delta;
+
 
 	uint32_t* reverseQueue=queue;
 	int32_t startPos=reverseStart,leftOver=numElements;
@@ -148,8 +161,14 @@ void bcDependencyBranchBased(uint32_t currRoot,uint32_t* off, uint32_t* ind, uin
 	}
 }
 
-void bcDependencyBranchAvoiding(uint32_t currRoot,uint32_t* off, uint32_t* ind, uint32_t* queue, uint32_t reverseStart, uint32_t numElements, uint32_t* level,uint32_t* sigma, float*delta, float* totalBC)
+void bcDependencyBranchAvoidingSOA(uint32_t currRoot,uint32_t* off, uint32_t* ind, uint32_t* queue, uint32_t reverseStart, uint32_t numElements, 
+	void* bcSOAStruct, float* totalBC) //	uint32_t* level,uint32_t* sigma, float*delta, float* totalBC)
 {
+	uint32_t* level = ((bcSOA*)bcSOAStruct)->level;
+	uint32_t* sigma = ((bcSOA*)bcSOAStruct)->sigma;
+	float* delta = ((bcSOA*)bcSOAStruct)->delta;
+
+
 	uint32_t* reverseQueue=queue;
 	int32_t startPos=reverseStart,leftOver=numElements;
 
@@ -226,7 +245,7 @@ void bcDependencyBranchAvoiding(uint32_t currRoot,uint32_t* off, uint32_t* ind, 
 
 #if defined(BENCHMARK_BC)
 
-void Benchmark_BC(const char* algorithm_name, const char* implementation_name, const struct PerformanceCounter performanceCounters[], size_t performanceCounterCount, BC_TRAV_Function bc_trav_function,  BC_DEP_Function bc_dep_function, uint32_t numVertices, uint32_t* off, uint32_t* ind, uint32_t* edgesTraversed) {
+void Benchmark_BC(const char* algorithm_name, const char* implementation_name, const struct PerformanceCounter performanceCounters[], size_t performanceCounterCount, BC_TRAV_Function bc_trav_function,  BC_DEP_Function bc_dep_function, uint32_t numVertices, uint32_t* off, uint32_t* ind, uint32_t* edgesTraversed,int isSOA) {
 	struct perf_event_attr perf_counter;
 
 	const uint32_t rootVertex = 1;
@@ -240,6 +259,13 @@ void Benchmark_BC(const char* algorithm_name, const char* implementation_name, c
 	uint32_t* perf_events = (uint32_t*)malloc(numVertices * sizeof(uint32_t));
 	uint32_t* vertices = (uint32_t*)malloc(numVertices * sizeof(uint32_t));
 	uint32_t* verticesPrefixSum = (uint32_t*)malloc(numVertices * sizeof(uint32_t));
+
+	bcSOA bcDataSOA;
+	bcDataSOA.level=level;
+	bcDataSOA.sigma=sigma;
+	bcDataSOA.delta=delta;
+
+	bcAOS* bcDataAOS = (bcAOS*)malloc(numVertices * sizeof(bcAOS));
 
 	int32_t levelCount = 0;
 	uint32_t totalVertices = 0;
@@ -266,9 +292,12 @@ void Benchmark_BC(const char* algorithm_name, const char* implementation_name, c
 		for (size_t i = 0; i < numVertices; i++) {
 			level[i] = INT32_MAX;
 			sigma[i] = 0;
-			delta[i] = 0;
+			delta[i] = 0.0;
 			queue[i] = 0;
 			totalBC[i]=0;
+			bcDataAOS[i].level=INT32_MAX;
+			bcDataAOS[i].sigma=0;
+			bcDataAOS[i].delta=0;
 		}
 
 		uint32_t currentLevel = 0;
@@ -277,6 +306,10 @@ void Benchmark_BC(const char* algorithm_name, const char* implementation_name, c
 		level[rootVertex] = currentLevel;
 		sigma[rootVertex] = 1;
 		queue[0] = rootVertex;
+
+		bcDataAOS[rootVertex].level=currentLevel;
+		bcDataAOS[rootVertex].sigma=1;
+
 
 		currentLevel++;
 
@@ -295,6 +328,9 @@ void Benchmark_BC(const char* algorithm_name, const char* implementation_name, c
 				assert(ioctl(perf_counter_fd, PERF_EVENT_IOC_RESET, 0) == 0);
 				assert(ioctl(perf_counter_fd, PERF_EVENT_IOC_ENABLE, 0) == 0);
 			}
+			void* tempPtrSOAAOS=bcDataAOS;
+			if (isSOA)
+				tempPtrSOAAOS = (void*)&bcDataSOA;
 			outputVertices = bc_trav_function(
 				off, 
 				ind,
@@ -302,9 +338,10 @@ void Benchmark_BC(const char* algorithm_name, const char* implementation_name, c
 				queuePosition,
 				outputVertices,
 				queuePosition+outputVertices,
-				level,
-				sigma,
-				delta
+				tempPtrSOAAOS
+				// level,
+				// sigma,
+				// delta
 			);
 
 			queuePosition += inputVertices;
@@ -388,6 +425,10 @@ void Benchmark_BC(const char* algorithm_name, const char* implementation_name, c
 				assert(ioctl(perf_counter_fd, PERF_EVENT_IOC_RESET, 0) == 0);
 				assert(ioctl(perf_counter_fd, PERF_EVENT_IOC_ENABLE, 0) == 0);
 			}
+			void* tempPtrSOAAOS=bcDataAOS;
+			if (isSOA)
+				tempPtrSOAAOS = (void*)&bcDataSOA;
+
 			bc_dep_function(
 				rootVertex,
 				off, 
@@ -395,9 +436,10 @@ void Benchmark_BC(const char* algorithm_name, const char* implementation_name, c
 				queue,
 				verticesPrefixSum[currentLevel],
 				vertices[currentLevel],
-				level,
-				sigma,
-				delta,
+				tempPtrSOAAOS,	
+				// level,
+				// sigma,
+				// delta,
 				totalBC
 			);
 
@@ -438,11 +480,9 @@ void Benchmark_BC(const char* algorithm_name, const char* implementation_name, c
 		}
 		printf("\t%"PRIu32"\t%"PRIu32"\n", vertices[level], edgesTraversed[level]);
 	}
-	
+
+	free(bcDataAOS);
 	free(perf_events);
-
-
-
 	free(queue);
 	free(stack);
 	free(level);
@@ -455,15 +495,23 @@ void Benchmark_BC(const char* algorithm_name, const char* implementation_name, c
 }
 
 
-void testBC(BC_TRAV_Function bc_trav_function,  BC_DEP_Function bc_dep_function, uint32_t numVertices, uint32_t* off, uint32_t* ind, uint32_t* level,uint32_t* sigma,float* delta,float* totalBC) {
+void testBC(BC_TRAV_Function bc_trav_function,  BC_DEP_Function bc_dep_function, uint32_t numVertices, uint32_t* off, uint32_t* ind, uint32_t* level,uint32_t* sigma,float* delta,float* totalBC, bcAOS* bcDataAOS,int isSOA) {
 	struct perf_event_attr perf_counter;
-
 	const uint32_t rootVertex = 1;
 
 	uint32_t* queue = (uint32_t*)memalign(64, numVertices * sizeof(uint32_t));
 	uint32_t* stack = (uint32_t*)memalign(64, numVertices * sizeof(uint32_t));
 	uint32_t* vertices = (uint32_t*)malloc(numVertices * sizeof(uint32_t));
 	uint32_t* verticesPrefixSum = (uint32_t*)malloc(numVertices * sizeof(uint32_t));
+
+	bcSOA bcDataSOA;
+	bcDataSOA.level=level;
+	bcDataSOA.sigma=sigma;
+	bcDataSOA.delta=delta;
+
+	void* tempPtrSOAAOS=bcDataAOS;
+	if (isSOA)
+		tempPtrSOAAOS = (void*)&bcDataSOA;
 
 	int32_t levelCount = 0;
 	uint32_t totalVertices = 0;
@@ -474,6 +522,9 @@ void testBC(BC_TRAV_Function bc_trav_function,  BC_DEP_Function bc_dep_function,
 			delta[i] = 0;
 			queue[i] = 0;
 			totalBC[i]=0;
+			bcDataAOS[i].level=INT32_MAX;
+			bcDataAOS[i].sigma=0;
+			bcDataAOS[i].delta=0.0;	
 		}
 
 		int32_t currentLevel = 0;
@@ -482,6 +533,9 @@ void testBC(BC_TRAV_Function bc_trav_function,  BC_DEP_Function bc_dep_function,
 		level[rootVertex] = currentLevel;
 		sigma[rootVertex] = 1;
 		queue[0] = rootVertex;
+
+		bcDataAOS[rootVertex].level=currentLevel;
+		bcDataAOS[rootVertex].sigma=1;
 
 		currentLevel++;
 
@@ -498,15 +552,23 @@ void testBC(BC_TRAV_Function bc_trav_function,  BC_DEP_Function bc_dep_function,
 				queuePosition,
 				outputVertices,
 				queuePosition+outputVertices,
-				level,
-				sigma,
-				delta
+				tempPtrSOAAOS
+				// level,
+				// sigma,
+				// delta
 			);
 
 			queuePosition += inputVertices;
 			currentLevel += 1;
-		} while (outputVertices != 0);
-	
+		} while (outputVertices != 0);	
+
+
+		int sum=vertices[0];
+		verticesPrefixSum[0]=vertices[0];	
+		for(int i=1; i <levelCount; i++){
+			sum+=vertices[i];
+			verticesPrefixSum[i]=verticesPrefixSum[i-1]+vertices[i];
+		}
 
 		currentLevel=currentLevel-1;
 		do {
@@ -517,15 +579,14 @@ void testBC(BC_TRAV_Function bc_trav_function,  BC_DEP_Function bc_dep_function,
 				queue,
 				verticesPrefixSum[currentLevel],
 				vertices[currentLevel],
-				level,
-				sigma,
-				delta,
+				tempPtrSOAAOS,
+				// level,
+				// sigma,
+				// delta,
 				totalBC
 			);
 			currentLevel--;
 		} while (currentLevel>=0);
-
-
 
 	free(queue);
 	free(stack);
@@ -534,7 +595,7 @@ void testBC(BC_TRAV_Function bc_trav_function,  BC_DEP_Function bc_dep_function,
 }
 
 
-void compareImplementations(uint32_t numVertices, uint32_t* off, uint32_t* ind, BC_TRAV_Function bb_bc_trav_function,  BC_DEP_Function bb_bc_dep_function, BC_TRAV_Function ba_bc_trav_function,  BC_DEP_Function ba_bc_dep_function ){
+void compareImplementations(uint32_t numVertices, uint32_t* off, uint32_t* ind, BC_TRAV_Function bb_bc_trav_function,  BC_DEP_Function bb_bc_dep_function, BC_TRAV_Function ba_bc_trav_function,  BC_DEP_Function ba_bc_dep_function, int isSOA){
 	uint32_t* BAlevel = (uint32_t*)memalign(64, numVertices * sizeof(uint32_t));
 	uint32_t* BAsigma = (uint32_t*)memalign(64, numVertices * sizeof(uint32_t));
 	float*    BAdelta = (float*)memalign(64, numVertices * sizeof(float));
@@ -543,35 +604,68 @@ void compareImplementations(uint32_t numVertices, uint32_t* off, uint32_t* ind, 
 	uint32_t* BBsigma = (uint32_t*)memalign(64, numVertices * sizeof(uint32_t));
 	float*    BBdelta = (float*)memalign(64, numVertices * sizeof(float));
 	float*    BBtotalBC = (float*)memalign(64, numVertices * sizeof(float));
+	bcAOS* BBbcDataAOS = (bcAOS*)malloc(numVertices * sizeof(bcAOS));
+	bcAOS* BAbcDataAOS = (bcAOS*)malloc(numVertices * sizeof(bcAOS));
 
-	testBC(bb_bc_trav_function,  bb_bc_dep_function,numVertices, off, ind, BBlevel,BBsigma, BBdelta,BBtotalBC);
-	testBC(ba_bc_trav_function,  ba_bc_dep_function,numVertices, off, ind, BAlevel,BAsigma, BAdelta,BAtotalBC);
+	testBC(bb_bc_trav_function,  bb_bc_dep_function,numVertices, off, ind, BBlevel,BBsigma, BBdelta,BBtotalBC, BBbcDataAOS,isSOA);
+	testBC(ba_bc_trav_function,  ba_bc_dep_function,numVertices, off, ind, BAlevel,BAsigma, BAdelta,BAtotalBC, BAbcDataAOS,isSOA);
 
 //	printf("Starting testing\n");
 
-	for (int i=0; i<numVertices; i++){
-		if (BAlevel[i] != BBlevel[i]){
-			printf("Levels are not the same\n");
-			break;
+	if (isSOA){
+		for (int i=0; i<numVertices; i++){
+			if (BAlevel[i] != BBlevel[i]){
+				printf("Levels are not the same\n");
+				break;
+			}
+		}
+		for (int i=0; i<numVertices; i++){
+			if (BAsigma[i] != BBsigma[i]){
+				printf("Sigmas are not the same\n");
+				break;
+			}
+		}
+		for (int i=0; i<numVertices; i++){
+			if (fabsf(BAdelta[i] - BBdelta[i]) > 0.000000001){
+				printf("Deltas are not the same %d\n",i);
+				break;
+			}
+			// if (i<100)
+//			printf("(%d, %d),  ", BAsigma[i], BBsigma[i]);
+			// printf("(%f, %f),  ", BBdelta[i],BAdelta[i]);
 		}
 	}
-	for (int i=0; i<numVertices; i++){
-		if (BAsigma[i] != BBsigma[i]){
-			printf("Sigmas are not the same\n");
-			break;
+	else{
+		printf("\n\n\n");
+		for (int i=0; i<numVertices; i++){
+			if (BBbcDataAOS[i].level != BAbcDataAOS[i].level){
+				printf("Levels are not the same\n");
+				break;
+			}
 		}
-	}
-	for (int i=0; i<numVertices; i++){
-		if (fabsf(BAdelta[i] - BBdelta[i]) > 0.000000001){
-			printf("Deltas are not the same %d\n",i);
-			break;
+		for (int i=0; i<numVertices; i++){
+			if (BBbcDataAOS[i].sigma != BAbcDataAOS[i].sigma){
+				printf("Sigmas are not the same\n");
+				break;
+			}
 		}
-//		if (i<100)
-//		printf("(%f, %f),  ", BBdelta[i],BAdelta[i]);
+		for (int i=0; i<numVertices; i++){
+			if (fabsf(BBbcDataAOS[i].delta - BAbcDataAOS[i].delta) > 0.000000001){
+				printf("Deltas are not the same %d\n",i);
+			printf("(%f, %f),  ", BBbcDataAOS[i].delta, BAbcDataAOS[i].delta);
+
+				break;
+			}
+			// if (i<100)
+			// printf("(%f, %f),  ", BBbcDataAOS[i].delta, BAbcDataAOS[i].delta);
+//			printf("(%d, %d),  ", BBbcDataAOS[i].sigma, BAbcDataAOS[i].sigma);
+		}
+
 	}
 //	printf("Stopping testing\n");
 
-	
+	free(BBbcDataAOS);	
+	free(BAbcDataAOS);	
 	free(BBlevel);
 	free(BBsigma);
 	free(BBdelta);
@@ -584,4 +678,224 @@ void compareImplementations(uint32_t numVertices, uint32_t* off, uint32_t* ind, 
 
 
 #endif
+
+
+
+
+
+
+uint32_t bcTreeBranchBasedAOS(uint32_t* off, uint32_t* ind, uint32_t* queue, uint32_t inputStart, uint32_t inputNum, 
+		uint32_t outputStart, void* bcAOSStruct)//uint32_t* level,uint32_t* sigma, float*delta);
+{
+	bcAOS* aos = (bcAOS*)bcAOSStruct;
+
+	uint32_t* outputQueue=queue+outputStart;
+	int32_t qPrevStart=inputStart,qPrevEnd=inputStart+inputNum;
+	int32_t qOut=0;
+	int32_t k;
+	// While queue is not empty
+	while(qPrevStart!=qPrevEnd)	{
+		uint32_t currElement = queue[qPrevStart++];
+		uint32_t nextLevel = aos[currElement].level+1;
+
+		uint32_t startEdge = off[currElement];
+		uint32_t stopEdge = off[currElement+1];
+		for (uint32_t j = startEdge; startEdge < stopEdge; startEdge++) {
+			uint32_t k = ind[startEdge];
+			// Checking if "k" has been found.
+			if(aos[k].level==INT32_MAX){
+				aos[k].level = nextLevel;
+				outputQueue[qOut++] = k;
+				aos[k].delta=0;
+			}
+			if(aos[k].level==(nextLevel))
+				aos[k].sigma += aos[currElement].sigma;
+		}
+	}
+	return 	qOut;
+}
+
+
+uint32_t bcTreeBranchAvoidingAOS(uint32_t* off, uint32_t* ind, uint32_t* queue, uint32_t inputStart, uint32_t inputNum, 
+		uint32_t outputStart, void* bcAOSStruct)//uint32_t* level,uint32_t* sigma, float*delta);
+{
+	bcAOS* aos = (bcAOS*)bcAOSStruct;
+
+	uint32_t* outputQueue=queue+outputStart;
+	int32_t qPrevStart=inputStart,qPrevEnd=inputStart+inputNum;
+	int32_t qOut=0;
+	int32_t k;
+	// While queue is not empty
+	while(qPrevStart!=qPrevEnd)	{
+		uint32_t currElement = queue[qPrevStart++];
+		int32_t nextLevel = aos[currElement].level+1;
+
+		uint32_t startEdge = off[currElement];
+		uint32_t stopEdge = off[currElement+1];
+
+		for (uint32_t j = startEdge; startEdge < stopEdge; startEdge++) {
+			uint32_t k = ind[startEdge];
+			// Checking if "k" has been found.
+			if(aos[k].level==INT32_MAX){
+				aos[k].level = nextLevel;
+				outputQueue[qOut++] = k;
+				aos[k].delta=0;
+			}
+
+#if defined(X86)
+            int32_t levelk=aos[k].level;
+			int32_t sigmaCurr = aos[currElement].sigma;
+			int32_t tempVal=0;
+   		__asm__ __volatile__ (
+				"CMP %[levelk], %[nextLevel];      \n\t"
+				"CMOVE %[sigmaCurr], %[tempVal];   \n\t"
+		    	: [tempVal] "+r" (tempVal)
+				: [levelk] "r" (levelk), 
+				  [nextLevel] "r" (nextLevel),
+				  [sigmaCurr] "r" (sigmaCurr)
+			);
+		   aos[k].sigma+=tempVal;
+		
+#endif
+
+#if defined(ARMASM)
+			int sigmak;//=aos[k].sigma;
+			int sigmacurr;//=aos[currElement].sigma;
+			int levelk=aos[k].level;
+			__asm__ __volatile__ (
+				"CMP %[nextLevel], %[levelk];                \n\t"
+				"LDREQ %[sigmak], [%[sigma], %[k], LSL #2];  \n\t"
+				"LDREQ %[sigmacurr], [%[sigma], %[currElement], LSL #2];  \n\t"
+				"ADDEQ %[sigmak],%[sigmak], %[sigmacurr];              \n\t"
+				"STREQ %[sigmak], [%[sigma], %[k], LSL #2];  \n\t"
+				: 
+				[sigmak] "+r" (sigmak),
+				[sigmacurr] "+r" (sigmacurr)
+				: 
+				[levelk] "r" (levelk), 
+				[nextLevel] "r" (nextLevel),				
+				[sigma] "r" (sigma),
+				[currElement] "r" (currElement),
+				[k] "r" (k)
+			);
+#endif
+		}
+	}
+	return 	qOut;
+}
+
+
+void bcDependencyBranchBasedAOS(uint32_t currRoot,uint32_t* off, uint32_t* ind, uint32_t* queue, uint32_t reverseStart, uint32_t numElements, 
+void* bcAOSStruct, float* totalBC) //	uint32_t* level,uint32_t* sigma, float*delta, float* totalBC)
+{
+	bcAOS* aos = (bcAOS*)bcAOSStruct;
+
+	uint32_t* reverseQueue=queue;
+	int32_t startPos=reverseStart,leftOver=numElements;
+
+	// Using Brandes algorithm to compute BC for a specific tree.
+	// Essentially, use the stack which the elements are placed in depth-reverse order, to "climb" back
+	// up the tree, all the way to the root.
+	// int32_t sEnd = stackPos-1;
+	while(leftOver>=0){
+		uint32_t currElement = reverseQueue[leftOver];
+		uint32_t startEdge = off[currElement];
+		uint32_t stopEdge = off[currElement+1];
+		uint32_t prevLevel = aos[currElement].level-1;
+		float deltadivsigma = (float)(aos[currElement].delta+1)/(float)(aos[currElement].sigma);
+		
+		for (uint32_t j = startEdge; startEdge < stopEdge; startEdge++) {
+			uint32_t k = ind[startEdge];
+			// If this is a neighbor and has not been found
+			if(aos[k].level == (aos[currElement].level-1)){
+				aos[k].delta += (deltadivsigma*(float)aos[k].sigma);
+			}
+			
+		}
+		if(currElement!=currRoot){
+			totalBC[currElement]+=aos[currElement].delta;
+		}
+		leftOver--;
+	}
+}
+
+void bcDependencyBranchAvoidingAOS(uint32_t currRoot,uint32_t* off, uint32_t* ind, uint32_t* queue, uint32_t reverseStart, uint32_t numElements, 
+	void* bcAOSStruct, float* totalBC) //	uint32_t* level,uint32_t* sigma, float*delta, float* totalBC)
+{
+	bcAOS* aos = (bcAOS*)bcAOSStruct;
+
+	uint32_t* reverseQueue=queue;
+	int32_t startPos=reverseStart,leftOver=numElements;
+
+	// Using Brandes algorithm to compute BC for a specific tree.
+	// Essentially, use the stack which the elements are placed in depth-reverse order, to "climb" back
+	// up the tree, all the way to the root.
+	// int32_t sEnd = stackPos-1;
+	while(leftOver>=0){
+		uint32_t currElement = reverseQueue[leftOver];
+
+		uint32_t startEdge = off[currElement];
+		uint32_t stopEdge = off[currElement+1];
+		int32_t prevLevel = aos[currElement].level-1;
+
+		float deltadivsigma = (float)(aos[currElement].delta+1)/(float)(aos[currElement].sigma);
+#if defined(X86)
+		__m128 tempstupid;				
+		__m128i mmiprevLevel = _mm_cvtsi32_si128(prevLevel);
+		__m128 mmDDS        = _mm_load_ss (&deltadivsigma);
+#endif
+
+		for (uint32_t j = startEdge; startEdge < stopEdge; startEdge++) {
+			uint32_t k = ind[startEdge];	
+#if defined(X86)
+			float temp=aos[k].delta;
+
+			__m128i mmiiLevelk   = _mm_cvtsi32_si128(aos[k].level);		
+			__m128 mmsigmak      = _mm_cvtsi32_ss(tempstupid,aos[k].sigma);
+			__m128 mmdeltak      = _mm_load_ss  (&temp);
+	
+			__m128i mmiCmpEq     = _mm_cmpeq_epi32 (mmiprevLevel, mmiiLevelk);
+			mmsigmak             = _mm_and_si128(mmsigmak,mmiCmpEq);
+			mmdeltak             = _mm_fmadd_ss (mmDDS,mmsigmak,mmdeltak);
+		   _mm_store_ss(&temp, mmdeltak);
+			aos[k].delta=temp;	
+
+#endif
+
+#if defined(ARMASM)
+			int levelk=aos[k].level,sigmak, k4=k<<2;
+     		float sigmakf,deltak;//=aos[k].delta;
+			int deltakpos,sigmakpos;
+			__asm__ __volatile__ ( ""
+				"CMP %[prevLevel], %[levelk]          	   ;\n\t"
+				"ADDEQ %[deltakpos], %[delta],%[k4]       ; \n\t"
+				"VLDREQ.32 %[deltak], [%[deltakpos],#0]	  ; \n\t"
+				"ADDEQ %[sigmakpos], %[sigma],%[k4] ;       \n\t"
+				"VLDREQ.32 %[sigmak], [%[sigmakpos],#0]	  ; \n\t"
+				"VCVTREQ.F32.S32 %[sigmakf],%[sigmak]; \n\t"
+				"VFMAEQ.F32 %[deltak], %[sigmakf], %[deltadivsigma]; \n\t"
+				"VSTREQ.32 %[deltak], [%[deltakpos],#0]	  ; \n\t"
+ 				:
+				[deltak] "+w" (deltak) , 
+				[sigmakf] "+w" (sigmakf),
+				[deltakpos] "+r" (deltakpos),
+				[sigmakpos] "+r" (sigmakpos)
+				:
+				[sigmak] "w" (sigmak),
+				[levelk] "r" (levelk), 
+				[prevLevel] "r" (prevLevel),
+				[delta] "r" (delta), 
+				[sigma] "r" (sigma) , 
+				[deltadivsigma] "w" (deltadivsigma), 
+				[k4] "r" (k4) 
+			);
+#endif
+		}
+		if(currElement!=currRoot){
+			totalBC[currElement]+=aos[currElement].delta;
+		}
+		leftOver--;
+	}
+
+}
 
