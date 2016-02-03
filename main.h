@@ -54,7 +54,7 @@ void BFS_TopDown_Branchless_MIC(uint32_t* off, uint32_t* ind, uint32_t* queue, u
   uint32_t level;
   uint32_t sigma;
   float delta;
-  uint32_t dummy;   
+  // uint32_t dummy;   
  }bcAOS;
 
 

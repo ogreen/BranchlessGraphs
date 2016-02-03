@@ -367,13 +367,16 @@ void Benchmark_BC(const char* algorithm_name, const char* implementation_name, c
 	}
 
 	for (uint32_t level = 0; level < levelCount; level++) {
-		printf("%s\t%s\t%"PRIu32, algorithm_name, implementation_name, level);
+//		printf("%s\t%s\t%"PRIu32, algorithm_name, implementation_name, level);
+		printf("%s,%s,%"PRIu32, algorithm_name, implementation_name, level);
 		for (size_t performanceCounterIndex = 0; performanceCounterIndex < performanceCounterCount; performanceCounterIndex++) {
 		 	if (!performanceCounters[performanceCounterIndex].supported)
 				continue;
-	  		printf("%11"PRIu32, perf_events[levelCount * performanceCounterIndex + level]);
+//	  		printf("%11"PRIu32, perf_events[levelCount * performanceCounterIndex + level]);
+	  		printf(",%"PRIu32, perf_events[levelCount * performanceCounterIndex + level]);
 		}
-		printf("\t%"PRIu32"\t%"PRIu32"\n", vertices[level], edgesTraversed[level]);
+//		printf("\t%"PRIu32"\t%"PRIu32"\n", vertices[level], edgesTraversed[level]);
+		printf(",%"PRIu32",%"PRIu32"\n", vertices[level], edgesTraversed[level]);
 	}
 	
 
@@ -472,13 +475,16 @@ void Benchmark_BC(const char* algorithm_name, const char* implementation_name, c
 	}
 
 	for (int32_t level = levelCount-1; level >=0 ; level--) {
-		printf("%s\t%s\t%"PRIu32, algorithm_name, implementation_name, level);
+		// printf("%s\t%s\t%"PRIu32, algorithm_name, implementation_name, level);
+		printf("%s,%s,%"PRIu32, algorithm_name, implementation_name, level);
 		for (size_t performanceCounterIndex = 0; performanceCounterIndex < performanceCounterCount; performanceCounterIndex++) {
 		 	if (!performanceCounters[performanceCounterIndex].supported)
 				continue;
-	  		printf("%11"PRIu32, perf_events[levelCount * performanceCounterIndex + level]);
+//	  		printf("%11"PRIu32, perf_events[levelCount * performanceCounterIndex + level]);
+	  		printf(",%"PRIu32, perf_events[levelCount * performanceCounterIndex + level]);
 		}
-		printf("\t%"PRIu32"\t%"PRIu32"\n", vertices[level], edgesTraversed[level]);
+//		printf("\t%"PRIu32"\t%"PRIu32"\n", vertices[level], edgesTraversed[level]);
+		printf(",%"PRIu32",%"PRIu32"\n", vertices[level], edgesTraversed[level]);
 	}
 
 	free(bcDataAOS);
@@ -636,7 +642,7 @@ void compareImplementations(uint32_t numVertices, uint32_t* off, uint32_t* ind, 
 		}
 	}
 	else{
-		printf("\n\n\n");
+		// printf("\n\n\n");
 		for (int i=0; i<numVertices; i++){
 			if (BBbcDataAOS[i].level != BAbcDataAOS[i].level){
 				printf("Levels are not the same\n");

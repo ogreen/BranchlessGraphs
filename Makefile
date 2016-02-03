@@ -45,7 +45,7 @@ sv: main.c timer.c sv.c graph.o Makefile
 cct: main.c timer.c cct.c Makefile
 	$(CC) -g -O3 -std=gnu99 $(CFLAGS) $(DEFINES) -Wno-unused-result -DBENCHMARK_CCT -o $@  main.c timer.c cct.c $(LDFLAGS) -lrt
 bc: main.c timer.c bc.c bfs.c Makefile
-	$(CC) -g -O2 -std=gnu99 $(CFLAGS) $(DEFINES) -Wno-unused-result -DBENCHMARK_BC -o $@  main.c timer.c bc.c bfs.c $(LDFLAGS) -lrt
+	$(CC) -g -O3 -std=gnu99 $(CFLAGS) $(DEFINES) -Wno-unused-result -DBENCHMARK_BC -o $@  main.c timer.c bc.c bfs.c $(LDFLAGS) -lrt
 
 
 bench-bfs: bfs
