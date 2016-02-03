@@ -13,14 +13,16 @@ def main(argv):
     printJava=True
     printPy=True
     
-    benchMarkRealData=True;
-    benchMarkSynthetic=True;
+    benchMarkRealData=False;
+    benchMarkSynthetic=False;
 
-	
+    benchMarkBC=True;
+
 #    print graphList
     #graphDir="/shared/users/greenman/dimacs/"
-    resDir="res-arm/"    
-    graphDir="/home/greenman/dimacs-sub/"
+    graphDir="/home/greenman/data/dimacs/"
+    resDir="has-cct/"    
+#    graphDir="/home/greenman/dimacs-sub/"
     if(benchMarkRealData):
         for graph in graphList:
             graphName=graphDir+graph[0]+graph[1]+".graph"
@@ -53,7 +55,18 @@ def main(argv):
                 temp3="--synthetic=1"
                 temp4="--size="+str(synSize)
                 subprocess.call(["python", "cctmain.py", temp1,temp2,temp3,temp4 ],stdout=outfile)
-                
+
+
+    graphDir="/home/greenman/data/dimacs/"
+    # resDir="~/Dropbox/branchAvoiding/bc/brd/"    
+    resDir="/home/greenman/work/work/Dropbox/branchAvoiding/bc/brd/"    
+    if(benchMarkBC):
+        for graph in graphList:
+            graphName=graphDir+graph[0]+graph[1]+".graph"
+            with open(resDir+graph[1]+".csv", "w") as outfile:
+                print graphName
+                subprocess.call(["./bc", graphName, graph[1]],stdout=outfile) 
+                 
 
 if __name__ == "__main__":
     main(sys.argv[1:])
