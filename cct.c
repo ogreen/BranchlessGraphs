@@ -124,7 +124,7 @@ void Benchmark_TriangleCounting(const char* algorithm_name, const char* implemen
 		}
 		edgeCounter++;
 	  }
-	  printf("\t%ld", val);
+	  printf("\t%lld", val);
 	}
 	edgeCounter=0;
 	int64_t tri=0,inter=0;
@@ -135,8 +135,8 @@ void Benchmark_TriangleCounting(const char* algorithm_name, const char* implemen
 		edgeCounter++;
 	  }
 	}   
-	printf("\t%ld", tri);
-	printf("\t%ld", inter);
+	printf("\t%lld", tri);
+	printf("\t%lld", inter);
 	printf("\n");
 
   }

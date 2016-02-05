@@ -75,22 +75,22 @@ uint32_t bcTreeBranchAvoidingAOS(uint32_t* off, uint32_t* ind, uint32_t* queue, 
 
 typedef void (*BC_DEP_Function)(uint32_t currRoot,uint32_t* off, uint32_t* ind, uint32_t* queue, uint32_t reverseStart, uint32_t numElements, 
     void* bcSOAAOSStruct, float* totalBC);
-//		uint32_t* level, uint32_t* sigma, float*delta, float* totalBC);
 
 void bcDependencyBranchBasedSOA(uint32_t currRoot,uint32_t* off, uint32_t* ind, uint32_t* queue, uint32_t reverseStart, uint32_t numElements, 
     void* bcSOAStruct, float* totalBC);
-//    uint32_t* level, uint32_t* sigma, float*delta, float* totalBC);
 void bcDependencyBranchAvoidingSOA(uint32_t currRoot,uint32_t* off, uint32_t* ind, uint32_t* queue, uint32_t reverseStart, uint32_t numElements, 
     void* bcSOAStruct, float* totalBC);
-//    uint32_t* level, uint32_t* sigma, float*delta, float* totalBC);
 
 void bcDependencyBranchBasedAOS(uint32_t currRoot,uint32_t* off, uint32_t* ind, uint32_t* queue, uint32_t reverseStart, uint32_t numElements, 
     void* bcAOSStruct, float* totalBC);
-//    uint32_t* level, uint32_t* sigma, float*delta, float* totalBC);
 void bcDependencyBranchAvoidingAOS(uint32_t currRoot,uint32_t* off, uint32_t* ind, uint32_t* queue, uint32_t reverseStart, uint32_t numElements, 
     void* bcAOSStruct, float* totalBC);
-//    uint32_t* level, uint32_t* sigma, float*delta, float* totalBC);
 
+#if defined(ARMASM)
+
+void bcDependencyBranchAvoidingAOSOpt(uint32_t currRoot,uint32_t* off, uint32_t* ind, uint32_t* queue, uint32_t reverseStart, uint32_t numElements, 
+    void* bcAOSStruct, float* totalBC);
+#endif 
 
 //---------------------
 // Connected Components

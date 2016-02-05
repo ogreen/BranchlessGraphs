@@ -350,13 +350,14 @@ int main (const int argc, char *argv[]) {
 	free(level);
 	free(queue);
   }
-	Benchmark_BC("BC", "Branch-based-AOS", perfCounters, COUNTOF(perfCounters), bcTreeBranchBasedAOS, 	bcDependencyBranchBasedAOS,   nv, off, ind, edgesTraversed,0);
-	Benchmark_BC("BC", "Branch-avoiding-AOS", perfCounters, COUNTOF(perfCounters), bcTreeBranchAvoidingAOS,	bcDependencyBranchAvoidingAOS, nv, off, ind, edgesTraversed,0);
 
   
 	Benchmark_BC("BC", "Branch-based-SOA", perfCounters, COUNTOF(perfCounters), bcTreeBranchBasedSOA, 	bcDependencyBranchBasedSOA,   nv, off, ind, edgesTraversed,1);
 	Benchmark_BC("BC", "Branch-avoiding-SOA", perfCounters, COUNTOF(perfCounters), bcTreeBranchAvoidingSOA,	bcDependencyBranchAvoidingSOA, nv, off, ind, edgesTraversed,1);
-
+ 	Benchmark_BC("BC", "Branch-based-AOS", perfCounters, COUNTOF(perfCounters), bcTreeBranchBasedAOS, 	bcDependencyBranchBasedAOS,   nv, off, ind, edgesTraversed,0);
+	Benchmark_BC("BC", "Branch-avoiding-AOS", perfCounters, COUNTOF(perfCounters), bcTreeBranchAvoidingAOS,	bcDependencyBranchAvoidingAOS, nv, off, ind, edgesTraversed,0);
+	Benchmark_BC("BC", "Branch-avoiding-AOS-Opt", perfCounters, COUNTOF(perfCounters), bcTreeBranchAvoidingAOS,	bcDependencyBranchAvoidingAOSOpt, nv, off, ind, edgesTraversed,0);
+ 
 	void compareImplementations(uint32_t numVertices, uint32_t* off, uint32_t* ind, BC_TRAV_Function bb_bc_trav_function,  BC_DEP_Function bb_bc_dep_function, BC_TRAV_Function ba_bc_trav_function,  BC_DEP_Function ba_bc_dep_function, int isSOA);
 	compareImplementations(nv, off, ind, bcTreeBranchBasedSOA,  bcDependencyBranchBasedSOA, bcTreeBranchAvoidingSOA,  bcDependencyBranchAvoidingSOA,1);	
 	compareImplementations(nv, off, ind, bcTreeBranchBasedAOS,  bcDependencyBranchBasedAOS, bcTreeBranchAvoidingAOS,  bcDependencyBranchAvoidingAOS,0);	

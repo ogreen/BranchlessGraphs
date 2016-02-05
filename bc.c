@@ -765,25 +765,33 @@ uint32_t bcTreeBranchAvoidingAOS(uint32_t* off, uint32_t* ind, uint32_t* queue, 
 #endif
 
 #if defined(ARMASM)
-			int sigmak;//=aos[k].sigma;
+    		int sigmak;//=aos[k].sigma;
 			int sigmacurr;//=aos[currElement].sigma;
 			int levelk=aos[k].level;
+            int k12=k*12+4;
+            int curr12=currElement*12+4;
 			__asm__ __volatile__ (
 				"CMP %[nextLevel], %[levelk];                \n\t"
-				"LDREQ %[sigmak], [%[sigma], %[k], LSL #2];  \n\t"
-				"LDREQ %[sigmacurr], [%[sigma], %[currElement], LSL #2];  \n\t"
+				//"LDREQ %[sigmak], [%[sigma], %[k], LSL #2];  \n\t"
+				"LDREQ %[sigmak], [%[aos],  %[k12]];  \n\t"
+				//"LDREQ %[sigmacurr], [%[sigma], %[currElement], LSL #2];  \n\t"
+				"LDREQ %[sigmacurr], [%[aos], %[curr12]];  \n\t"
 				"ADDEQ %[sigmak],%[sigmak], %[sigmacurr];              \n\t"
-				"STREQ %[sigmak], [%[sigma], %[k], LSL #2];  \n\t"
+				//"STREQ %[sigmak], [%[sigma], %[k], LSL #2];  \n\t"
+				"STREQ %[sigmak], [%[aos], %[k12]];  \n\t"
 				: 
 				[sigmak] "+r" (sigmak),
 				[sigmacurr] "+r" (sigmacurr)
 				: 
 				[levelk] "r" (levelk), 
 				[nextLevel] "r" (nextLevel),				
-				[sigma] "r" (sigma),
+//				[sigma] "r" (sigma),
+				[aos]  "r" (aos),
 				[currElement] "r" (currElement),
-				[k] "r" (k)
+				[k12] "r" (k12),
+				[curr12] "r" (curr12)
 			);
+
 #endif
 		}
 	}
@@ -869,14 +877,15 @@ void bcDependencyBranchAvoidingAOS(uint32_t currRoot,uint32_t* off, uint32_t* in
 #endif
 
 #if defined(ARMASM)
-			int levelk=aos[k].level,sigmak, k4=k<<2;
+			int levelk=aos[k].level,sigmak, k12=k*12,aoskpos;
      		float sigmakf,deltak;//=aos[k].delta;
 			int deltakpos,sigmakpos;
 			__asm__ __volatile__ ( ""
 				"CMP %[prevLevel], %[levelk]          	   ;\n\t"
-				"ADDEQ %[deltakpos], %[delta],%[k4]       ; \n\t"
+				"ADDEQ %[aoskpos], %[aos],%[k12]       ; \n\t"
+				"ADDEQ %[deltakpos], %[aoskpos],#8       ; \n\t"
 				"VLDREQ.32 %[deltak], [%[deltakpos],#0]	  ; \n\t"
-				"ADDEQ %[sigmakpos], %[sigma],%[k4] ;       \n\t"
+				"ADDEQ %[sigmakpos], %[aoskpos],#4;       \n\t"
 				"VLDREQ.32 %[sigmak], [%[sigmakpos],#0]	  ; \n\t"
 				"VCVTREQ.F32.S32 %[sigmakf],%[sigmak]; \n\t"
 				"VFMAEQ.F32 %[deltak], %[sigmakf], %[deltadivsigma]; \n\t"
@@ -885,16 +894,19 @@ void bcDependencyBranchAvoidingAOS(uint32_t currRoot,uint32_t* off, uint32_t* in
 				[deltak] "+w" (deltak) , 
 				[sigmakf] "+w" (sigmakf),
 				[deltakpos] "+r" (deltakpos),
-				[sigmakpos] "+r" (sigmakpos)
+				[sigmakpos] "+r" (sigmakpos),
+				[aoskpos] "+r" (aoskpos)
 				:
 				[sigmak] "w" (sigmak),
 				[levelk] "r" (levelk), 
 				[prevLevel] "r" (prevLevel),
-				[delta] "r" (delta), 
-				[sigma] "r" (sigma) , 
+//				[delta] "r" (delta), 
+//				[sigma] "r" (sigma) , 
+				[aos] "r" (aos) , 
 				[deltadivsigma] "w" (deltadivsigma), 
-				[k4] "r" (k4) 
+				[k12] "r" (k12) 
 			);
+
 #endif
 		}
 		if(currElement!=currRoot){
@@ -904,4 +916,70 @@ void bcDependencyBranchAvoidingAOS(uint32_t currRoot,uint32_t* off, uint32_t* in
 	}
 
 }
+
+#if defined(ARMASM)
+
+
+void bcDependencyBranchAvoidingAOSOpt(uint32_t currRoot,uint32_t* off, uint32_t* ind, uint32_t* queue, uint32_t reverseStart, uint32_t numElements, 
+	void* bcAOSStruct, float* totalBC) //	uint32_t* level,uint32_t* sigma, float*delta, float* totalBC)
+{
+	bcAOS* aos = (bcAOS*)bcAOSStruct;
+
+	uint32_t* reverseQueue=queue;
+	int32_t startPos=reverseStart,leftOver=numElements;
+
+	// Using Brandes algorithm to compute BC for a specific tree.
+	// Essentially, use the stack which the elements are placed in depth-reverse order, to "climb" back
+	// up the tree, all the way to the root.
+	// int32_t sEnd = stackPos-1;
+	while(leftOver>=0){
+		uint32_t currElement = reverseQueue[leftOver];
+
+		uint32_t startEdge = off[currElement];
+		uint32_t stopEdge = off[currElement+1];
+		int32_t prevLevel = aos[currElement].level-1;
+
+		float deltadivsigma = (float)(aos[currElement].delta+1)/(float)(aos[currElement].sigma);
+
+		for (uint32_t j = startEdge; startEdge < stopEdge; startEdge++) {
+			uint32_t k = ind[startEdge];	
+
+			int levelk=aos[k].level,sigmak, k12=k*12,aoskpos;
+     		float sigmakf,deltak;//=aos[k].delta;
+			int deltakpos,sigmakpos;
+			__asm__ __volatile__ ( ""
+				"CMP %[prevLevel], %[levelk]          	   ;\n\t"
+				"ADD %[aoskpos], %[aos],%[k12]       ; \n\t"
+				"ADD %[deltakpos], %[aoskpos],#8       ; \n\t"
+				"VLDR.32 %[deltak], [%[deltakpos]]	  ; \n\t"
+				"ADDEQ %[sigmakpos], %[aoskpos],#4;       \n\t"
+				"VLDREQ.32 %[sigmak], [%[sigmakpos],#0]	  ; \n\t"
+				"VCVTREQ.F32.S32 %[sigmakf],%[sigmak]; \n\t"
+				"VFMAEQ.F32 %[deltak], %[sigmakf], %[deltadivsigma]; \n\t"
+				"VSTR.32 %[deltak], [%[deltakpos],#0]	  ; \n\t"
+ 				:
+				[deltak] "+w" (deltak) , 
+				[sigmakf] "+w" (sigmakf),
+				[deltakpos] "+r" (deltakpos),
+				[sigmakpos] "+r" (sigmakpos),
+				[aoskpos] "+r" (aoskpos)
+				:
+				[sigmak] "w" (sigmak),
+				[levelk] "r" (levelk), 
+				[prevLevel] "r" (prevLevel),
+				[aos] "r" (aos) , 
+				[deltadivsigma] "w" (deltadivsigma), 
+				[k12] "r" (k12) 
+			);
+
+		}
+		if(currElement!=currRoot){
+			totalBC[currElement]+=aos[currElement].delta;
+		}
+		leftOver--;
+	}
+
+}
+
+#endif 
 
