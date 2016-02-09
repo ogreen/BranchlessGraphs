@@ -174,6 +174,94 @@ with Function("BFS_TopDown_Branchless_PeachPy",
     MOV( rax, outputQueue )
 
     RETURN()
+
+
+with Function("BFS_TopDown_Branchless_Trace_PeachPy",
+        (vertexEdgesArgument, neighborsArgument, inputQueueArgument, inputVerticesArgument,
+        outputQueueArgument, levelsArgument, currentLevelArgument),
+        abi=ABI.SystemV) as bfs_trace:
+
+    vertexEdges = GeneralPurposeRegister64()
+    LOAD.ARGUMENT( vertexEdges, vertexEdgesArgument )
+
+    neighbors = GeneralPurposeRegister64()
+    LOAD.ARGUMENT( neighbors, neighborsArgument )
+
+    inputQueue = GeneralPurposeRegister64()
+    LOAD.ARGUMENT( inputQueue, inputQueueArgument )
+
+    inputVertices = GeneralPurposeRegister64()
+    LOAD.ARGUMENT( inputVertices, inputVerticesArgument )
+
+    outputQueue = GeneralPurposeRegister64()
+    LOAD.ARGUMENT( outputQueue, outputQueueArgument )
+
+    levels = GeneralPurposeRegister64()
+    LOAD.ARGUMENT( levels, levelsArgument )
+
+    currentLevel = GeneralPurposeRegister32()
+    LOAD.ARGUMENT( currentLevel, currentLevelArgument )
+
+    outputQueueStart = GeneralPurposeRegister64()
+    MOV( outputQueueStart, outputQueue )
+    
+    per_edge_loop = Loop()
+
+    with Loop() as per_vertex_loop:
+        currentVertex = GeneralPurposeRegister64()
+        MOV( currentVertex.as_dword, [inputQueue] )
+        ADD( inputQueue, 4 )
+
+        startEdge = GeneralPurposeRegister64()
+        MOV( startEdge.as_dword, [vertexEdges + currentVertex * 4] )
+
+        endEdge = GeneralPurposeRegister64()
+        MOV( endEdge.as_dword, [vertexEdges + currentVertex * 4 + 4] )
+
+        CMP( startEdge, endEdge )
+        JE( per_edge_loop.end )
+
+        currentNeighborPointer = GeneralPurposeRegister64()
+        LEA( currentNeighborPointer, [neighbors + startEdge * 4] )
+
+        endNeighborPointer = GeneralPurposeRegister64()
+        LEA( endNeighborPointer, [neighbors + endEdge * 4] )
+
+        with per_edge_loop:
+            neighborVertex = GeneralPurposeRegister64()
+            MOV( neighborVertex.as_dword, [currentNeighborPointer] )
+            ADD( currentNeighborPointer, 4 )
+
+            outputQueueOld = GeneralPurposeRegister64()
+            MOV( outputQueueOld, outputQueue )
+
+            neighborLevel = GeneralPurposeRegister32()
+            MOV( neighborLevel, [levels + neighborVertex * 4] )
+
+            MOV( [outputQueue], neighborVertex.as_dword )
+            ADD( outputQueue, 4 )
+
+            CMP( neighborLevel, currentLevel )
+            CMOVA( neighborLevel, currentLevel )
+
+            # MOV( [levels + neighborVertex * 4], neighborLevel )
+
+            CMOVBE( outputQueue, outputQueueOld )
+
+            CMP( currentNeighborPointer, endNeighborPointer )
+            JNE( per_edge_loop.begin )
+
+        SUB( inputVertices, 1 )
+        JNE( per_vertex_loop.begin )
+
+    SUB( outputQueue, outputQueueStart )
+    SHR( outputQueue, 2 )
+    MOV( rax, outputQueue )
+
+    RETURN()
+
+
+
     
 vertexCountArgument = Argument(size_t)
 componentMapArgument = Argument(ptr(uint32_t))
@@ -435,6 +523,7 @@ with Function("ConnectedComponents_SV_Branchless_PeachPy",
 with open("graph_x86_64.s", "w") as graph_file:
     graph_file.write(bfs_branchy.assembly)
     graph_file.write(bfs_branchless.assembly)
+    graph_file.write(bfs_trace.assembly)
     graph_file.write(bfs_branchlessless.assembly)
     graph_file.write(sv_branchy.assembly)
     graph_file.write(sv_branchless.assembly)

@@ -1,10 +1,322 @@
 #include <stdio.h>
-#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
+#include <malloc.h>
 #include <inttypes.h>
+#include <assert.h>
+#include <time.h>
+#include <math.h>
 
 #ifdef __x86_64__
 	#include <x86intrin.h>
 #endif
+
+#include "main.h"
+
+#if defined(BENCHMARK_BFS)
+ void Benchmark_BFS_TopDown_Trace(const char* algorithm_name, const char* implementation_name, const struct PerformanceCounter performanceCounters[], size_t performanceCounterCount, BFS_TopDown_Function bfs_function, uint32_t numVertices, uint32_t* off, uint32_t* ind, uint32_t* edgesTraversed, 
+ 		uint32_t* queueStartPosition,uint32_t* prelevel,uint32_t*prequeue) {
+  struct perf_event_attr perf_counter;
+
+  uint32_t* queue = (uint32_t*)memalign(64, numVertices * sizeof(uint32_t));
+  uint32_t* level = (uint32_t*)memalign(64, numVertices * sizeof(uint32_t));
+  uint64_t* perf_events = (uint64_t*)malloc(numVertices * sizeof(uint64_t));
+  uint32_t* vertices = (uint32_t*)malloc(numVertices * sizeof(uint32_t));
+
+ 
+	uint32_t levelCount = 0;
+
+
+  levelCount = 0;
+  for (size_t performanceCounterIndex = 0; performanceCounterIndex < performanceCounterCount; performanceCounterIndex++) {
+	if (!performanceCounters[performanceCounterIndex].supported)
+	  continue;
+	int perf_counter_fd = -1;
+	if (performanceCounters[performanceCounterIndex].type != PERF_TYPE_TIME) {
+	  memset(&perf_counter, 0, sizeof(struct perf_event_attr));
+	  perf_counter.type = performanceCounters[performanceCounterIndex].type;
+	  perf_counter.size = sizeof(struct perf_event_attr);
+	  perf_counter.config = performanceCounters[performanceCounterIndex].subtype;
+	  perf_counter.disabled = 1;
+	  perf_counter.exclude_kernel = 1;
+	  perf_counter.exclude_hv = 1;
+
+	  perf_counter_fd = perf_event_open(&perf_counter, 0, -1, -1, 0);
+	  if (perf_counter_fd == -1) {
+		fprintf(stderr, "Error opening counter %s\n", performanceCounters[performanceCounterIndex].name);
+		exit(EXIT_FAILURE);
+	  }
+	}
+
+	/* Initialize level array */
+	for (size_t i = 0; i < numVertices; i++) {
+//	  level[i] = INT32_MAX;
+//	  queue[i] = 0;
+	}
+
+	const uint32_t rootVertex = 1;
+	uint32_t currentLevel = 0;
+	level[rootVertex] = currentLevel++;
+	uint32_t* queuePosition = prequeue;
+	queue[0] = rootVertex;
+
+	uint32_t outputVertices = 1;
+	do {
+	  // const uint32_t inputVertices = outputVertices;
+		const uint32_t inputVertices = queueStartPosition[currentLevel]-queueStartPosition[currentLevel-1];
+	  if (levelCount == 0) {
+		vertices[currentLevel-1] = inputVertices;
+	  }
+
+	  struct timespec startTime;
+	  if (performanceCounters[performanceCounterIndex].type == PERF_TYPE_TIME) {
+		assert(clock_gettime(CLOCK_MONOTONIC, &startTime) == 0);
+	  } else {
+		assert(ioctl(perf_counter_fd, PERF_EVENT_IOC_RESET, 0) == 0);
+		assert(ioctl(perf_counter_fd, PERF_EVENT_IOC_ENABLE, 0) == 0);
+	  }
+
+	  // outputVertices = bfs_function(off, ind, queuePosition, inputVertices, queuePosition + inputVertices, level, currentLevel);
+	  // queuePosition += inputVertices;
+
+
+		outputVertices = bfs_function(off, ind, queuePosition, inputVertices, queuePosition + inputVertices, prelevel, currentLevel);
+		queuePosition += inputVertices;
+
+
+	  if (performanceCounters[performanceCounterIndex].type == PERF_TYPE_TIME) {
+		struct timespec endTime;
+		assert(clock_gettime(CLOCK_MONOTONIC, &endTime) == 0);
+		perf_events[levelCount * performanceCounterIndex + (currentLevel-1)] =
+		  (1000000000ll * endTime.tv_sec + endTime.tv_nsec) - 
+		  (1000000000ll * startTime.tv_sec + startTime.tv_nsec);
+	  } else {
+		assert(ioctl(perf_counter_fd, PERF_EVENT_IOC_DISABLE, 0) == 0);
+		assert(read(perf_counter_fd, &perf_events[levelCount * performanceCounterIndex + (currentLevel-1)], sizeof(uint64_t)) == sizeof(uint64_t));
+	  }
+	  currentLevel += 1;
+	} while (queueStartPosition[currentLevel] != INT32_MAX);	  
+	// } while (outputVertices != 0);
+	if (levelCount == 0) {
+	  levelCount = currentLevel - 1;
+	  perf_events = realloc(perf_events, numVertices * sizeof(uint64_t) * levelCount);
+	}
+	close(perf_counter_fd);
+  }
+  for (uint32_t level = 0; level < levelCount; level++) {
+	printf("%s\t%s\t%"PRIu32, algorithm_name, implementation_name, level);
+	for (size_t performanceCounterIndex = 0; performanceCounterIndex < performanceCounterCount; performanceCounterIndex++) {
+	  if (!performanceCounters[performanceCounterIndex].supported)
+		continue;
+	  printf("\t%"PRIu64, perf_events[levelCount * performanceCounterIndex + level]);
+	}
+	printf("\t%"PRIu32"\t%"PRIu32"\n", vertices[level], edgesTraversed[level]);
+  }
+  free(queue);
+  free(level);
+  free(perf_events);
+  free(vertices);
+}
+ 
+
+void Benchmark_BFS_TopDown(const char* algorithm_name, const char* implementation_name, const struct PerformanceCounter performanceCounters[], size_t performanceCounterCount, BFS_TopDown_Function bfs_function, uint32_t numVertices, uint32_t* off, uint32_t* ind, uint32_t* edgesTraversed) {
+  struct perf_event_attr perf_counter;
+
+  uint32_t* queue = (uint32_t*)memalign(64, numVertices * sizeof(uint32_t));
+  uint32_t* level = (uint32_t*)memalign(64, numVertices * sizeof(uint32_t));
+  uint64_t* perf_events = (uint64_t*)malloc(numVertices * sizeof(uint64_t));
+  uint32_t* vertices = (uint32_t*)malloc(numVertices * sizeof(uint32_t));
+
+  uint32_t levelCount = 0;
+  for (size_t performanceCounterIndex = 0; performanceCounterIndex < performanceCounterCount; performanceCounterIndex++) {
+	if (!performanceCounters[performanceCounterIndex].supported)
+	  continue;
+	int perf_counter_fd = -1;
+	if (performanceCounters[performanceCounterIndex].type != PERF_TYPE_TIME) {
+	  memset(&perf_counter, 0, sizeof(struct perf_event_attr));
+	  perf_counter.type = performanceCounters[performanceCounterIndex].type;
+	  perf_counter.size = sizeof(struct perf_event_attr);
+	  perf_counter.config = performanceCounters[performanceCounterIndex].subtype;
+	  perf_counter.disabled = 1;
+	  perf_counter.exclude_kernel = 1;
+	  perf_counter.exclude_hv = 1;
+
+	  perf_counter_fd = perf_event_open(&perf_counter, 0, -1, -1, 0);
+	  if (perf_counter_fd == -1) {
+		fprintf(stderr, "Error opening counter %s\n", performanceCounters[performanceCounterIndex].name);
+		exit(EXIT_FAILURE);
+	  }
+	}
+
+	/* Initialize level array */
+	for (size_t i = 0; i < numVertices; i++) {
+	  level[i] = INT32_MAX;
+	  queue[i] = 0;
+	}
+
+	const uint32_t rootVertex = 1;
+	uint32_t currentLevel = 0;
+	level[rootVertex] = currentLevel++;
+	uint32_t* queuePosition = queue;
+	queue[0] = rootVertex;
+
+	uint32_t outputVertices = 1;
+	do {
+	  const uint32_t inputVertices = outputVertices;
+	  if (levelCount == 0) {
+		vertices[currentLevel-1] = inputVertices;
+	  }
+
+	  struct timespec startTime;
+	  if (performanceCounters[performanceCounterIndex].type == PERF_TYPE_TIME) {
+		assert(clock_gettime(CLOCK_MONOTONIC, &startTime) == 0);
+	  } else {
+		assert(ioctl(perf_counter_fd, PERF_EVENT_IOC_RESET, 0) == 0);
+		assert(ioctl(perf_counter_fd, PERF_EVENT_IOC_ENABLE, 0) == 0);
+	  }
+
+	  outputVertices = bfs_function(off, ind, queuePosition, inputVertices, queuePosition + inputVertices, level, currentLevel);
+	  queuePosition += inputVertices;
+
+	  if (performanceCounters[performanceCounterIndex].type == PERF_TYPE_TIME) {
+		struct timespec endTime;
+		assert(clock_gettime(CLOCK_MONOTONIC, &endTime) == 0);
+		perf_events[levelCount * performanceCounterIndex + (currentLevel-1)] =
+		  (1000000000ll * endTime.tv_sec + endTime.tv_nsec) - 
+		  (1000000000ll * startTime.tv_sec + startTime.tv_nsec);
+	  } else {
+		assert(ioctl(perf_counter_fd, PERF_EVENT_IOC_DISABLE, 0) == 0);
+		assert(read(perf_counter_fd, &perf_events[levelCount * performanceCounterIndex + (currentLevel-1)], sizeof(uint64_t)) == sizeof(uint64_t));
+	  }
+	  currentLevel += 1;
+	} while (outputVertices != 0);
+	if (levelCount == 0) {
+	  levelCount = currentLevel - 1;
+	  perf_events = realloc(perf_events, numVertices * sizeof(uint64_t) * levelCount);
+	}
+	close(perf_counter_fd);
+  }
+  for (uint32_t level = 0; level < levelCount; level++) {
+	printf("%s\t%s\t%"PRIu32, algorithm_name, implementation_name, level);
+	for (size_t performanceCounterIndex = 0; performanceCounterIndex < performanceCounterCount; performanceCounterIndex++) {
+	  if (!performanceCounters[performanceCounterIndex].supported)
+		continue;
+	  printf("\t%"PRIu64, perf_events[levelCount * performanceCounterIndex + level]);
+	}
+	printf("\t%"PRIu32"\t%"PRIu32"\n", vertices[level], edgesTraversed[level]);
+  }
+  free(queue);
+  free(level);
+  free(perf_events);
+  free(vertices);
+}
+
+void Benchmark_BFS_BottomUp(const char* algorithm_name, const char* implementation_name, BFS_BottomUp_Function bfs_function, uint32_t numVertices, uint32_t* off, uint32_t* ind) {
+  struct perf_event_attr perf_branches;
+  struct perf_event_attr perf_mispredictions;
+  struct perf_event_attr perf_instructions;
+
+  memset(&perf_branches, 0, sizeof(struct perf_event_attr));
+  perf_branches.type = PERF_TYPE_HARDWARE;
+  perf_branches.size = sizeof(struct perf_event_attr);
+  perf_branches.config = PERF_COUNT_HW_BRANCH_INSTRUCTIONS;
+  perf_branches.disabled = 1;
+  perf_branches.exclude_kernel = 1;
+  perf_branches.exclude_hv = 1;
+
+  memset(&perf_mispredictions, 0, sizeof(struct perf_event_attr));
+  perf_mispredictions.type = PERF_TYPE_HARDWARE;
+  perf_mispredictions.size = sizeof(struct perf_event_attr);
+  perf_mispredictions.config = PERF_COUNT_HW_BRANCH_MISSES;
+  perf_mispredictions.disabled = 1;
+  perf_mispredictions.exclude_kernel = 1;
+  perf_mispredictions.exclude_hv = 1;
+
+  memset(&perf_instructions, 0, sizeof(struct perf_event_attr));
+  perf_instructions.type = PERF_TYPE_HARDWARE;
+  perf_instructions.size = sizeof(struct perf_event_attr);
+  perf_instructions.config = PERF_COUNT_HW_INSTRUCTIONS;
+  perf_instructions.disabled = 1;
+  perf_instructions.exclude_kernel = 1;
+  perf_instructions.exclude_hv = 1;
+
+  int fd_branches = perf_event_open(&perf_branches, 0, -1, -1, 0);
+  if (fd_branches == -1) {
+	fprintf(stderr, "Error opening PERF_COUNT_HW_BRANCH_INSTRUCTIONS\n");
+	exit(EXIT_FAILURE);
+  }
+
+  int fd_mispredictions = perf_event_open(&perf_mispredictions, 0, -1, -1, 0);
+  if (fd_mispredictions == -1) {
+	fprintf(stderr, "Error opening PERF_COUNT_HW_BRANCH_MISSES\n");
+	exit(EXIT_FAILURE);
+  }
+
+  int fd_instructions = perf_event_open(&perf_instructions, 0, -1, -1, 0);
+  if (fd_instructions == -1) {
+	fprintf(stderr, "Error opening PERF_COUNT_HW_INSTRUCTIONS\n");
+	exit(EXIT_FAILURE);
+  }
+
+  uint32_t* levels = (uint32_t*)memalign(64, numVertices * sizeof(uint32_t));
+  uint32_t* bitmap = (uint32_t*)memalign(64, numVertices * sizeof(uint32_t));
+  /* Initialize level array */
+  for (size_t i = 0; i < numVertices; i++) {
+	levels[i] = INT32_MAX;
+	bitmap[i] = 0;
+  }
+
+  uint64_t* branches = (uint64_t*)memalign(64, numVertices * sizeof(uint64_t));
+  uint64_t* mispredictions = (uint64_t*)memalign(64, numVertices * sizeof(uint64_t));
+  uint64_t* instructions = (uint64_t*)memalign(64, numVertices * sizeof(uint64_t));
+  double* seconds = (double*)memalign(64, numVertices * sizeof(double));
+
+  uint32_t currentLevel = 0;
+  bool changed;
+
+  const uint32_t rootVertex = 1;
+  levels[rootVertex] = currentLevel;
+  bitmap[rootVertex / 32] = 1 << (rootVertex % 32);
+  do {
+	ioctl(fd_branches, PERF_EVENT_IOC_RESET, 0);
+	ioctl(fd_mispredictions, PERF_EVENT_IOC_RESET, 0);
+	ioctl(fd_instructions, PERF_EVENT_IOC_RESET, 0);
+
+	tic();
+	ioctl(fd_branches, PERF_EVENT_IOC_ENABLE, 0);
+	ioctl(fd_mispredictions, PERF_EVENT_IOC_ENABLE, 0);
+	ioctl(fd_instructions, PERF_EVENT_IOC_ENABLE, 0);
+
+	/* Call the bfs implementation */
+	changed = bfs_function(off, ind, bitmap, levels, numVertices, currentLevel);
+
+	ioctl(fd_branches, PERF_EVENT_IOC_DISABLE, 0);
+	ioctl(fd_mispredictions, PERF_EVENT_IOC_DISABLE, 0);
+	ioctl(fd_instructions, PERF_EVENT_IOC_DISABLE, 0);
+	seconds[currentLevel] = toc();
+	read(fd_branches, &branches[currentLevel], sizeof(long long));
+	read(fd_mispredictions, &mispredictions[currentLevel], sizeof(long long));
+	read(fd_instructions, &instructions[currentLevel], sizeof(long long));
+	currentLevel += 1;
+  } while (changed);
+
+  for (uint32_t level = 0; level < currentLevel; level++) {
+	printf("%s\t%s\t%"PRIu32"\t%.10lf\t%"PRIu64"\t%"PRIu64"\t%"PRIu64" \t1 \t1\n", algorithm_name, implementation_name, level, seconds[level], mispredictions[level], branches[level], instructions[level]);
+  }
+
+  close(fd_branches);
+  close(fd_mispredictions);
+  close(fd_instructions);
+  free(levels);
+  free(bitmap);
+  free(branches);
+  free(mispredictions);
+  free(instructions);
+  free(seconds);
+}
+#endif
+
+
 
 void BFS_TopDown_Branchy_LevelInformation(uint32_t* off, uint32_t* ind, uint32_t* queue, uint32_t* level, uint32_t currRoot, uint32_t* edgesTraversed, uint32_t* queueStartPosition) {
 	level[currRoot] = 0;
