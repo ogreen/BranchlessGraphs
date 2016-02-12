@@ -242,7 +242,90 @@ void bcDependencyBranchAvoidingSOA(uint32_t currRoot,uint32_t* off, uint32_t* in
 
 }
 
+#if defined(ARMASM)
+ void bcDependencyBranchAvoidingSOAOpt(uint32_t currRoot,uint32_t* off, uint32_t* ind, uint32_t* queue, uint32_t reverseStart, uint32_t numElements, 
+	void* bcSOAStruct, float* totalBC) //	uint32_t* level,uint32_t* sigma, float*delta, float* totalBC)
+{
+	uint32_t* level = ((bcSOA*)bcSOAStruct)->level;
+	uint32_t* sigma = ((bcSOA*)bcSOAStruct)->sigma;
+	float* delta = ((bcSOA*)bcSOAStruct)->delta;
 
+
+	uint32_t* reverseQueue=queue;
+	int32_t startPos=reverseStart,leftOver=numElements;
+
+	// Using Brandes algorithm to compute BC for a specific tree.
+	// Essentially, use the stack which the elements are placed in depth-reverse order, to "climb" back
+	// up the tree, all the way to the root.
+	// int32_t sEnd = stackPos-1;
+	while(leftOver>=0){
+		uint32_t currElement = reverseQueue[leftOver];
+
+		uint32_t startEdge = off[currElement];
+		uint32_t stopEdge = off[currElement+1];
+		int32_t prevLevel = level[currElement]-1;
+
+		float deltadivsigma = (float)(delta[currElement]+1)/(float)(sigma[currElement]);
+#if defined(X86)
+		__m128 tempstupid;				
+		__m128i mmiprevLevel = _mm_cvtsi32_si128(prevLevel);
+		__m128 mmDDS        = _mm_load_ss (&deltadivsigma);
+#endif
+
+		for (uint32_t j = startEdge; startEdge < stopEdge; startEdge++) {
+			uint32_t k = ind[startEdge];	
+#if defined(X86)
+
+			__m128i mmiiLevelk   = _mm_cvtsi32_si128(level[k]);		
+			__m128 mmsigmak      = _mm_cvtsi32_ss(tempstupid,sigma[k]);
+			__m128 mmdeltak      = _mm_load_ss  (delta+k);
+	
+			__m128i mmiCmpEq     = _mm_cmpeq_epi32 (mmiprevLevel, mmiiLevelk);
+			mmsigmak             = _mm_and_si128(mmsigmak,mmiCmpEq);
+			mmdeltak             = _mm_fmadd_ss (mmDDS,mmsigmak,mmdeltak);
+		   _mm_store_ss(delta+k, mmdeltak);
+
+#endif
+
+#if defined(ARMASM)
+			int levelk=level[k],sigmak, k4=k<<2;
+     		float sigmakf,deltak;//=delta[k];
+			int deltakpos,sigmakpos;
+			__asm__ __volatile__ ( ""
+				"CMP %[prevLevel], %[levelk]          	   ;\n\t"
+				"ADD %[deltakpos], %[delta],%[k4]       ; \n\t"
+				"VLDR.32 %[deltak], [%[deltakpos],#0]	  ; \n\t"
+				"ADDEQ %[sigmakpos], %[sigma],%[k4] ;       \n\t"
+				"VLDREQ.32 %[sigmak], [%[sigmakpos],#0]	  ; \n\t"
+				"VCVTREQ.F32.S32 %[sigmakf],%[sigmak]; \n\t"
+				"VFMAEQ.F32 %[deltak], %[sigmakf], %[deltadivsigma]; \n\t"
+				//"VSTREQ.32 %[deltak], [%[deltakpos],#0]	  ; \n\t"
+				"VSTR.32 %[deltak], [%[deltakpos],#0]	  ; \n\t"
+ 				:
+				[deltak] "+w" (deltak) , 
+				[sigmakf] "+w" (sigmakf),
+				[deltakpos] "+r" (deltakpos),
+				[sigmakpos] "+r" (sigmakpos)
+				:
+				[sigmak] "w" (sigmak),
+				[levelk] "r" (levelk), 
+				[prevLevel] "r" (prevLevel),
+				[delta] "r" (delta), 
+				[sigma] "r" (sigma) , 
+				[deltadivsigma] "w" (deltadivsigma), 
+				[k4] "r" (k4) 
+			);
+#endif
+		}
+		if(currElement!=currRoot){
+			totalBC[currElement]+=delta[currElement];
+		}
+		leftOver--;
+	}
+
+}
+
+#endif 
 #if defined(BENCHMARK_BC)
 
 void Benchmark_BC(const char* algorithm_name, const char* implementation_name, const struct PerformanceCounter performanceCounters[], size_t performanceCounterCount, BC_TRAV_Function bc_trav_function,  BC_DEP_Function bc_dep_function, uint32_t numVertices, uint32_t* off, uint32_t* ind, uint32_t* edgesTraversed,int isSOA) {

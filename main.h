@@ -87,7 +87,9 @@ void bcDependencyBranchAvoidingAOS(uint32_t currRoot,uint32_t* off, uint32_t* in
     void* bcAOSStruct, float* totalBC);
 
 #if defined(ARMASM)
-
+void bcDependencyBranchAvoidingSOAOpt(uint32_t currRoot,uint32_t* off, uint32_t* ind, uint32_t* queue, uint32_t reverseStart, uint32_t numElements, 
+    void* bcSOAStruct, float* totalBC);
+ 
 void bcDependencyBranchAvoidingAOSOpt(uint32_t currRoot,uint32_t* off, uint32_t* ind, uint32_t* queue, uint32_t reverseStart, uint32_t numElements, 
     void* bcAOSStruct, float* totalBC);
 #endif 
